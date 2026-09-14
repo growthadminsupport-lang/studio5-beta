@@ -53,6 +53,9 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  // Same budget as password login: it is the other way in, and each call costs a round trip to
+  // Google's key endpoint plus a database lookup.
+  @Throttle(LOGIN_THROTTLE)
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('google')

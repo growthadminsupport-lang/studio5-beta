@@ -27,6 +27,17 @@ import { UpdateGrowthRecordDto } from './dto/update-growth-record.dto';
 const BMI_FOR_AGE_MIN_MONTHS = 24;
 const NOTABLE_Z_THRESHOLD = 2; // roughly outside the ~2.3rd-97.7th percentile band.
 
+/** Measures that have a reference curve to chart. */
+const CURVE_MEASURES = [
+  'height',
+  'weight',
+  'bmi',
+  'headCircumference',
+] as const;
+type CurveMeasure = (typeof CURVE_MEASURES)[number];
+const isCurveMeasure = (m: string): m is CurveMeasure =>
+  (CURVE_MEASURES as readonly string[]).includes(m);
+
 function computeBmi(
   heightCm?: number | null,
   weightKg?: number | null,
@@ -93,7 +104,7 @@ export function nutritionalStatusKey(
 }
 
 /**
- * BMI-for-age only applies from five years (FR-8).
+ * BMI-for-age applies from two years — see BMI_FOR_AGE_MIN_MONTHS for why not FR-8's five.
  *
  * Rounded before comparing because `ageInMonths` divides by an average month length, which
  * can land a hair under an exact-year boundary purely from leap-year timing — 59.99 rather
@@ -111,7 +122,10 @@ export class GrowthService {
     private reference: GrowthReferenceService,
   ) {}
 
-  /** FR-7/FR-8: percentile + SDS for height/weight-for-age, and BMI-for-age for children 5y+. */
+  /**
+   * FR-7/FR-8: percentile + SDS for height/weight-for-age, BMI-for-age from two years, and head
+   * circumference up to 36 months.
+   */
   private async computeMetrics(
     childId: string,
     measuredAt: Date,
@@ -357,18 +371,29 @@ export class GrowthService {
     }));
   }
 
-  /** FR-9: reference percentile curves (P3/P50/P97) for the child's sex, to plot alongside chart(). */
-  async referenceCurve(
-    userId: string,
-    childId: string,
-    measure: 'height' | 'weight' | 'bmi',
-  ) {
+  /**
+   * FR-9: reference percentile curves (P3/P50/P97) for the child's sex, to plot alongside chart().
+   *
+   * `measure` is checked against a closed list because it arrives as a raw query string. An
+   * unknown value used to fall through to the height table and return a plausible-looking curve
+   * for the wrong measure.
+   */
+  async referenceCurve(userId: string, childId: string, measure: string) {
+    if (!isCurveMeasure(measure)) {
+      throw new BadRequestException(
+        `measure must be one of: ${CURVE_MEASURES.join(', ')}`,
+      );
+    }
     await this.childrenService.assertGuardianAccess(childId, userId);
     const child = await this.prisma.child.findUniqueOrThrow({
       where: { id: childId },
     });
-    const maxMonths = measure === 'bmi' ? 240 : 240;
-    const minMonths = measure === 'bmi' ? BMI_FOR_AGE_MIN_MONTHS : 0;
+    const [minMonths, maxMonths] =
+      measure === 'bmi'
+        ? [BMI_FOR_AGE_MIN_MONTHS, 240]
+        : measure === 'headCircumference'
+          ? [0, HEAD_CIRCUMFERENCE_MAX_MONTHS]
+          : [0, 240];
     return this.reference.curve(measure, child.sex, minMonths, maxMonths);
   }
 

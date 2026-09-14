@@ -41,7 +41,19 @@ export default function Settings() {
       setPasswordSaved(true);
       setPasswordError(null);
     },
-    onError: () => setPasswordError('Current password is incorrect.'),
+    // The server's own reason, not a fixed string: a wrong current password (401), a
+    // Google-only account with no password to change (400) and a validation failure each need a
+    // different response from the user, and "incorrect password" was right for only one of them.
+    onError: (err: unknown) => {
+      const message = (err as { response?: { data?: { message?: string | string[] } } }).response
+        ?.data?.message;
+      setPasswordSaved(false);
+      setPasswordError(
+        Array.isArray(message)
+          ? message.join(' ')
+          : (message ?? 'Could not reach the server. Please try again.'),
+      );
+    },
   });
 
   const avatarSrc = useAuthedImage(ownAvatarPath(user?.avatarUrl)) ?? undefined;

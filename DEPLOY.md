@@ -1,53 +1,72 @@
 # Deploying GrowTH
 
-Split deploy: **frontend → Vercel**, **backend → Render**, **database → Neon**.
-(Matches the hosting plan in the original project spec: Vercel + Render, zero-budget free tiers.)
+Split deploy: **frontend → Vercel**, **backend → Render**, **database → Neon**, all on free tiers.
 
 ## 1. Database — Neon
 
-1. Sign up at https://neon.tech (free tier), create a project named `growth`.
-2. Copy the pooled connection string it gives you — looks like:
+1. Create a free project at https://neon.tech.
+2. Copy the pooled connection string:
    `postgresql://<user>:<password>@<host>/<db>?sslmode=require`
-3. Keep it — you'll paste it into Render as `DATABASE_URL` in step 2.
+3. It goes into Render as `DATABASE_URL` in step 2.
 
 ## 2. Backend — Render
 
-1. Sign up at https://render.com, connect the `MONNNNNNNNNNN/project_stu5` GitHub repo.
-2. Render will detect `render.yaml` at the repo root (Blueprint) — or create a Web Service
-   manually with:
-   - Root directory: `backend`
-   - Build command: `npm install && npx prisma generate && npm run build`
-   - Start command: `npx prisma migrate deploy && npm run start:prod`
-   - Health check path: `/health`
-3. Set env vars (Render dashboard → Environment):
-   - `DATABASE_URL` → the Neon connection string from step 1
-   - `CORS_ORIGIN` → your Vercel frontend URL (fill in after step 3, e.g. `https://project-stu5.vercel.app`)
-   - `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` → Render can auto-generate these (already configured in `render.yaml`)
-4. Deploy. Once live, note the backend URL (e.g. `https://growth-backend.onrender.com`).
-5. Seed demo articles once (Render Shell tab, or run locally against the Neon URL):
-   ```bash
-   DATABASE_URL="<neon-url>" npm run prisma:seed
-   ```
+1. Connect the `MONNNNNNNNNNN/project_stu5` repo at https://render.com. Render reads
+   `render.yaml` at the repo root (Blueprint), and that file is the source of truth for the
+   build and start commands. The build runs `prisma migrate deploy` and `prisma db seed` (the
+   Parenting Resources articles, upsert-only) and downloads the bone-age model from the
+   `model-v1` GitHub release, so a deploy needs no manual migration or seed step.
+2. Set the variables `render.yaml` declares with `sync: false` (dashboard → Environment):
 
-**Known limitation:** bone-age X-ray uploads are stored on Render's local disk, which is
-wiped on every redeploy (Render free tier has no persistent volume). Fine for a demo; swap
-to object storage (Cloudinary/S3/Supabase Storage) before relying on it long-term.
+   | Variable | Value | If unset |
+   | --- | --- | --- |
+   | `DATABASE_URL` | Neon connection string | The backend cannot start |
+   | `CORS_ORIGIN` | Exact Vercel origin, e.g. `https://grow-th.vercel.app`, no trailing slash | The browser blocks every API call |
+   | `FRONTEND_URL` | The same Vercel origin | Reset-password links point at `localhost:5173` |
+   | `RESEND_API_KEY` | Resend API key | Forgot-password returns 200 but no email is sent |
+   | `MAIL_FROM` | Verified sender, e.g. `GrowTH <noreply@yourdomain>` | Falls back to `onboarding@resend.dev` |
+   | `GOOGLE_CLIENT_ID` | Google OAuth web client ID | Google sign-in is refused; email sign-in still works |
+
+   Render generates `JWT_ACCESS_SECRET`. The bone-age calibration values are set in
+   `render.yaml` itself.
+3. Deploy, and note the backend URL (e.g. `https://growth-backend-a479.onrender.com`).
+
+**Known limitation:** avatars and bone-age X-rays are written to Render's local disk, which is
+wiped on every redeploy (the free plan has no persistent volume). The database rows survive and
+point at missing files, which the API reports as 404. Move uploads to object storage before
+relying on them.
+
+**Cold starts:** the free instance sleeps after ~15 minutes idle and takes 30-60s to wake. See
+`.github/workflows/keep-backend-awake.yml` for what the scheduled ping does and does not do.
 
 ## 3. Frontend — Vercel
 
-Using the existing project at
-https://vercel.com/monnnnnnnnnnns-projects/project-stu5/settings:
+1. Project settings → Root Directory → `frontend`. The build command (`npm run build`) and
+   output directory (`dist`) are auto-detected.
+2. Environment variables:
+   - `VITE_API_URL` → the Render backend URL from step 2.
+   - `VITE_GOOGLE_CLIENT_ID` → the same client ID as the backend's `GOOGLE_CLIENT_ID`. Optional;
+     the Google button is hidden without it. Add the Vercel origin under *Authorized JavaScript
+     origins* in Google Cloud Console.
+3. Redeploy. Vite inlines `VITE_*` values at build time, so changing one needs a redeploy.
+4. Set Render's `CORS_ORIGIN` and `FRONTEND_URL` to this Vercel URL if you have not already.
 
-1. Project settings → Root Directory → `frontend`
-2. Build command: `npm run build` (auto-detected for Vite)
-3. Output directory: `dist` (auto-detected)
-4. Env var: `VITE_API_URL` → your Render backend URL from step 2
-5. Redeploy. Then go back to Render and set `CORS_ORIGIN` to this Vercel URL.
+## Local development
 
-## Local dev (unchanged)
+Everything in containers, app on http://localhost:8080:
 
 ```bash
-docker compose up -d          # local Postgres + Redis
-cd backend && npx prisma migrate dev && npm run prisma:seed && npm run start:dev
-cd frontend && npm run dev
+docker compose up --build
 ```
+
+Or with hot reload — Postgres in Docker, the app on the host (Node 22, see `.nvmrc`):
+
+```bash
+docker compose up -d db
+cp backend/.env.example backend/.env
+cd backend && npm ci && npx prisma migrate dev && npx prisma db seed && npm run start:dev
+cd frontend && npm ci && npm run dev    # http://localhost:5173
+```
+
+Leave `RESEND_API_KEY` unset locally: forgot-password then returns the reset token in the
+response instead of emailing it.

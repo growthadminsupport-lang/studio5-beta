@@ -50,9 +50,10 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY package.json ./
 
-# Avatars and bone-age X-rays are written to disk by multer and served back as static
-# files, so this path is mounted as a volume in compose — without it, every uploaded image
-# disappears the next time the container is replaced.
+# Avatars and bone-age X-rays are written to disk by multer and streamed back through
+# guardian-checked routes (never served as static files), so this path is mounted as a volume
+# in compose — without it, every uploaded image disappears the next time the container is
+# replaced.
 RUN mkdir -p uploads/avatars uploads/bone-age && chown -R node:node uploads
 
 USER node

@@ -23,7 +23,7 @@ export class GrowthController {
   referenceCurve(
     @CurrentUser() user: AuthUser,
     @Query('childId') childId: string,
-    @Query('measure') measure: 'height' | 'weight' | 'bmi',
+    @Query('measure') measure: string,
   ) {
     return this.growthService.referenceCurve(user.userId, childId, measure);
   }

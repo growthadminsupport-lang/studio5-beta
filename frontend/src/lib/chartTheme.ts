@@ -7,7 +7,7 @@
  * on white — effectively invisible, and it is the band the whole chart exists to show).
  * Every value below is checked against its own background.
  */
-export type Measure = 'height' | 'weight' | 'bmi';
+export type Measure = 'height' | 'weight' | 'bmi' | 'headCircumference';
 
 interface ChartPalette {
   band: string;
@@ -26,6 +26,7 @@ const LIGHT: ChartPalette = {
     height: '#2f7566', // 5.44:1
     weight: '#547150', // 5.45:1
     bmi: '#9c6626', // 4.84:1
+    headCircumference: '#6d4c9f', // 6.59:1
   },
 };
 
@@ -38,6 +39,7 @@ const DARK: ChartPalette = {
     height: '#5fe4d4', // 10.31:1
     weight: '#b6d9ae', // 10.30:1
     bmi: '#efb96e', //  9.02:1
+    headCircumference: '#c9b6f2', //  8.73:1
   },
 };
 

@@ -1,17 +1,17 @@
 name: Keep backend awake
 
-# Render's free plan spins the backend down after ~15 minutes with no traffic, and the
-# cold wake is what makes login/signup feel broken after a quiet night. Pinging /health
-# every 10 minutes keeps the container resident, so the first real user of the day gets
-# the same ~70ms login as everyone else.
+# Pings /health on Render's free instance. What it can and cannot do, measured 2026-09-14:
 #
-# This fits the free plan's 750 instance-hours/month (a full month is ~730), but it uses
-# essentially all of them — so it only works while growth-backend is the only free web
-# service in the Render account.
-#
-# Caveat: GitHub disables scheduled workflows on repos with no activity for 60 days.
-# If logins start feeling slow again after a long quiet stretch, check this workflow is
-# still enabled before digging into the app.
+# - It does NOT keep the service resident on its own. GitHub runs scheduled workflows
+#   best-effort: the cron below asks for every 10 minutes, but runs landed roughly every two
+#   hours. Render sleeps after ~15 minutes idle, so most pings arrive at a cold instance and take
+#   30-60s. Read it as a liveness check that fails loudly when the backend is actually down.
+# - To really keep it awake, point an external pinger at the same URL every 10-14 minutes:
+#   cron-job.org or UptimeRobot (both free), or a crontab on any always-on machine. That uses
+#   ~730 of the free plan's 750 instance-hours a month, so it only fits while growth-backend is
+#   the only free web service in the Render workspace.
+# - GitHub disables scheduled workflows after 60 days with no repository activity. If this
+#   stops running, re-enable it under the Actions tab.
 
 on:
   schedule:
@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping backend health endpoint
+        # A cold wake regularly takes 30-60s and occasionally longer; one run failed at the old
+        # 90s limit. A longer timeout plus one retry separates "was asleep" from "is down".
         run: |
-          curl --fail --silent --show-error --max-time 90 \
+          curl --fail --silent --show-error --max-time 120 --retry 1 --retry-delay 5 \
             https://growth-backend-a479.onrender.com/health

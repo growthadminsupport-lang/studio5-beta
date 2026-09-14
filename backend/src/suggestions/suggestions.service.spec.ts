@@ -96,7 +96,7 @@ describe('SuggestionsService', () => {
     });
 
     it('stays quiet when there is no BMI yet', async () => {
-      // Under five, BMI-for-age does not apply at all.
+      // No growth record with a BMI yet, so there is nothing to trigger on.
       expect(await kinds(build({ bmi: null, ageYears: 3 }))).toHaveLength(0);
     });
   });

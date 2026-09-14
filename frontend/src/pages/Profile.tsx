@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Avatar, Button, TextField, Alert } from '@mui/material';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import type { User } from '../types';
 import { ownAvatarPath, useAuthedImage } from '../lib/useAuthedImage';
 import { avatarSx } from '../lib/chartTheme';
 import { useThemeMode } from '../context/ThemeModeContext';
@@ -11,17 +12,19 @@ import { useAuth } from '../context/AuthContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [fullName, setFullName] = useState(user?.fullName ?? '');
   const [saved, setSaved] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: async () => (await api.patch('/auth/profile', { fullName })).data,
-    onSuccess: () => {
+    mutationFn: async () => (await api.patch<User>('/auth/profile', { fullName })).data,
+    // The signed-in user lives in AuthContext, not in React Query, so invalidating queries never
+    // reached it: the header kept the old name until the next reload. The PATCH returns the
+    // updated user, so hand that straight to the context.
+    onSuccess: (updated) => {
+      updateUser(updated);
       setSaved(true);
-      queryClient.invalidateQueries();
     },
   });
 

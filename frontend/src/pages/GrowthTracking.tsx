@@ -90,6 +90,22 @@ export default function GrowthTracking() {
     enabled: !!selectedChildId,
   });
 
+  // Charted for infants, and for any child with head-circumference readings on file — earlier
+  // readings should not vanish from view on the third birthday.
+  const hasHeadCircumference = (chart ?? []).some((c) => c.headCircumferenceCm !== null);
+  const showHeadCircumference = isInfant || hasHeadCircumference;
+
+  const { data: headCircumferenceCurve } = useQuery({
+    queryKey: ['growth-reference-curve', selectedChildId, 'headCircumference'],
+    queryFn: async () =>
+      (
+        await api.get<ReferenceCurvePoint[]>('/growth/reference-curve', {
+          params: { childId: selectedChildId, measure: 'headCircumference' },
+        })
+      ).data,
+    enabled: !!selectedChildId && showHeadCircumference,
+  });
+
   const { data: history } = useQuery({
     queryKey: ['growth-history', selectedChildId],
     queryFn: async () =>
@@ -101,6 +117,7 @@ export default function GrowthTracking() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editHeight, setEditHeight] = useState('');
   const [editWeight, setEditWeight] = useState('');
+  const [editHeadCircumference, setEditHeadCircumference] = useState('');
 
   async function invalidateAll() {
     await queryClient.invalidateQueries({ queryKey: ['growth-chart', selectedChildId] });
@@ -122,6 +139,7 @@ export default function GrowthTracking() {
     onSuccess: async (record) => {
       setHeightCm('');
       setWeightKg('');
+      setHeadCircumferenceCm('');
       setLastGuidance(record.guidance ?? null);
       await invalidateAll();
     },
@@ -133,6 +151,7 @@ export default function GrowthTracking() {
         await api.patch(`/growth/${id}`, {
           heightCm: editHeight ? Number(editHeight) : undefined,
           weightKg: editWeight ? Number(editWeight) : undefined,
+          headCircumferenceCm: editHeadCircumference ? Number(editHeadCircumference) : undefined,
         })
       ).data,
     onSuccess: async () => {
@@ -150,6 +169,7 @@ export default function GrowthTracking() {
     setEditingId(record.id);
     setEditHeight(record.heightCm ?? '');
     setEditWeight(record.weightKg ?? '');
+    setEditHeadCircumference(record.headCircumferenceCm ?? '');
   }
 
   if (!selectedChildId) {
@@ -167,6 +187,10 @@ export default function GrowthTracking() {
   const bmiPoints = (chart ?? []).map((c) => ({
     ageMonths: selectedChild ? ageInMonths(selectedChild.dateOfBirth, c.date) : 0,
     value: c.bmi,
+  }));
+  const headCircumferencePoints = (chart ?? []).map((c) => ({
+    ageMonths: selectedChild ? ageInMonths(selectedChild.dateOfBirth, c.date) : 0,
+    value: c.headCircumferenceCm,
   }));
 
   return (
@@ -227,6 +251,16 @@ export default function GrowthTracking() {
         measure="bmi"
         footnote="BMI-for-age applies from 2 years. Below that, weight-for-length is the measure clinicians use."
       />
+      {showHeadCircumference && (
+        <PercentileChart
+          title="Head circumference-for-age"
+          unit="cm"
+          curve={headCircumferenceCurve ?? []}
+          points={headCircumferencePoints}
+          measure="headCircumference"
+          footnote="Charted from birth to 36 months, where CDC's reference table ends."
+        />
+      )}
 
       <div className="bg-surface rounded-2xl shadow-sm p-5">
         <h2 className="font-semibold text-ink mb-4">History</h2>
@@ -251,6 +285,16 @@ export default function GrowthTracking() {
                   onChange={(e) => setEditWeight(e.target.value)}
                   sx={{ width: 110 }}
                 />
+                {(isInfant || record.headCircumferenceCm) && (
+                  <TextField
+                    size="small"
+                    label="Head (cm)"
+                    type="number"
+                    value={editHeadCircumference}
+                    onChange={(e) => setEditHeadCircumference(e.target.value)}
+                    sx={{ width: 110 }}
+                  />
+                )}
                 <IconButton
                   size="small"
                   color="primary"
@@ -269,6 +313,11 @@ export default function GrowthTracking() {
                   <span className="text-gray-500">{formatDate(record.measuredAt)}</span>
                   <span>{record.heightCm ? `${record.heightCm} cm (${fmtPercentile(record.heightPercentile)})` : '—'}</span>
                   <span>{record.weightKg ? `${record.weightKg} kg (${fmtPercentile(record.weightPercentile)})` : '—'}</span>
+                  {record.headCircumferenceCm && (
+                    <span>
+                      Head {record.headCircumferenceCm} cm ({fmtPercentile(record.headCircumferencePercentile)})
+                    </span>
+                  )}
                   <span
                     className={
                       record.guidance?.nutritionalStatusKey === 'SEVERE_OBESITY'

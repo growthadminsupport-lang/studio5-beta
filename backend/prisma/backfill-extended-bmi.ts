@@ -116,7 +116,7 @@ async function main() {
   console.log(
     `\n  ${material} row(s) moved by ${MATERIAL_PERCENTILE_SHIFT} percentile points or more` +
       `\n  ${precisionOnly} row(s) changed in stored precision only` +
-      `\n  ${skipped} row(s) skipped (under five years, or no BMI-for-age)` +
+      `\n  ${skipped} row(s) skipped (under two years, or no BMI-for-age)` +
       `\n\n${WRITE ? `wrote ${updates.length} row(s)` : 'nothing written — re-run with --write to apply'}\n`,
   );
 }
