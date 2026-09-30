@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildrenService } from '../children/children.service';
+import type { Capability } from '../children/child-access';
 import {
   GrowthReferenceService,
   HEAD_CIRCUMFERENCE_MAX_MONTHS,
@@ -75,11 +76,7 @@ const SEVERE_OBESITY_PCT_OF_P95 = 120;
 const SEVERE_OBESITY_BMI = 35;
 
 export type NutritionalStatusKey =
-  | 'UNDERWEIGHT'
-  | 'HEALTHY'
-  | 'OVERWEIGHT'
-  | 'OBESITY'
-  | 'SEVERE_OBESITY';
+  'UNDERWEIGHT' | 'HEALTHY' | 'OVERWEIGHT' | 'OBESITY' | 'SEVERE_OBESITY';
 
 const NUTRITIONAL_STATUS_LABELS: Record<NutritionalStatusKey, string> = {
   UNDERWEIGHT: 'Underweight',
@@ -191,7 +188,8 @@ export class GrowthService {
     nutritionalStatusKey: NutritionalStatusKey | null;
     bmiPctOfP95: number | null;
   } {
-    const asNumber = (v: unknown) => (v !== null && v !== undefined ? Number(v) : null);
+    const asNumber = (v: unknown) =>
+      v !== null && v !== undefined ? Number(v) : null;
     const heightSds = asNumber(record.heightSds);
     const weightSds = asNumber(record.weightSds);
     const bmi = asNumber(record.bmi);
@@ -221,7 +219,9 @@ export class GrowthService {
     return {
       message,
       flagged,
-      nutritionalStatus: statusKey ? NUTRITIONAL_STATUS_LABELS[statusKey] : null,
+      nutritionalStatus: statusKey
+        ? NUTRITIONAL_STATUS_LABELS[statusKey]
+        : null,
       // The key, not just the label, so the UI can colour and branch on a stable value rather
       // than matching on prose that copy edits will change.
       nutritionalStatusKey: statusKey,
@@ -242,7 +242,7 @@ export class GrowthService {
   }
 
   async create(userId: string, dto: CreateGrowthRecordDto) {
-    await this.childrenService.assertGuardianAccess(dto.childId, userId);
+    await this.childrenService.access(dto.childId, userId, 'growth.write');
     // FR-6 asks for height and weight; both are optional on the DTO so a parent can log
     // just one. Neither, though, stores a dated row with nothing in it — it shows up as a
     // blank line in the history and a gap in every chart.
@@ -271,6 +271,7 @@ export class GrowthService {
         heightCm: dto.heightCm,
         weightKg: dto.weightKg,
         note: dto.note,
+        recordedById: userId,
         ...metrics,
       },
     });
@@ -278,7 +279,7 @@ export class GrowthService {
   }
 
   async findAll(userId: string, childId: string) {
-    await this.childrenService.assertGuardianAccess(childId, userId);
+    await this.childrenService.access(childId, userId, 'growth.read');
     const records = await this.prisma.growthRecord.findMany({
       where: { childId, deletedAt: null },
       orderBy: { measuredAt: 'desc' },
@@ -286,17 +287,21 @@ export class GrowthService {
     return records.map((r) => this.attachGuidance(r));
   }
 
-  async findOne(userId: string, id: string) {
+  async findOne(
+    userId: string,
+    id: string,
+    capability: Capability = 'growth.read',
+  ) {
     const record = await this.prisma.growthRecord.findUnique({ where: { id } });
     if (!record || record.deletedAt) {
       throw new NotFoundException('Growth record not found');
     }
-    await this.childrenService.assertGuardianAccess(record.childId, userId);
+    await this.childrenService.access(record.childId, userId, capability);
     return record;
   }
 
   async update(userId: string, id: string, dto: UpdateGrowthRecordDto) {
-    const record = await this.findOne(userId, id);
+    const record = await this.findOne(userId, id, 'growth.write');
     const heightCm =
       dto.heightCm ?? (record.heightCm ? Number(record.heightCm) : undefined);
     const weightKg =
@@ -306,7 +311,9 @@ export class GrowthService {
       : record.measuredAt;
     const headCircumferenceCm =
       dto.headCircumferenceCm ??
-      (record.headCircumferenceCm ? Number(record.headCircumferenceCm) : undefined);
+      (record.headCircumferenceCm
+        ? Number(record.headCircumferenceCm)
+        : undefined);
     const metrics = await this.computeMetrics(
       record.childId,
       measuredAt,
@@ -329,7 +336,7 @@ export class GrowthService {
   }
 
   async remove(userId: string, id: string) {
-    const record = await this.findOne(userId, id);
+    const record = await this.findOne(userId, id, 'growth.write');
     await this.prisma.growthRecord.update({
       where: { id: record.id },
       data: { deletedAt: new Date() },
@@ -338,7 +345,7 @@ export class GrowthService {
   }
 
   async chart(userId: string, childId: string) {
-    await this.childrenService.assertGuardianAccess(childId, userId);
+    await this.childrenService.access(childId, userId, 'growth.read');
     const records = await this.prisma.growthRecord.findMany({
       where: { childId, deletedAt: null },
       orderBy: { measuredAt: 'asc' },
@@ -364,7 +371,9 @@ export class GrowthService {
       weightPercentile: r.weightPercentile ? Number(r.weightPercentile) : null,
       bmiPercentile: r.bmiPercentile ? Number(r.bmiPercentile) : null,
       bmiPctOfP95: r.bmiPctOfP95 ? Number(r.bmiPctOfP95) : null,
-      headCircumferenceCm: r.headCircumferenceCm ? Number(r.headCircumferenceCm) : null,
+      headCircumferenceCm: r.headCircumferenceCm
+        ? Number(r.headCircumferenceCm)
+        : null,
       headCircumferencePercentile: r.headCircumferencePercentile
         ? Number(r.headCircumferencePercentile)
         : null,
@@ -384,7 +393,7 @@ export class GrowthService {
         `measure must be one of: ${CURVE_MEASURES.join(', ')}`,
       );
     }
-    await this.childrenService.assertGuardianAccess(childId, userId);
+    await this.childrenService.access(childId, userId, 'growth.read');
     const child = await this.prisma.child.findUniqueOrThrow({
       where: { id: childId },
     });
@@ -402,7 +411,7 @@ export class GrowthService {
   }
 
   async statistics(userId: string, childId: string) {
-    await this.childrenService.assertGuardianAccess(childId, userId);
+    await this.childrenService.access(childId, userId, 'growth.read');
     const [latest, previous] = await this.prisma.growthRecord.findMany({
       where: { childId, deletedAt: null },
       orderBy: { measuredAt: 'desc' },

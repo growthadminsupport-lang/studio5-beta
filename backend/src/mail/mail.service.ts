@@ -42,24 +42,23 @@ export class MailService {
     return this.apiKey !== null;
   }
 
-  /** Returns true only if the provider accepted the message. */
-  async sendPasswordResetEmail(
-    email: string,
-    resetToken: string,
+  /** The frontend origin, without a trailing slash, for links in emails. */
+  get appUrl() {
+    return this.frontendUrl.replace(/\/$/, '');
+  }
+
+  /**
+   * Sends one email through Resend. Returns true only if the provider accepted it. Never
+   * throws: every caller treats email as a best-effort extra on top of something that has
+   * already happened (an in-app notification, a saved record).
+   */
+  async send(
+    to: string,
+    subject: string,
+    text: string,
+    html?: string,
   ): Promise<boolean> {
     if (!this.apiKey) return false;
-
-    const resetLink = `${this.frontendUrl.replace(/\/$/, '')}/reset-password?token=${resetToken}`;
-    const subject = 'Reset your GrowTH password';
-    const text =
-      'We received a request to reset your GrowTH password. Open this link to choose a new one ' +
-      `(expires in 1 hour):\n\n${resetLink}\n\nIf you didn't request this, you can ignore this email.`;
-    const html = `
-      <p>We received a request to reset your GrowTH password.</p>
-      <p><a href="${resetLink}">Click here to choose a new password</a> (link expires in 1 hour).</p>
-      <p>If you didn't request this, you can ignore this email.</p>
-    `;
-
     try {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -69,25 +68,60 @@ export class MailService {
         },
         body: JSON.stringify({
           from: this.from,
-          to: [email],
+          to: [to],
           subject,
           text,
-          html,
+          ...(html ? { html } : {}),
         }),
       });
       if (!res.ok) {
         this.logger.error(
-          `Resend returned ${res.status} sending to ${email}: ${await res.text()}`,
+          `Resend returned ${res.status} sending to ${to}: ${await res.text()}`,
         );
         return false;
       }
       return true;
     } catch (err) {
-      this.logger.error(
-        `Failed to send password reset email to ${email}`,
-        err as Error,
-      );
+      this.logger.error(`Failed to send "${subject}" to ${to}`, err as Error);
       return false;
     }
   }
+
+  /** Returns true only if the provider accepted the message. */
+  sendPasswordResetEmail(email: string, resetToken: string): Promise<boolean> {
+    const resetLink = `${this.appUrl}/reset-password?token=${resetToken}`;
+    const text =
+      'We received a request to reset your GrowTH password. Open this link to choose a new one ' +
+      `(expires in 1 hour):\n\n${resetLink}\n\nIf you didn't request this, you can ignore this email.`;
+    const html = `
+      <p>We received a request to reset your GrowTH password.</p>
+      <p><a href="${resetLink}">Click here to choose a new password</a> (link expires in 1 hour).</p>
+      <p>If you didn't request this, you can ignore this email.</p>
+    `;
+    return this.send(email, 'Reset your GrowTH password', text, html);
+  }
+
+  /**
+   * A short notice with one link back into the app. Deliberately carries no medical detail:
+   * email is not a place for a child's screening result, so it only says there is something
+   * to read and where.
+   */
+  sendNotice(
+    to: string,
+    subject: string,
+    body: string,
+    path: string,
+  ): Promise<boolean> {
+    const link = `${this.appUrl}${path}`;
+    return this.send(
+      to,
+      subject,
+      `${body}\n\nOpen GrowTH: ${link}`,
+      `<p>${escapeHtml(body)}</p><p><a href="${link}">Open GrowTH</a></p>`,
+    );
+  }
+}
+
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }

@@ -1,5 +1,6 @@
 import { NotFoundException, StreamableFile } from '@nestjs/common';
 import { createReadStream, existsSync } from 'fs';
+import { unlink } from 'fs/promises';
 import { basename, extname, join } from 'path';
 
 export const UPLOADS_ROOT = join(process.cwd(), 'uploads');
@@ -42,4 +43,19 @@ export function streamUpload(
       CONTENT_TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream',
     disposition: 'inline',
   });
+}
+
+/**
+ * Deletes a stored upload. Multer writes the file before the handler runs, so a request that is
+ * then refused (wrong role, bad date) would otherwise leave an orphaned radiograph on disk.
+ * Never throws: failing to tidy up must not mask the error that caused it.
+ */
+export async function removeUpload(
+  dir: string,
+  storedPath: string | null | undefined,
+) {
+  if (!storedPath) return;
+  await unlink(join(UPLOADS_ROOT, dir, basename(storedPath))).catch(
+    () => undefined,
+  );
 }

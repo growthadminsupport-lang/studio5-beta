@@ -10,7 +10,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
+import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { publicUser } from '../users/public-user';
 import { MailService } from '../mail/mail.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -62,36 +64,8 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private sanitizeUser(user: {
-    id: string;
-    email: string;
-    fullName: string;
-    phoneNumber: string | null;
-    role: string;
-    avatarUrl: string | null;
-    isVerified: boolean;
-    createdAt: Date;
-  }) {
-    const {
-      id,
-      email,
-      fullName,
-      phoneNumber,
-      role,
-      avatarUrl,
-      isVerified,
-      createdAt,
-    } = user;
-    return {
-      id,
-      email,
-      fullName,
-      phoneNumber,
-      role,
-      avatarUrl,
-      isVerified,
-      createdAt,
-    };
+  private sanitizeUser(user: User) {
+    return publicUser(user);
   }
 
   async register(dto: RegisterDto) {
@@ -110,6 +84,14 @@ export class AuthService {
         fullName: dto.fullName,
         phoneNumber: dto.phoneNumber,
         termsAcceptedAt: new Date(),
+        ...(dto.accountType === 'DOCTOR'
+          ? {
+              role: 'DOCTOR' as const,
+              doctorStatus: 'PENDING' as const,
+              licenseNumber: dto.licenseNumber?.trim(),
+              hospital: dto.hospital?.trim(),
+            }
+          : {}),
       },
     });
 
@@ -156,7 +138,9 @@ export class AuthService {
   async googleLogin(dto: GoogleLoginDto) {
     const clientId = this.config.get<string>('GOOGLE_CLIENT_ID');
     if (!clientId) {
-      this.logger.error('GOOGLE_CLIENT_ID is not set — refusing Google sign-in');
+      this.logger.error(
+        'GOOGLE_CLIENT_ID is not set — refusing Google sign-in',
+      );
       throw new BadRequestException('Google sign-in is not configured');
     }
 
@@ -367,7 +351,12 @@ export class AuthService {
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: dto,
+      data: {
+        ...dto,
+        ...(dto.phoneNumber !== undefined
+          ? { phoneNumber: dto.phoneNumber.trim() || null }
+          : {}),
+      },
     });
     return this.sanitizeUser(user);
   }

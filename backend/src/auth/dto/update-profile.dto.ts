@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MinLength } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -9,4 +9,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   avatarUrl?: string;
+
+  /** Same format as registration. Empty string clears it. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^[0-9+\-\s()]{9,15}$/, { message: 'Enter a valid phone number' })
+  phoneNumber?: string;
 }

@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 // Render's outbound IPv6 to Gmail SMTP is unreachable (ENETUNREACH); Node resolves
@@ -37,6 +38,21 @@ async function bootstrap() {
   // medical image, since the filenames travel to the client in API responses. They are
   // streamed instead through guardian-checked routes — see BoneAgeController.image and
   // UsersController.avatar.
+
+  // D3 asks for a documented API. This is generated from the controllers and DTOs, so it cannot
+  // drift from the code the way a hand-written spec does. docs/api.md explains the concepts.
+  const openApi = new DocumentBuilder()
+    .setTitle('GrowTH API')
+    .setDescription(
+      'Roles and permissions: docs/user-flows.md. Conventions: docs/api.md.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth()
+    .addSecurityRequirements('bearer')
+    .build();
+  SwaggerModule.setup('docs', app, () =>
+    SwaggerModule.createDocument(app, openApi),
+  );
 
   await app.listen(process.env.PORT ?? 3001);
 }

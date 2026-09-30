@@ -1,3 +1,4 @@
+import { ageInMonths } from '../common/age';
 import { Injectable } from '@nestjs/common';
 import { ChildSex } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,17 +26,6 @@ import type { PubertyAnswersDto } from '../puberty/dto/submit-puberty-screening.
  * inconsistent with every other output in this product being a screening aid rather than a
  * diagnosis. Whether these are dismissible is client question Q8.
  */
-
-/**
- * How far ahead of chronological age a bone age has to be before it is worth raising.
- *
- * ⚠️ Two years is the conventional figure in paediatric endocrinology, but **this repo has no
- * source for it** — see research-checklist.md D3. It is also uncomfortably close to the
- * model's own error: MAE is 8.78 months and roughly one estimate in four is out by more than a
- * year, so a 24-month gap is only about two average errors wide. The copy this produces says
- * "worth asking about", never "your child has advanced bone age".
- */
-const BONE_AGE_AHEAD_MONTHS = 24;
 
 /**
  * Youngest age at which the puberty questionnaire is offered.
@@ -74,8 +64,7 @@ export interface Suggestion {
   actionHref: string;
 }
 
-const monthsBetween = (from: Date, to: Date) =>
-  (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24 * 30.4375);
+const monthsBetween = ageInMonths;
 
 @Injectable()
 export class SuggestionsService {
@@ -86,7 +75,16 @@ export class SuggestionsService {
   ) {}
 
   async forChild(userId: string, childId: string): Promise<Suggestion[]> {
-    await this.childrenService.assertGuardianAccess(childId, userId);
+    // Suggestions are read by everyone linked to the child, so each one is only produced for a
+    // role that may see what it is based on. A caretaker must not learn a screening flagged
+    // early signs from a suggestion when the result itself is withheld (docs/user-flows.md §2).
+    const access = await this.childrenService.access(
+      childId,
+      userId,
+      'child.read',
+    );
+    const seesPubertyResult = access.can('puberty.result');
+    const isDoctor = access.can('boneAge.write');
 
     const child = await this.prisma.child.findUniqueOrThrow({
       where: { id: childId },
@@ -103,20 +101,22 @@ export class SuggestionsService {
         where: { childId },
         orderBy: { assessedAt: 'desc' },
       }),
+      // The doctor's latest reading, not the model's raw number: that is what every role may see.
       this.prisma.boneAgePrediction.findFirst({
-        where: { childId, status: 'COMPLETED' },
-        orderBy: { createdAt: 'desc' },
+        where: { childId, review: { not: null } },
+        orderBy: { examDate: 'desc' },
       }),
     ]);
 
     const latestScreening = screenings[0];
-    const latestResult = latestScreening
-      ? compilePubertyResult(
-          child.sex as ChildSex,
-          monthsBetween(child.dateOfBirth, latestScreening.assessedAt) / 12,
-          latestScreening.answers as PubertyAnswersDto,
-        )
-      : null;
+    const latestResult =
+      latestScreening && seesPubertyResult
+        ? compilePubertyResult(
+            child.sex,
+            monthsBetween(child.dateOfBirth, latestScreening.assessedAt) / 12,
+            latestScreening.answers as PubertyAnswersDto,
+          )
+        : null;
 
     const out: Suggestion[] = [];
 
@@ -139,8 +139,7 @@ export class SuggestionsService {
           )
         : null;
 
-    const bmiOutOfRange =
-      statusKey !== null && statusKey !== 'HEALTHY';
+    const bmiOutOfRange = statusKey !== null && statusKey !== 'HEALTHY';
     const oldEnoughToScreen = ageYears >= PUBERTY_SCREENING_MIN_AGE_YEARS;
     const screenedRecently =
       latestScreening !== undefined &&
@@ -160,7 +159,7 @@ export class SuggestionsService {
           'move together, so this is a good moment to run the puberty screening — it takes ' +
           'about two minutes, and "not sure" is a valid answer to any of it.',
         actionLabel: 'Start puberty screening',
-        actionHref: '/puberty',
+        actionHref: `/children/${childId}/puberty`,
       });
     }
 
@@ -170,42 +169,55 @@ export class SuggestionsService {
     const boneAgeSinceScreening =
       latestBoneAge &&
       latestScreening &&
-      latestBoneAge.createdAt > latestScreening.assessedAt;
+      latestBoneAge.examDate > latestScreening.assessedAt;
 
     if (latestResult?.outcome === 'EARLY_SIGNS' && !boneAgeSinceScreening) {
-      out.push({
-        kind: 'BONE_AGE_UPLOAD',
-        severity: 'warning',
-        title: 'If you have a hand X-ray, upload it',
-        body:
-          'The screening reported early signs. A bone age reading is what tells a doctor ' +
-          'whether puberty is actually progressing quickly or just starting early — many ' +
-          'children with early signs need no treatment at all. This does not replace the ' +
-          'appointment; it gives you something to bring to it.',
-        actionLabel: 'Upload X-ray',
-        actionHref: '/bone-age',
-      });
+      out.push(
+        isDoctor
+          ? {
+              kind: 'BONE_AGE_UPLOAD',
+              severity: 'warning',
+              title: 'Early signs reported: consider a bone age',
+              body:
+                'The latest screening reported early signs. A bone age reading helps tell ' +
+                'rapidly progressive puberty from the slowly progressive kind that needs no treatment.',
+              actionLabel: 'Upload X-ray',
+              actionHref: `/children/${childId}/bone-age`,
+            }
+          : {
+              kind: 'BONE_AGE_UPLOAD',
+              severity: 'warning',
+              title: 'Ask the doctor about a bone age reading',
+              body:
+                'The screening reported early signs. A bone age reading is what tells a doctor ' +
+                'whether puberty is actually progressing quickly or just starting early — many ' +
+                "children with early signs need no treatment at all. In GrowTH the child's " +
+                'doctor adds the X-ray; invite them if they are not here yet.',
+              actionLabel: 'Invite the doctor',
+              actionHref: `/children/${childId}/people`,
+            },
+      );
     }
 
-    // T3 — a bone age well ahead of chronological age, read next to everything else.
-    if (latestBoneAge?.predictedAgeMonths) {
-      const chronoMonths = monthsBetween(child.dateOfBirth, latestBoneAge.createdAt);
-      const gap = latestBoneAge.predictedAgeMonths - chronoMonths;
-      if (gap >= BONE_AGE_AHEAD_MONTHS) {
-        const years = (gap / 12).toFixed(1);
-        out.push({
-          kind: 'BONE_AGE_REFERRAL',
-          severity: 'warning',
-          title: 'Bone age is ahead of actual age',
-          body:
-            `The last reading put ${child.fullName}'s bone age about ${years} years ahead. ` +
-            'That is worth asking a paediatrician about, especially alongside the growth chart ' +
-            'and screening history. Bear in mind the estimate itself is approximate — typically ' +
-            'out by around nine months, and sometimes by more than a year.',
-          actionLabel: 'View growth chart',
-          actionHref: '/growth',
-        });
-      }
+    // T3 — the doctor read the latest bone age as outside the range for the child's age. Worded
+    // without numbers: parents and caretakers see the doctor's reading, never the model's estimate.
+    if (
+      latestBoneAge?.review === 'ADVANCED' ||
+      latestBoneAge?.review === 'DELAYED'
+    ) {
+      const direction =
+        latestBoneAge.review === 'ADVANCED' ? 'ahead of' : 'behind';
+      out.push({
+        kind: 'BONE_AGE_REFERRAL',
+        severity: 'warning',
+        title: `Bone age is ${direction} actual age`,
+        body:
+          `The doctor read ${child.fullName}'s latest hand X-ray as ${direction} their age. ` +
+          'Keep measuring growth regularly: the growth chart and screening history are what the ' +
+          'doctor reads alongside it.',
+        actionLabel: 'View growth chart',
+        actionHref: `/children/${childId}/growth`,
+      });
     }
 
     // T4 — the follow-up plan already computes a due date and nothing ever surfaced it.
@@ -221,7 +233,7 @@ export class SuggestionsService {
             'early signs. Repeating it now means you arrive at the next appointment with dated ' +
             'observations rather than recollections.',
           actionLabel: 'Repeat screening',
-          actionHref: '/puberty',
+          actionHref: `/children/${childId}/puberty`,
         });
       }
     }

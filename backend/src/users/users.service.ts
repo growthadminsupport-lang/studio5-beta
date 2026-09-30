@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { publicUser } from './public-user';
 import { UpdateProfileDto } from '../auth/dto/update-profile.dto';
 import { streamUpload } from '../common/uploads';
 
@@ -7,36 +9,8 @@ import { streamUpload } from '../common/uploads';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  private sanitize(user: {
-    id: string;
-    email: string;
-    fullName: string;
-    phoneNumber: string | null;
-    role: string;
-    avatarUrl: string | null;
-    isVerified: boolean;
-    createdAt: Date;
-  }) {
-    const {
-      id,
-      email,
-      fullName,
-      phoneNumber,
-      role,
-      avatarUrl,
-      isVerified,
-      createdAt,
-    } = user;
-    return {
-      id,
-      email,
-      fullName,
-      phoneNumber,
-      role,
-      avatarUrl,
-      isVerified,
-      createdAt,
-    };
+  private sanitize(user: User) {
+    return publicUser(user);
   }
 
   async me(userId: string) {
@@ -49,7 +23,12 @@ export class UsersService {
   async updateMe(userId: string, dto: UpdateProfileDto) {
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: dto,
+      data: {
+        ...dto,
+        ...(dto.phoneNumber !== undefined
+          ? { phoneNumber: dto.phoneNumber.trim() || null }
+          : {}),
+      },
     });
     return this.sanitize(user);
   }
@@ -74,28 +53,30 @@ export class UsersService {
   /**
    * Hard-deletes the account (not a soft delete): a prior soft-delete implementation left the
    * email permanently stuck (unique constraint kept blocking re-registration with that email).
-   * Children this user is the sole guardian of are deleted along with their growth/screening/
-   * bone-age history; children shared with another guardian are left intact for that guardian.
+   *
+   * Children this user is the only *parent* of are deleted with all their history, which also
+   * ends every caretaker's and doctor's access to them. A caretaker or doctor closing their
+   * account only loses their own link; the child stays with the family.
    */
   async deleteMe(userId: string) {
-    const links = await this.prisma.childGuardian.findMany({
-      where: { userId },
+    const parentLinks = await this.prisma.childGuardian.findMany({
+      where: { userId, role: 'PARENT' },
       select: { childId: true },
     });
-    const childIds = links.map((l) => l.childId);
+    const childIds = parentLinks.map((l) => l.childId);
 
     if (childIds.length > 0) {
-      const guardianCounts = await this.prisma.childGuardian.groupBy({
+      const parentCounts = await this.prisma.childGuardian.groupBy({
         by: ['childId'],
-        where: { childId: { in: childIds } },
+        where: { childId: { in: childIds }, role: 'PARENT' },
         _count: { userId: true },
       });
-      const soleGuardianChildIds = guardianCounts
+      const soleParentChildIds = parentCounts
         .filter((c) => c._count.userId === 1)
         .map((c) => c.childId);
-      if (soleGuardianChildIds.length > 0) {
+      if (soleParentChildIds.length > 0) {
         await this.prisma.child.deleteMany({
-          where: { id: { in: soleGuardianChildIds } },
+          where: { id: { in: soleParentChildIds } },
         });
       }
     }
