@@ -1,0 +1,9 @@
+# Runtime only. Deliberately no torch: it costs 635 MB on disk and 374 MB resident after one
+# inference, which does not fit a 512 MB Render instance alongside a web server.
+# See convert_to_onnx.py.
+fastapi>=0.115
+uvicorn[standard]>=0.32
+python-multipart>=0.0.12
+pillow>=11.0
+numpy>=2.0
+onnxruntime>=1.20

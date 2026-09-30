@@ -1,0 +1,89 @@
+services:
+  - type: web
+    name: growth-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    # Migrations run at build time, not start time. The free plan spins the service down
+    # after ~15 min idle, so startCommand runs again on every cold wake — and `npx prisma
+    # migrate deploy` there cost 10-20s of package resolution + a DB round trip on each
+    # one, for a migration set that hasn't changed since the build. Building it in means a
+    # wake is just "boot Node", which is what the user actually waits on at the login form.
+    # `prisma db seed` runs here too. The Parenting Resources articles are content the repo
+    # owns — nothing in the app can create or edit an article, so the seed is their only
+    # source. It's upsert-only and idempotent, so re-running it on every deploy just
+    # republishes whatever prisma/articles-content.ts currently says.
+    buildCommand: >-
+      npm ci --include=dev &&
+      npx prisma generate &&
+      npx prisma migrate deploy &&
+      npx prisma db seed &&
+      npm run build &&
+      mkdir -p models &&
+      curl -fsSL -o models/bone_age.onnx
+      https://github.com/growthadminsupport-lang/studio5-beta/releases/download/model-v1/bone_age.onnx
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.23.1
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        sync: false
+      # Password reset links are built from this. Unset, MailService falls back to
+      # http://localhost:5173 and every reset email points at the recipient's own machine.
+      - key: FRONTEND_URL
+        sync: false
+      # Reset-email delivery. Render blocks outbound SMTP, so Resend's HTTP API is the only
+      # transport that works here. Declared rather than left implicit because with it unset
+      # the forgot-password request still returns 200 and the user simply receives nothing.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # Google sign-in. The public client ID only — this is the ID-token flow, which verifies
+      # Google's signature and checks the audience matches. No client secret is involved, so
+      # there is no OAuth secret to store, rotate or leak. Unset, /auth/google returns a clear
+      # misconfiguration error and email/password sign-in is unaffected.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # --- bone age, in-process -------------------------------------------------------
+      # Deliberately NOT a second Render service. The free tier bills 750 instance hours per
+      # *workspace* per month, not per service, so two always-waking services burn the quota
+      # twice as fast and get everything suspended mid-month. It would also chain two ~1-minute
+      # cold starts onto the first request of a demo. Node and Python ONNX Runtime were checked
+      # against each other on identical input and agree to the last decimal.
+      - key: BONE_AGE_MODEL_PATH
+        value: models/bone_age.onnx
+      - key: BONE_AGE_MODEL_VERSION
+        value: effnetb0-v1-rsna
+      # Measured on the held-out test set, 2026-08-18.
+      - key: BONE_AGE_MAE_MONTHS
+        value: "8.78"
+      # 73.1% within a year — i.e. about one estimate in four is out by more than 12 months.
+      # Shown next to the MAE so the UI cannot imply a bound the model does not have.
+      - key: BONE_AGE_ACCURACY_12M
+        value: "0.731"
+      # The checkpoint's training target was normalised, and the constants did not come with
+      # the weights. These are inferred: MSE and R2 give Var(y) = MSE/(1-R2), so the test set
+      # SD is ~41.7 months, and the RSNA training mean is ~127.3. Every result computed from
+      # them is flagged "provisional" all the way to the UI. Set BONE_AGE_CALIBRATION=confirmed
+      # only once the ML team supplies the real values.
+      - key: BONE_AGE_AGE_MEAN
+        value: "127.3"
+      - key: BONE_AGE_AGE_STD
+        value: "41.7"
+      - key: BONE_AGE_CALIBRATION
+        value: provisional

@@ -1,0 +1,68 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { PrismaThrottlerStorage } from './common/prisma-throttler.storage';
+import { ProxyAwareThrottlerGuard } from './common/throttler-proxy.guard';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { PrismaModule } from './prisma/prisma.module';
+import { PrismaService } from './prisma/prisma.service';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { ChildrenModule } from './children/children.module';
+import { GrowthModule } from './growth/growth.module';
+import { PubertyModule } from './puberty/puberty.module';
+import { BoneAgeModule } from './bone-age/bone-age.module';
+import { ArticlesModule } from './articles/articles.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { SupportModule } from './support/support.module';
+import { SuggestionsModule } from './suggestions/suggestions.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    // Baseline ceiling for ordinary API traffic. The routes that actually need
+    // protecting — login, register, forgot-password, the public contact form — carry
+    // their own much tighter @Throttle on top of this.
+    //
+    // Counters live in Postgres, not in the process: Render serves more than one instance
+    // and per-process tallies multiplied every limit by the instance count.
+    ThrottlerModule.forRootAsync({
+      imports: [PrismaModule],
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => ({
+        throttlers: [{ ttl: 60_000, limit: 120 }],
+        storage: new PrismaThrottlerStorage(prisma),
+      }),
+    }),
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    ChildrenModule,
+    GrowthModule,
+    PubertyModule,
+    BoneAgeModule,
+    ArticlesModule,
+    NotificationsModule,
+    SupportModule,
+    SuggestionsModule,
+  ],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    // Order matters: APP_GUARD providers run in registration order, and throttling first
+    // means a credential-stuffing flood is rejected before it costs a passport verify and
+    // a bcrypt compare each.
+    {
+      provide: APP_GUARD,
+      useClass: ProxyAwareThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
+})
+export class AppModule {}
