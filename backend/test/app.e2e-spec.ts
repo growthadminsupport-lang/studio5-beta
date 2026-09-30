@@ -8,6 +8,9 @@ describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
+    // Self-contained: a fresh clone has no backend/.env, and AuthModule refuses to boot without these.
+    process.env.JWT_ACCESS_SECRET ??= 'e2e-secret';
+    process.env.JWT_ACCESS_EXPIRES_IN ??= '15m';
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -24,6 +27,6 @@ describe('AppController (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    await app?.close();
   });
 });

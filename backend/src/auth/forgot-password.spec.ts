@@ -64,6 +64,9 @@ describe('forgot-password → email → reset (full chain)', () => {
     process.env.FRONTEND_URL = 'https://grow-th.vercel.app/';
     process.env.MAIL_FROM = 'GrowTH <noreply@hacklgroups.com>';
     process.env.NODE_ENV = 'production'; // the gate we care about
+    // Self-contained: a fresh clone has no backend/.env, and AuthModule refuses to boot without these.
+    process.env.JWT_ACCESS_SECRET ??= 'test-access-secret';
+    process.env.JWT_ACCESS_EXPIRES_IN ??= '15m';
 
     global.fetch = (async (url: string, init: any) => {
       if (String(url).includes('api.resend.com')) {
