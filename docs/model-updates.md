@@ -1,5 +1,11 @@
 # Updating the bone-age model
 
+> **Superseded on 2026-10-01 for the model in production.** The backend now runs the ML team's
+> refine9 (EfficientNet-B5, 456 px, MAE 7.43 months), which outputs months directly. How it was
+> converted and checked: [`ai-service/refine9/README.md`](../ai-service/refine9/README.md). This file describes the original
+> EfficientNet-B0 (`model-v1`) and is kept as history.
+
+
 Training continues, so this is the loop for shipping a retrain: **fetch, convert, verify,
 release, bump, test.** No code changes — only a URL, a version string, and the measured
 numbers.

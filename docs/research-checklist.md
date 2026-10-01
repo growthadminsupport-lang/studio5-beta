@@ -276,8 +276,9 @@ conventional bands differ from BMI's 5/85/95. Sourcing those cut-points is what 
 
 ### D3 🔴 No accuracy target has been set for the bone-age model
 
-The model's measured performance is known — MAE **8.78** months, RMSE **11.66**, R² 0.9219,
-**73.1%** within a year. What is *not* known is whether that is good enough, because nobody has
+The model's measured performance is known. refine9, in production since 2026-10-01, has MAE
+**7.43** months and **80.2%** within a year on the RSNA validation images. The retired
+`model-v1` had MAE 8.78 months, RMSE 11.66, R² 0.9219 and 73.1% within a year. What is *not* known is whether that is good enough, because nobody has
 written down what decision the number drives.
 
 Published comparators, for context:
@@ -288,7 +289,8 @@ Published comparators, for context:
 | RSNA 2017, top five | MAD 4.2–4.5 months | same |
 | BoneXpert 3 vs manual GP | RMSE **0.68 y** boys, **0.52 y** girls | [Front Endocrinol 2023](https://www.frontiersin.org/journals/endocrinology/articles/10.3389/fendo.2023.1130580/full) |
 | BoneXpert vs mean of six raters | MAD **4.1** months | same |
-| **GrowTH v1** | **MAE 8.78 / RMSE 11.66 months** | measured 2026-08-18 |
+| **GrowTH v1** | **MAE 8.78 / RMSE 11.66 months** | measured 2026-08-18, retired |
+| **GrowTH refine9** | **MAE 7.43 months** (validation, 4-view TTA) | ML team, 2026-09-29 |
 
 So GrowTH sits at roughly **twice** the error of the published leaders, and worse than the
 commercial clinical tool.
@@ -307,15 +309,15 @@ zero. Holding that under 1% needs MAE ≤ ~7.4 months; under 0.5%, ≤ ~6.8 mont
 **Tasks:**
 - [ ] Find and cite the clinical gap threshold — Royal College of Paediatricians of Thailand
       guidance, or a paediatric endocrinology reference. Owner: ___
-- [ ] Put the target to the Client Representative: is a triage aid at MAE ~9 months acceptable,
+- [ ] Put the target to the Client Representative: is a triage aid at MAE ~7.4 months acceptable,
       or must it reach published parity (~4.5) before launch? See `client-questions.md`.
 - [ ] Confirm what TOR §6.3 actually requires — reporting the MAE transparently, or meeting a
       stated figure. The TOR is a scan; read §6.3 directly rather than relying on notes.
 
-⚠️ **Before any of the above matters:** the 8.78 figure describes the *checkpoint*, measured by
-the ML team with the real normalisation constants. The deployed service uses **inferred**
-`AGE_MEAN`/`AGE_STD`, so the accuracy of what is actually in production is unmeasured. Getting
-those constants confirmed outranks every row above. See `model-updates.md`.
+✅ **Resolved 2026-10-01:** the warning that production accuracy was unmeasured (inferred
+`AGE_MEAN`/`AGE_STD`) no longer applies. refine9 predicts months directly, and the Node port
+matches the ML team's PyTorch pipeline to within 0.013 months (`ai-service/refine9/README.md`).
+What remains is that 7.43 is a validation figure, not a held-out test (TOR §6.3).
 
 **Owner:** ___ **Due:** ___
 

@@ -26,8 +26,10 @@ See `data-knowledge/Growth-techstack.jpg`.
 - **Frontend:** React 19, Vite 8, MUI 9, Tailwind, Recharts 3, hosted on Vercel.
 - **Backend:** NestJS 11 on Render, with global guards for rate limiting and JWT auth.
 - **Database:** Neon Postgres through Prisma 5.
-- **Bone age:** EfficientNet-B0 model run with `onnxruntime-node`, downloaded at build time from
-  the `model-v1` GitHub release.
+- **Bone age:** the ML team's refine9 (EfficientNet-B5, 456 px, test-time augmentation) run with
+  `onnxruntime-node`, downloaded at build time from the `model-v2` GitHub release. Doctors can
+  upload a PDF, JPEG, PNG or WebP; the browser crops it to the film. See
+  `ai-service/refine9/README.md`.
 - **Email:** Resend (password reset, invitations, alerts). DNS on Cloudflare (`hacklgroups.com`).
 
 ## Running locally

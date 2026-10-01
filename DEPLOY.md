@@ -17,8 +17,8 @@ Every account is owned by `growth.admin.support@gmail.com`.
    (New → Blueprint). Render reads
    `render.yaml` at the repo root (Blueprint), and that file is the source of truth for the
    build and start commands. The build runs `prisma migrate deploy` and `prisma db seed` (the
-   Parenting Resources articles, upsert-only) and downloads the bone-age model from the
-   `model-v1` GitHub release, so a deploy needs no manual migration or seed step.
+   Parenting Resources articles, upsert-only) and downloads the bone-age model (refine9) from the
+   `model-v2` GitHub release, checking its SHA-256, so a deploy needs no manual migration or seed step.
 2. Set the variables `render.yaml` declares with `sync: false` (dashboard → Environment):
 
    | Variable | Value | If unset |

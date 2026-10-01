@@ -78,8 +78,8 @@ rather than birth-to-20.
   film the parent already has, which is the gap TOR §1 describes: many facilities have no one
   available to interpret one.
 - **Triggered by:** a screening returning early signs, or a doctor asking for it.
-- **Accuracy:** MAE **8.78 months**, and roughly **one estimate in four** is out by more than a
-  year. Currently on provisional calibration.
+- **Accuracy:** refine9, MAE **7.43 months**, and roughly **one estimate in five** is out by more
+  than a year (RSNA validation images).
 - 🔴 The 2-year gap the app treats as notable is uncited (D3) — and it is only about two of the
   model's own average errors wide, which is why the copy says "worth asking about" rather than
   stating anything.

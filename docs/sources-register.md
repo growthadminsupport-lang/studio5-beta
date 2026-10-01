@@ -45,8 +45,10 @@ Archival copies of the original Excel workbooks: `data-knowledge/Chart/*.xls`.
 | What | Value | Source |
 | --- | --- | --- |
 | Training dataset | RSNA Pediatric Bone Age, ~12,611 train / 1,425 val | 🟢 TOR §3.4; Stanford + Univ. of Colorado |
-| Architecture | EfficientNet-B0 + sex input, 1281→128→1 | 🟢 Recovered from the checkpoint, `strict=True` load, 0 missing keys |
-| MAE / MSE / R² / ±12 mo | 8.78 mo / 135.91 / 0.9219 / 73.1% | 🟢 Supplied by the ML team, 2026-08-18 |
+| Architecture (in production since 2026-10-01) | refine9: EfficientNet-B5 + sex input, 456 px, 4-view TTA | 🟢 The ML team's `model.py`, `strict=True` load (`ai-service/refine9/`) |
+| MAE / ±12 mo (refine9) | 7.43 mo / 80.2% on 1,425 validation images | 🟢 Recomputed by the ML team, 2026-09-29 |
+| Architecture (`model-v1`, retired) | EfficientNet-B0 + sex input, 1281→128→1 | 🟢 Recovered from the checkpoint, `strict=True` load, 0 missing keys |
+| MAE / MSE / R² / ±12 mo (`model-v1`) | 8.78 mo / 135.91 / 0.9219 / 73.1% | 🟢 Supplied by the ML team, 2026-08-18 |
 | Benchmark: RSNA challenge best | MAD 4.27 mo (top five 4.2–4.5) | 🟢 [Radiology 2018](https://pubs.rsna.org/doi/abs/10.1148/radiol.2018180736) |
 | Benchmark: BoneXpert vs manual GP | RMSE 0.52–0.68 y | 🟢 [Front Endocrinol 2023](https://www.frontiersin.org/journals/endocrinology/articles/10.3389/fendo.2023.1130580/full) |
 
@@ -87,9 +89,9 @@ are told, with nothing behind it.
 
 | # | Item | The ambiguity |
 | --- | --- | --- |
-| 1 | **Bone-age calibration** | `AGE_MEAN` 127.3 / `AGE_STD` 41.7 were **derived by us** from the reported MSE and R², not supplied. Every result is flagged provisional. **The deployed model's real accuracy is therefore unmeasured** — 8.78 describes the checkpoint, not production |
-| 2 | **Sex encoding** | Assumed male = 1. A flip degrades one sex silently, with no error |
-| 3 | **Input resolution** | Assumed 224×224 |
+| 1 | ~~**Bone-age calibration**~~ | **Resolved 2026-10-01:** refine9 predicts months directly. The derived `AGE_MEAN`/`AGE_STD` of `model-v1` are retired |
+| 2 | ~~**Sex encoding**~~ | **Resolved:** male = 1.0, from the training CSV's `male` column (the team's `dataset.py`) |
+| 3 | ~~**Input resolution**~~ | **Resolved:** 456 × 456, CLAHE, squashed resize (the team's `train.py`) |
 | 4 | **Normalisation** | Assumed ImageNet mean/std |
 | 5 | **Train/test split** | TOR §6.3 requires it documented with no overlap. Never supplied |
 | 6 | **Growth reference choice** | TOR §2A.2 requires client confirmation. Never happened |
