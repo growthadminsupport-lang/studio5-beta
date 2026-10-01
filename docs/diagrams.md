@@ -1,24 +1,17 @@
 # GrowTH — System Diagrams
 
-Mermaid source for the three project diagrams. These describe the system **as built**
-(updated 2026-08-18), not the original proposal — where the two differ, the difference is
-called out.
+Mermaid source for the project diagrams. They describe the system **as built in
+`studio5-beta`** (updated 2026-10-01): the team's frontend, the NestJS backend, and the parent,
+caretaker, doctor and admin roles the client asked for on 2026-09-30.
 
-Rendered exports, regenerated from this file:
-
-| Diagram | SVG |
+| Diagram | Where |
 | --- | --- |
-| System architecture | [`diagram-system-architecture.svg`](./diagram-system-architecture.svg) |
-| App structure | [`diagram-app-structure.svg`](./diagram-app-structure.svg) |
-| User flow | [`diagram-user-flow.svg`](./diagram-user-flow.svg) |
+| System architecture | §1 below · export [`diagram-system-architecture.svg`](./diagram-system-architecture.svg) |
+| App structure (routes) | §2 below · export [`diagram-app-structure.svg`](./diagram-app-structure.svg) |
+| User flows, one per role, and the invitation sequence | [`user-flows.md`](./user-flows.md) · exports in [`user-flows/`](./user-flows/) |
 
-```bash
-npx -y @mermaid-js/mermaid-cli -i docs/diagrams.md -o docs/diagram.svg -b white
-```
-
-> The earlier exports `app-overview-diagram.svg/png` and `system-architecture.svg/png` were
-> deleted on 2026-08-18. They pre-dated the ai-service, the rate limiter and the auth changes,
-> and a stale architecture diagram is worse than none — someone reads it and believes it.
+> The SVG exports in this folder still show the August build. Regenerate them from this file
+> (see the end) before using them in slides; GitHub renders the Mermaid below directly.
 
 ---
 
@@ -26,190 +19,138 @@ npx -y @mermaid-js/mermaid-cli -i docs/diagrams.md -o docs/diagram.svg -b white
 
 ```mermaid
 flowchart TB
-    subgraph client["Browser — parent / caregiver"]
-        UI["React 19 + Vite 8<br/>MUI 9 · Tailwind 4 · Recharts 3"]
-        LS[("localStorage<br/>refreshToken · selectedChildId · theme")]
+    subgraph client["Browser: parent · caretaker · doctor · admin"]
+        UI["React 19 + Vite 8<br/>MUI 9 · Tailwind 3.4 · Recharts 3<br/>qrcode.react · react-markdown"]
+        LS[("localStorage / sessionStorage<br/>refresh token · selected child · theme")]
         UI <--> LS
     end
 
-    subgraph vercel["Vercel — static hosting"]
-        BUNDLE["SPA bundle<br/>single chunk, ~1.30 MB"]
+    subgraph vercel["Vercel: static hosting"]
+        BUNDLE["SPA bundle<br/>admin portal lazy-loaded"]
     end
 
-    subgraph render["Render — one free service, sleeps after 15 min idle"]
-        subgraph api["growth-backend · NestJS 11"]
-            GUARD["Global guards, in order<br/>1 ProxyAwareThrottlerGuard<br/>2 JwtAuthGuard"]
-            MOD["Modules<br/>auth · users · children · growth<br/>puberty · bone-age · articles<br/>notifications · support"]
-            LMS["GrowthReferenceService<br/>LMS tables — CDC 2000, in-process<br/>staying CDC 2000, see research-checklist D1"]
+    subgraph render["Render: growth-api, free, sleeps after 15 min idle"]
+        subgraph api["NestJS 11"]
+            GUARD["Global guards, in order<br/>1 throttler, proxy-aware<br/>2 JwtAuthGuard<br/>+ AdminGuard on /admin"]
+            ACCESS["ChildrenService.access<br/>role on the child × capability<br/>PARENT · CARETAKER · DOCTOR"]
+            MOD["Modules<br/>auth · users · children + invites<br/>growth · puberty · bone-age<br/>articles · notifications · support<br/>suggestions · admin"]
+            LMS["GrowthReference<br/>CDC 2000 LMS, in-process"]
+            ORT["onnxruntime-node<br/>EfficientNet-B0 + sex input"]
             GUARD --> MOD
+            MOD --> ACCESS
             MOD --> LMS
-        end
-            ORT["onnxruntime-node<br/>EfficientNet-B0 + sex input<br/>in-process · ~120 MB · ~35 ms"]
             MOD --> ORT
-        DISK[("uploads/ on local disk<br/>EPHEMERAL — lost on redeploy")]
+        end
+        DISK[("uploads/: X-rays, avatars<br/>EPHEMERAL, lost on redeploy")]
     end
 
-    NEON[("Neon Postgres<br/>via Prisma 5<br/>+ rate_limits, shared throttle counters")]
-    RESEND["Resend HTTP API<br/>password-reset mail"]
-    REL[("GitHub Release model-v1<br/>bone_age.onnx, 16 MB<br/>fetched at build")]
+    NEON[("Neon Postgres, via Prisma 5<br/>users · children · child_guardians · child_invites<br/>records · notifications · support · rate_limits")]
+    RESEND["Resend, from hacklgroups.com<br/>reset · invitations · alerts · doctor decisions"]
+    GOOGLE["Google Identity Services<br/>ID-token sign-in"]
+    REL[("GitHub Release model-v1<br/>bone_age.onnx, fetched at build")]
+    DNS["Cloudflare DNS<br/>hacklgroups.com"]
 
     UI -- "HTTPS · Bearer JWT" --> GUARD
+    UI -. "sign-in button" .-> GOOGLE
     BUNDLE -.-> UI
     MOD --> NEON
     MOD --> DISK
-    MOD -- "outbound HTTPS<br/>SMTP ports are blocked here" --> RESEND
+    MOD -- "verify token" --> GOOGLE
+    MOD -- "HTTPS API" --> RESEND
+    DNS -. "SPF / DKIM" .-> RESEND
     REL -.-> ORT
 
     classDef gap stroke-dasharray: 5 4
-    class DISK,ORT gap
+    class DISK gap
 ```
 
 **Notes on what this shows**
 
-- **Auth** — 15-minute access JWT in memory; refresh token is 48 random bytes, stored
-  SHA-256-hashed in `sessions`, and rotated on every use. Only the refresh token touches
-  `localStorage`.
-- **Guard order matters.** The throttler runs before `JwtAuthGuard`, so a credential flood is
-  rejected before it costs a passport verify and a bcrypt compare. Its counters live in
-  Postgres, not in the process — Render serves more than one instance, and per-process tallies
-  multiplied the limit by the instance count.
-- **Percentile maths runs in-process**, not in the database and not in a service — the LMS
-  tables are JSON bundled with the API. **CDC 2000 (US)**, staying that way — kept consistent
-  with the bone-age model's US-calibrated training population (see `research-checklist.md`
-  §D1).
-- **One service, not two.** Inference runs inside the backend through `onnxruntime-node`.
-  Render bills **750 instance hours per workspace per month**, not per service, so a second
-  always-waking service burns the quota twice as fast — and chains a second ~1-minute cold
-  start onto the first request. Node and Python ONNX Runtime agree to the last decimal on
-  identical input, so nothing is lost by co-locating.
-- **The model is not in the repo.** `bone_age.onnx` is a GitHub Release asset fetched during
-  the backend build. A 16 MB binary in git would be carried by every clone forever and gain a
-  full copy per retrain. Updating it: [`model-updates.md`](./model-updates.md).
-- **ONNX, not torch.** torch is 635 MB on disk and 374 MB resident, which does not fit a
-  512 MB instance alongside the API.
-- **Two dashed boxes are the remaining gaps.** Inference runs, but on **provisional
-  calibration** — the checkpoint's target was normalised and the constants did not arrive with
-  the weights, so `AGE_MEAN`/`AGE_STD` are inferred from the reported MSE and R², and every
-  result is flagged as provisional through to a banner in the UI. And Render's disk does not
-  survive a redeploy, so uploaded X-rays outlive their files.
+- **Two kinds of role.**
+  - The account role (`USER`, `DOCTOR`, `ADMIN`) gates the admin portal. It also gates whether a doctor is approved.
+  - The role on each child (`PARENT`, `CARETAKER`, `DOCTOR`, on `child_guardians`) decides everything else.
+  - Every child route goes through `ChildrenService.access`, which checks one capability table (`backend/src/children/child-access.ts`).
+  - Responses are shaped per role on the server, so a caretaker's browser never receives a puberty result and a family's never receives the bone-age months.
+- **Auth.**
+  - A 15-minute access JWT is kept in memory.
+  - The refresh token is random, stored SHA-256-hashed in `sessions`, and rotated on every use.
+  - A password reset or change revokes every session.
+  - `AdminGuard` reads the role from the database on each request, so a demotion takes effect at once.
+- **Invitations.** A parent creates one, and the link carries a random token stored only as a hash. It is single-use, expires in 7 days, and can be shared as a QR code or by email through Resend. The claim is transactional.
+- **Guard order matters.** The throttler runs before `JwtAuthGuard`, so a credential flood is rejected before it costs a verify or a bcrypt compare. The counters live in Postgres because Render can run more than one instance.
+- **One service.** Inference runs inside the API through `onnxruntime-node`. Render's free hours are per workspace, so a second service would burn them twice as fast and add a second cold start. The model is a release asset, not in git. See [`model-updates.md`](./model-updates.md).
+- **The dashed box is the remaining gap.** Render's disk does not survive a redeploy, so X-rays are lost while their rows remain. Doctors now keep an X-ray history, which makes this matter more. Cloudflare R2's free tier is the low-cost fix (`tor-compliance.md` §5).
+- **Calibration is still provisional.** `AGE_MEAN`/`AGE_STD` were derived, not supplied, and every estimate says so.
 
 ---
 
-## 2. App structure — routes and layout
+## 2. App structure: routes and layout
 
 ```mermaid
 flowchart TD
-    ROOT["/ HomeRoute"] -->|"signed in"| DASH_R["redirect → /dashboard"]
-    ROOT -->|"signed out"| HOME["Home — PublicHeader + Footer"]
-
-    subgraph pub["Public routes — no session required"]
-        HOME
+    subgraph pub["Public: MainLayout, no session needed"]
+        HOME["/ Home"]
         ABOUT["/about"]
         CONTACT["/contact"]
-        LOGIN["/login"]
-        REG["/register"]
+        KNOW["/knowledge"]
+        ART["/knowledge/:slug<br/>5 designed articles + admin Markdown"]
+        PRIV["/privacy-notice · /terms"]
+        INV["/invite/:token<br/>preview, then sign in or register"]
+    end
+
+    subgraph auth["Auth pages: no layout"]
+        LOGIN["/login?next="]
+        REG["/register<br/>parent-caretaker or doctor"]
         FORGOT["/forgot-password"]
-        RESET["/reset-password"]
-        PRIV["/privacy"]
-        LEARN["/learn"]
-        ART["/learn/:id"]
-        NF["* → NotFound"]
+        RESET["/reset-password?token="]
     end
 
-    subgraph prot["ProtectedRoute — redirects to / when signed out"]
-        ADDCHILD["/children/new<br/>/children/:id/edit<br/>(no AppShell — focused task)"]
-        subgraph shell["AppShell — top nav + mobile bottom nav + footer"]
-            DASH["/dashboard"]
-            GROWTH["/growth"]
-            PUB["/puberty"]
-            BONE["/bone-age"]
-            CHILDREN["/children"]
-            NOTIF["/notifications"]
-            PROFILE["/profile"]
-            SETTINGS["/settings"]
-            MILE["/milestones — Placeholder"]
-            HELP["/help — Placeholder"]
-        end
+    subgraph prot["ProtectedRoute: back to /login?next= when signed out"]
+        DASH["/dashboard"]
+        GROWTH["/growth"]
+        PUB["/puberty<br/>result hidden from caretakers"]
+        BONE["/bone-age<br/>doctor: upload, review, history<br/>family: status only"]
+        PEOPLE["/people<br/>parent: invite by QR or email, members"]
+        CHILD["/children/new · /children/:id/edit<br/>doctor: HN only"]
+        NOTIF["/notifications"]
+        PROFILE["/profile · /settings"]
     end
 
-    LEARN --> ART
-    ART -->|"back, via router state"| HOME
-    ART -->|"back, via router state"| DASH
-    ART -->|"back, fallback"| LEARN
+    subgraph admin["ProtectedRoute adminOnly · lazy-loaded"]
+        ADM["/admin/doctors · articles · inbox · usage · export"]
+    end
 
-    classDef dead fill:#eee,stroke:#999,stroke-dasharray: 4 3
-    class MILE,HELP dead
+    %% invisible links: stack the boxes into columns so the diagram stays readable
+    HOME ~~~ ABOUT ~~~ CONTACT
+    PRIV ~~~ INV
+    LOGIN ~~~ REG
+    FORGOT ~~~ RESET
+    DASH ~~~ GROWTH ~~~ NOTIF
+    PUB ~~~ BONE
+    PEOPLE ~~~ CHILD ~~~ PROFILE
+    pub ~~~ auth
+    auth ~~~ prot
+    prot ~~~ admin
+
+    KNOW --> ART
+    INV -->|"not signed in"| LOGIN
+    INV -->|"not signed in"| REG
+    LOGIN -->|"next"| INV
+    INV -->|"accepted"| DASH
+    NOTIF -->|"opens the child's page"| PUB
+    NOTIF --> BONE
+    NOTIF --> PEOPLE
 ```
 
 **Notes**
 
-- `/learn` and `/contact` sit **outside** `ProtectedRoute` but re-enter the app chrome via
-  `PageChrome` when a session exists — so a signed-in reader keeps the nav instead of
-  appearing logged out.
-- `ArticleDetail`'s back link follows router state stamped by `ArticleCard`, so it returns
-  to Home, Dashboard or Learn depending on where the reader came from. It used to be
-  hardcoded to `/learn`.
-- **`/milestones` and `/help` are dead** (greyed above): both render a "Coming soon"
-  placeholder and neither appears in any navigation — unreachable except by typing the URL.
-
----
-
-## 3. User flow
-
-```mermaid
-flowchart TD
-    START([Parent lands on GrowTH]) --> SEEN{"Has an account?"}
-    SEEN -->|no| REG["Register<br/>name · email · phone · password"]
-    REG --> TERMS{"Accept terms<br/>+ privacy notice?"}
-    TERMS -->|no| REG
-    TERMS -->|"yes — FR-2"| ADD["Add first child<br/>name · sex · DOB · relationship"]
-    SEEN -->|yes| LOGIN["Log in"]
-    LOGIN --> DASH
-    ADD --> DASH["Dashboard<br/>latest stats · chart · screening · resources"]
-
-    DASH --> A["Record a measurement<br/>height and/or weight + date"]
-    DASH --> B["Puberty screening<br/>sex-specific questionnaire"]
-    DASH --> C["Upload hand X-ray"]
-    DASH --> D["Read an article"]
-    DASH --> E["Switch / add child"]
-
-    A --> A1["Server computes<br/>percentile · SDS · BMI-for-age 5y+"]
-    A1 --> A2{"Outside ±2 SD?"}
-    A2 -->|yes| A3["Flagged guidance:<br/>'screening signal, not a diagnosis —<br/>consider seeing a paediatrician'"]
-    A2 -->|no| A4["'Within the typical range'"]
-    A3 --> CHART["Trend chart vs P3/P50/P97<br/>framed on the child's own age range"]
-    A4 --> CHART
-
-    B --> B1{"Outcome"}
-    B1 -->|EARLY_SIGNS| B2["See a doctor<br/>+ 3-round follow-up plan, every 4 months"]
-    B1 -->|DELAYED_ONSET| B3["Mention at next visit"]
-    B1 -->|"TYPICAL / NO_SIGNS"| B4["No action needed"]
-    B2 --> BHIST["Screening history — FR-14"]
-    B3 --> BHIST
-    B4 --> BHIST
-
-    C --> C1["Validated: JPEG/PNG, ≤10 MB"]
-    C1 --> C2["Row saved as PENDING"]
-    C2 -->|"in-process, async"| C3["Inference → COMPLETED<br/>bone age ± MAE months"]
-    C3 -.-> C4["Shown beside chronological age<br/>'screening aid, not a diagnosis'"]
-
-    E --> DASH
-    D --> D1["Article — back link returns<br/>to wherever you came from"]
-
-    classDef gap fill:#eee,stroke:#999,stroke-dasharray: 4 3
-    class C4 gap
-```
-
-**Notes**
-
-- The **terms gate is enforced server-side** (`@Equals(true)` on the register DTO), not just
-  in the form — FR-2.
-- Every clinical-looking output is worded as a screening signal. No path in this flow
-  produces anything phrased as a diagnosis.
-- The bone-age branch now runs end to end: upload → PENDING → in-process inference → COMPLETED,
-  with the client polling only while something is in flight. The remaining caveat is
-  calibration — the months are computed from inferred constants and are labelled provisional
-  in the UI until the ML team confirms them. See `model-updates.md`.
+- **The child switcher is shared.**
+  - Each signed-in page starts with the same child card, and the selected child is kept across reloads.
+  - Caretakers see their children grouped by family.
+  - Doctors can also search by HN.
+- **One route serves several roles.** `/bone-age` and `/puberty` render a different view for each role. The server decides what data each view receives; the page does not filter it.
+- **Notifications are links.** Each one selects its child and opens the page it is about.
+- "Report a problem" lives in the profile menu on every signed-in page. It sends the current page with the message.
 
 ---
 
@@ -218,5 +159,6 @@ flowchart TD
 GitHub renders Mermaid in Markdown natively. For standalone files:
 
 ```bash
-npx -y @mermaid-js/mermaid-cli -i docs/diagrams.md -o docs/diagrams.svg
+npx -y @mermaid-js/mermaid-cli -i docs/diagrams.md -o docs/diagram.svg -b white
+# writes docs/diagram-1.svg and docs/diagram-2.svg; rename them to the files listed at the top
 ```
