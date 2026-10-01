@@ -4,6 +4,12 @@ import { UploadCloud, Trash2, AlertTriangle, Info, X, Stethoscope, ShieldCheck }
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
 import { api, errorMessage, dateOnly } from '../lib/api';
+import { ACCEPT } from '../lib/xray';
+import XrayPrepareDialog from '../components/BoneAge/XrayPrepareDialog';
+
+// Before preparing: a PDF report or a phone photo can be large; what is uploaded is at most
+// 2048 px and 10 MB (lib/xray.js).
+const MAX_PICK_BYTES = 50 * 1024 * 1024;
 
 // Bone age is the doctor's tool (docs/user-flows.md §2, §5). The child's approved doctor uploads
 // a hand X-ray, reads the AI estimate next to the child's real age on the exam day, and records
@@ -104,7 +110,7 @@ function XrayThumb({ id }) {
 // Doctor: one record, with the review form
 // ============================================================
 
-function DoctorRecord({ record, onSaved, onDelete }) {
+function DoctorRecord({ record, accuracy, onSaved, onDelete }) {
   const [review, setReview] = useState(record.review ?? record.suggestedReview ?? '');
   const [note, setNote] = useState(record.doctorNote ?? '');
   const [examDate, setExamDate] = useState(dateOnly(record.examDate));
@@ -171,8 +177,8 @@ function DoctorRecord({ record, onSaved, onDelete }) {
               </div>
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              Model error is typically ±{Math.round(record.maeMonths)} months, and about 1 estimate in 4 is out by more than a year
-              {record.modelVersion?.includes('provisional') ? ' (calibration still provisional)' : ''}. AI suggests:{' '}
+              Model error is typically ±{Math.round(record.maeMonths)} months
+              {accuracy ? `, and about 1 estimate in ${Math.round(1 / (1 - accuracy))} is out by more than a year` : ''}. AI suggests:{' '}
               <span className="font-medium">{REVIEW[record.suggestedReview]?.label ?? '—'}</span> (gap of 2 years or more).
             </p>
             {record.implausibleGap && (
@@ -238,6 +244,7 @@ function DoctorView({ child }) {
   const [uploadError, setUploadError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [picked, setPicked] = useState(null);
 
   const load = useCallback(async () => {
     const res = await api.get('/bone-age/history', { params: { childId: child.id } });
@@ -268,30 +275,34 @@ function DoctorView({ child }) {
     return () => clearInterval(timer);
   }, [analysing, load]);
 
-  async function handleFile(file) {
+  // A chosen file opens the prepare dialog first (PDF page, crop, downsizing); only what it
+  // hands back is uploaded.
+  function handleFile(file) {
+    if (inputRef.current) inputRef.current.value = '';
     if (!file) return;
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setUploadError('Use a JPEG or PNG image.');
+    if (file.size > MAX_PICK_BYTES) {
+      setUploadError('That file is larger than 50 MB. Export the X-ray on its own and try again.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError('That image is larger than 10MB. Try a smaller export.');
-      return;
-    }
+    setUploadError(null);
+    setPicked(file);
+  }
+
+  async function upload(prepared) {
+    setPicked(null);
     setUploadError(null);
     setUploading(true);
     try {
       const form = new FormData();
       form.append('childId', child.id);
       form.append('examDate', examDate);
-      form.append('file', file);
+      form.append('file', prepared.file);
       await api.post('/bone-age/upload', form, { timeout: 60000 });
       await load();
     } catch (err) {
       setUploadError(errorMessage(err));
     } finally {
       setUploading(false);
-      if (inputRef.current) inputRef.current.value = '';
     }
   }
 
@@ -307,15 +318,6 @@ function DoctorView({ child }) {
 
   return (
     <>
-      {model?.calibration === 'provisional' && (
-        <div className="mb-4 flex gap-3 rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4">
-          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-          <p className="text-sm text-amber-800 dark:text-amber-300">
-            <span className="font-semibold">Provisional calibration.</span> The conversion from the model&apos;s output to months has not
-            been confirmed by the team that trained it. Treat estimates as indicative.
-          </p>
-        </div>
-      )}
       {model && !model.ready && (
         <div className="mb-4 flex gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
           <Info size={18} className="mt-0.5 shrink-0 text-slate-500 dark:text-slate-400" />
@@ -365,8 +367,8 @@ function DoctorView({ child }) {
         >
           <UploadCloud size={28} className="text-[#056559] dark:text-teal-300" />
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{uploading ? 'Uploading…' : 'Drop the X-ray here or click to choose'}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Left hand and wrist · JPEG or PNG · up to 10 MB</p>
-          <input ref={inputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+          <p className="text-xs text-slate-500 dark:text-slate-400">Left hand and wrist · PDF, JPEG, PNG or WebP · you can crop before upload</p>
+          <input ref={inputRef} type="file" accept={ACCEPT} className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
         </div>
       </Card>
 
@@ -374,12 +376,19 @@ function DoctorView({ child }) {
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">History</h2>
         <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
           {records.map((r) => (
-            <DoctorRecord key={`${r.id}-${r.status}-${r.updatedAt}`} record={r} onSaved={load} onDelete={setPendingDeleteId} />
+            <DoctorRecord
+              key={`${r.id}-${r.status}-${r.updatedAt}`}
+              record={r}
+              accuracy={model?.accuracyWithin12Months}
+              onSaved={load}
+              onDelete={setPendingDeleteId}
+            />
           ))}
           {records.length === 0 && <p className="py-4 text-sm text-slate-500 dark:text-slate-400">No X-rays yet.</p>}
         </div>
       </Card>
 
+      {picked && <XrayPrepareDialog key={`${picked.name}-${picked.lastModified}`} file={picked} onCancel={() => setPicked(null)} onUpload={upload} />}
       {pendingDeleteId && <ConfirmDeleteDialog onCancel={() => setPendingDeleteId(null)} onConfirm={() => handleDelete(pendingDeleteId)} />}
     </>
   );
