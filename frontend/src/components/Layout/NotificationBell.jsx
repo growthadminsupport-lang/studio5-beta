@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useChildren } from "../../context/ChildrenContext";
 import { Bell, X } from "lucide-react";
 import { useNotifications } from "../../context/NotificationsContext";
 import "./Notifications.css";
@@ -8,6 +9,14 @@ function NotificationBell() {
   const [open, setOpen] = useState(false);
 
   const { notifications, markAsRead } = useNotifications();
+  const { setActiveChildId } = useChildren();
+  const navigate = useNavigate();
+
+  function openNotification(n) {
+    if (n.childId) setActiveChildId(n.childId);
+    setOpen(false);
+    navigate(n.path);
+  }
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -32,7 +41,7 @@ function NotificationBell() {
           ) : (
             notifications.slice(0, 3).map((n) => (
               <div key={n.id} className="notification-card">
-                <div className="notification-text">
+                <div className="notification-text" role="button" tabIndex={0} style={{ cursor: "pointer" }} onClick={() => openNotification(n)} onKeyDown={(e) => e.key === "Enter" && openNotification(n)}>
                   <h4>{n.title}</h4>
                   <p>{n.description}</p>
                   <span className="notification-time">

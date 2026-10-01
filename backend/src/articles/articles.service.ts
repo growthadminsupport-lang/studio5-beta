@@ -16,9 +16,10 @@ export class ArticlesService {
     });
   }
 
-  async findOne(id: string) {
-    const article = await this.prisma.article.findUnique({
-      where: { id },
+  /** By id or by slug: the website links to /knowledge/<slug>. */
+  async findOne(idOrSlug: string) {
+    const article = await this.prisma.article.findFirst({
+      where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
       include: { category: true },
     });
     if (!article || !article.publishedAt) {

@@ -1,34 +1,20 @@
-import { useState } from 'react';
-import { useChartTheme } from '../utils/chartTheme';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
+import GrowthChart from '../components/GrowthTracking/GrowthChart';
+import { api } from '../lib/api';
+import { describePercentile, useGrowthRecords } from '../lib/growth';
+import { BUILTIN_ARTICLES } from '../content/articles';
 import {
   Ruler,
   Weight,
   Accessibility,
   Sparkles,
   Plus,
-  Utensils,
-  Bandage,
-  Heart,
-  Salad,
   AlertTriangle,
 } from 'lucide-react';
 
-import growthExploreImg from '../assets/knowledgeImg/growthExplore.png';
-import nutritionExploreImg from '../assets/knowledgeImg/nutritionExplore.png';
-import pubertyExploreImg from '../assets/knowledgeImg/pubertyExplore.png';
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  Area,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from 'recharts';
 
 // ============================================================
 // Growth Measures
@@ -40,152 +26,12 @@ const MEASURES = {
   bmi: { label: 'BMI', unit: '', icon: Accessibility, valueKey: 'bmi', chartTitle: 'BMI-for-age vs. Reference', percentileKey: 'bmiPercentile' },
 };
 
-// ============================================================
-// Mock Data
-// ============================================================
-
-// The child's most recent GrowthRecord (docs/api.md) — the latest entry
-// from GET /growth?childId=. null until one is logged, so the tiles show "—".
-const latestRecord = null;
-
-// Drives the "Worth a look" banner. null until growth stats flag
-// something — comes from the backend's guidance calculation later.
-const guidance = null; // shape once wired up: { flagged, nutritionalStatus, message }
-
-// Drives "What to do next" — empty until there's something to suggest
-// (a stale measurement, an unflagged puberty screening, etc).
-const suggestions = [];
-
-// null | 'PENDING' | 'COMPLETED' | 'FAILED'
-const boneAge = {
-  status: null,
-  ageYears: null,
-};
-
-// Placeholder percentile milestones (girls) — replace with the real
-// WHO/CDC LMS reference table from the backend once it's wired up.
-// Each curve is interpolated across ages 0–20y for a smooth line.
-const MILESTONES = {
-  height: [
-    { age: 0, p3: 46, p50: 49, p97: 53 },
-    { age: 1, p3: 71, p50: 76, p97: 80 },
-    { age: 2, p3: 80, p50: 86, p97: 92 },
-    { age: 5, p3: 100, p50: 109, p97: 118 },
-    { age: 10, p3: 126, p50: 138, p97: 150 },
-    { age: 15, p3: 150, p50: 162, p97: 172 },
-    { age: 20, p3: 152, p50: 163, p97: 173 },
-  ],
-  weight: [
-    { age: 0, p3: 2.4, p50: 3.3, p97: 4.2 },
-    { age: 1, p3: 7.0, p50: 9.0, p97: 11.5 },
-    { age: 2, p3: 9.0, p50: 12.0, p97: 15.0 },
-    { age: 5, p3: 13.5, p50: 18.0, p97: 24.0 },
-    { age: 10, p3: 21, p50: 32, p97: 45 },
-    { age: 15, p3: 39, p50: 53, p97: 72 },
-    { age: 20, p3: 43, p50: 57, p97: 80 },
-  ],
-  bmi: [
-    { age: 0, p3: 11, p50: 13, p97: 15 },
-    { age: 1, p3: 14, p50: 16.5, p97: 19 },
-    { age: 2, p3: 13, p50: 15.5, p97: 18.5 },
-    { age: 5, p3: 12.5, p50: 15, p97: 17.5 },
-    { age: 10, p3: 13, p50: 16.5, p97: 20.5 },
-    { age: 15, p3: 15, p50: 19, p97: 25 },
-    { age: 20, p3: 16.5, p50: 21, p97: 28.5 },
-  ],
-};
-
-// Same dataset as the "Nurturing Knowledge" section on HomePage.jsx —
-// copied in directly for now rather than pulled from a shared file.
-// If HomePage's copy ever changes, update this array too.
-const articles = [
-  {
-    id: 1,
-    slug: 'navigating-growth-spurts',
-    label: 'Article',
-    title: 'Growth Spurts',
-    desc: 'When and how your body speeds up.',
-    category: 'growth',
-    image: growthExploreImg,
-  },
-  {
-    id: 2,
-    slug: 'nutrition-for-pre-teens',
-    label: 'Guide',
-    title: 'Nutrition',
-    desc: 'Key nutrients for strong bones and healthy growth.',
-    category: 'nutrition',
-    image: nutritionExploreImg,
-  },
-  {
-    id: 3,
-    slug: 'understanding-puberty',
-    label: 'Explainer',
-    title: 'Puberty',
-    desc: 'What to expect and how to prepare.',
-    category: 'puberty',
-    image: pubertyExploreImg,
-  },
-];
-// ============================================================
-// Helpers
-// ============================================================
-
-// Interpolates a milestone table (sparse ages) into one point per year
-// so the reference lines and bands read as smooth curves like the
-// clinical growth charts they're standing in for.
-function buildCurve(milestones) {
-  const years = Array.from({ length: 21 }, (_, i) => i); // 0..20
-  const ceiling = Math.max(...milestones.map((m) => m.p97)) * 1.08;
-
-  return years.map((age) => {
-    let lower = milestones[0];
-    let upper = milestones[milestones.length - 1];
-    for (let i = 0; i < milestones.length - 1; i++) {
-      if (age >= milestones[i].age && age <= milestones[i + 1].age) {
-        lower = milestones[i];
-        upper = milestones[i + 1];
-        break;
-      }
-    }
-    const span = upper.age - lower.age || 1;
-    const t = (age - lower.age) / span;
-    const lerp = (a, b) => a + (b - a) * t;
-
-    const p3 = lerp(lower.p3, upper.p3);
-    const p50 = lerp(lower.p50, upper.p50);
-    const p97 = lerp(lower.p97, upper.p97);
-
-    return {
-      age,
-      ageLabel: `${age}y`,
-      p3,
-      p50,
-      p97,
-      belowP3: p3,
-      typicalRange: p97 - p3,
-      aboveP97: ceiling - p97,
-    };
-  });
-}
-
-const REFERENCE_CURVES = {
-  height: buildCurve(MILESTONES.height),
-  weight: buildCurve(MILESTONES.weight),
-  bmi: buildCurve(MILESTONES.bmi),
-};
-
-// Below P3 or above P97 is "worth a second look" — everything in
-// between reads as typical range. Returns null when there's no
-// percentile yet (no measurement logged).
-function describeStatus(percentile) {
-  if (percentile === null || percentile === undefined) return null;
-  if (percentile >= 99.5) return { label: '>P99 · well above typical', tone: 'text-amber-600 dark:text-amber-400' };
-  if (percentile <= 0.5) return { label: '<P1 · well below typical', tone: 'text-amber-600 dark:text-amber-400' };
-  if (percentile < 3) return { label: `P${Math.round(percentile)} · below typical`, tone: 'text-amber-600 dark:text-amber-400' };
-  if (percentile > 97) return { label: `P${Math.round(percentile)} · above typical`, tone: 'text-amber-600 dark:text-amber-400' };
-  return { label: `P${Math.round(percentile)} · typical range`, tone: 'text-[#056559] dark:text-teal-300' };
-}
+// Same cards as the Knowledge page (content/articles.js).
+const DASHBOARD_SLUGS = ['navigating-growth-spurts', 'nutrition-for-pre-teens', 'understanding-puberty'];
+const articles = DASHBOARD_SLUGS.map((slug) => BUILTIN_ARTICLES.find((a) => a.slug === slug)).map((a) => ({
+  ...a,
+  desc: a.blurb,
+}));
 
 // ============================================================
 // What to do next
@@ -233,11 +79,37 @@ function NextSteps({ items }) {
 // ============================================================
 
 function DashboardPage() {
-  const chart = useChartTheme();
   const [selectedMeasure, setSelectedMeasure] = useState('height');
   const { activeChild: child } = useChildren();
   const currentMeasure = MEASURES[selectedMeasure];
-  const curve = REFERENCE_CURVES[selectedMeasure];
+  const { records } = useGrowthRecords(child?.id);
+  const latestRecord = records[0] ?? null;
+  const guidance = latestRecord?.guidance ?? null;
+  const [suggestions, setSuggestions] = useState([]);
+  const [boneAge, setBoneAge] = useState(null);
+  const [lastScreening, setLastScreening] = useState(null);
+
+  // "What to do next" (cross-feature suggestions), and the latest puberty and bone-age state for
+  // the two cards. The API shapes each by role: a caretaker gets no screening result and the
+  // family gets only the doctor's bone-age reading.
+  useEffect(() => {
+    if (!child) return;
+    let cancelled = false;
+    const params = { params: { childId: child.id } };
+    Promise.allSettled([
+      api.get('/suggestions', params),
+      api.get('/bone-age/history', params),
+      api.get('/puberty/history', params),
+    ]).then(([sug, bone, pub]) => {
+      if (cancelled) return;
+      setSuggestions(sug.status === 'fulfilled' ? sug.value.data : []);
+      setBoneAge(bone.status === 'fulfilled' ? bone.value.data[0] ?? null : null);
+      setLastScreening(pub.status === 'fulfilled' ? pub.value.data[0] ?? null : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [child]);
 
   // No child on the account yet — nothing else on the dashboard makes
   // sense without one, so this replaces the whole page body.
@@ -305,7 +177,7 @@ function DashboardPage() {
                 const Icon = measure.icon;
                 const active = selectedMeasure === key;
                 const value = latestRecord?.[measure.valueKey] ?? null;
-                const status = describeStatus(latestRecord?.[measure.percentileKey]);
+                const status = describePercentile(latestRecord?.[measure.percentileKey]);
 
                 return (
                   <button
@@ -336,93 +208,14 @@ function DashboardPage() {
             <div>
               <h3 className="text-sm font-bold text-[#056559] dark:text-teal-300">{currentMeasure.chartTitle}</h3>
               <p className="mt-0.5 text-xs text-slate-400">
-                Dashed lines are the 3rd/50th/97th percentile reference curves for the child&apos;s age and sex.
+                {selectedMeasure === 'bmi'
+                  ? 'CDC 2000 BMI-for-age for the child\'s sex, from 2 years.'
+                  : 'CDC 2000 reference for the child\'s sex: 3rd, 50th and 97th percentile.'}
               </p>
             </div>
 
-            <div className="mt-3 h-[220px] w-full sm:h-[260px] lg:h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={curve} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
-
-                  <XAxis
-                    dataKey="ageLabel"
-                    ticks={['0y', '5y', '10y', '15y', '20y']}
-                    tick={{ fill: chart.tick, fontSize: 11 }}
-                    axisLine={{ stroke: chart.axis }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fill: chart.tick, fontSize: 11 }}
-                    axisLine={{ stroke: chart.axis }}
-                    tickLine={false}
-                    width={48}
-                    tickFormatter={(v) => `${Math.round(v)}${currentMeasure.unit}`}
-                  />
-                  <Tooltip
-                    formatter={(value, name) => [`${Number(value).toFixed(1)}${currentMeasure.unit}`, name]}
-                    labelFormatter={(label) => `Age ${label}`}
-                    contentStyle={{ ...chart.tooltipStyle, boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}
-                  />
-
-                  {/* Stacked bands: below P3, typical range, above P97.
-                      Background only — hidden from the tooltip. */}
-                  <Area type="monotone" dataKey="belowP3" stackId="bands" stroke="none" fill={chart.band("#e2e8f0")} fillOpacity={chart.opacity(0.85)} tooltipType="none" activeDot={false} />
-                  <Area type="monotone" dataKey="typicalRange" stackId="bands" stroke="none" fill={chart.band("#bfdbfe")} fillOpacity={chart.opacity(0.65)} tooltipType="none" activeDot={false} />
-                  <Area type="monotone" dataKey="aboveP97" stackId="bands" stroke="none" fill={chart.band("#fed7aa")} fillOpacity={chart.opacity(0.6)} tooltipType="none" activeDot={false} />
-
-                  {/* Reference percentile lines */}
-                  <Line type="monotone" dataKey="p3" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="P3 (low)" />
-                  <Line type="monotone" dataKey="p50" stroke={chart.median} strokeWidth={1.5} strokeDasharray="2 3" dot={false} name="P50 (median)" />
-                  <Line type="monotone" dataKey="p97" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="P97 (high)" />
-
-                  {/* The child's own measurements — empty until logged,
-                      the legend swatch below stays regardless. */}
-                  <Line
-                    type="monotone"
-                    dataKey={selectedMeasure}
-                    data={[]}
-                    stroke={chart.own}
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: chart.own }}
-                    name={currentMeasure.chartTitle}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Custom legend — matches the two-row key under the chart */}
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600 dark:text-slate-300">
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded bg-[#056559] dark:bg-teal-400" />
-                {currentMeasure.chartTitle}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded border-t border-dashed border-slate-400 dark:border-slate-500" />
-                P3 (low)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded border-t border-dashed border-[#00685f] dark:border-teal-300" />
-                P50 (median)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded border-t border-dashed border-slate-400 dark:border-slate-500" />
-                P97 (high)
-              </span>
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600 dark:text-slate-300">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#e2e8f0] dark:bg-slate-600" />
-                Below P3
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#bfdbfe] dark:bg-blue-500/50" />
-                Typical range
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#fed7aa] dark:bg-orange-500/50" />
-                Above P97
-              </span>
+            <div className="mt-3">
+              <GrowthChart child={child} measure={selectedMeasure} records={records} bare height={260} />
             </div>
           </div>
 
@@ -435,14 +228,18 @@ function DashboardPage() {
             </div>
 
             <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
-              Answer a short questionnaire to screen for early signs of puberty.
+              {!lastScreening
+                ? 'Answer a short questionnaire to screen for early signs of puberty.'
+                : lastScreening.result
+                  ? `Last screening (${new Date(lastScreening.assessedAt).toLocaleDateString()}): ${lastScreening.result.title}`
+                  : `Last submitted ${new Date(lastScreening.assessedAt).toLocaleDateString()}. The result is shared with the parent and doctor.`}
             </p>
 
             <Link
               to="/puberty"
               className="mt-4 flex w-full items-center justify-center rounded-full bg-[#056559] dark:bg-teal-400 px-4 py-2.5 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300"
             >
-              Start Screening
+              {lastScreening ? 'Open Screening' : 'Start Screening'}
             </Link>
           </div>
         </div>
@@ -462,21 +259,33 @@ function DashboardPage() {
           </div>
 
           <p className="mb-4 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            {boneAge.status === 'COMPLETED' && boneAge.ageYears
-              ? `Latest estimate: ${boneAge.ageYears} years bone age.`
-              : boneAge.status === 'PENDING'
-                ? 'Your last X-ray is still being analyzed.'
-                : boneAge.status === 'FAILED'
-                  ? 'Your last analysis could not be completed — try uploading again.'
-                  : 'Upload a left-hand X-ray for a preliminary bone age assessment.'}
+            {child.myRole === 'DOCTOR'
+              ? boneAge
+                ? boneAge.status === 'PENDING'
+                  ? 'The last X-ray is still being analysed.'
+                  : boneAge.review
+                    ? `Last X-ray ${new Date(boneAge.examDate).toLocaleDateString()}: reviewed.`
+                    : `Last X-ray ${new Date(boneAge.examDate).toLocaleDateString()}: waiting for your reading.`
+                : 'Upload a left-hand X-ray for an AI-assisted bone age estimate.'
+              : boneAge
+                ? `Doctor's reading (${new Date(boneAge.examDate).toLocaleDateString()}): ${
+                    { NORMAL: 'normal for age', ADVANCED: 'advanced for age', DELAYED: 'delayed for age' }[boneAge.review]
+                  }.`
+                : "No result yet. The child's doctor adds the hand X-ray and records what it shows."}
           </p>
 
           <Link
             to="/bone-age"
             className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-[#056559] dark:text-teal-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
           >
-            <Plus size={14} />
-            {boneAge.status === 'COMPLETED' || boneAge.status === 'FAILED' ? 'Add New X-Ray' : 'Upload X-Ray'}
+            {child.myRole === 'DOCTOR' ? (
+              <>
+                <Plus size={14} />
+                {boneAge ? 'Open Bone Age' : 'Upload X-Ray'}
+              </>
+            ) : (
+              'Open Bone Age'
+            )}
           </Link>
         </div>
 

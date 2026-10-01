@@ -1054,3 +1054,26 @@
 [data-theme="dark"] .kn-resource-row:hover {
   border-color: #5eead4;
 }
+/* Search beside the "Parenting Resources" heading (FR-21) */
+.kn-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kn-search {
+  min-width: 220px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-border);
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.kn-search:focus {
+  border-color: var(--color-primary);
+}

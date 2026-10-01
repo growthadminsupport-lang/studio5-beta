@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { User } from 'lucide-react';
 import { useChildren } from '../context/ChildrenContext';
+import { errorMessage } from '../lib/api';
 
 // Placeholder avatar choices — swap `bg` for real illustrated presets
 // once art is ready (mirrors CHILD_AVATAR_PRESETS in the reference).
@@ -51,6 +52,9 @@ function ChildFormPage() {
   const [dateOfBirth, setDateOfBirth] = useState(existingChild?.dateOfBirth ?? '');
   const [sex, setSex] = useState(existingChild?.sex ?? 'FEMALE'); // 'FEMALE' | 'MALE'
   const [relation, setRelation] = useState(existingChild?.relation ?? 'PARENT');
+  const [hn, setHn] = useState(existingChild?.hn ?? '');
+  // A doctor edits only the hospital number (docs/user-flows.md §2); the API refuses the rest.
+  const hnOnly = isEdit && existingChild?.myRole === 'DOCTOR';
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -64,6 +68,18 @@ function ChildFormPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+
+    if (hnOnly) {
+      setSaving(true);
+      try {
+        await updateChild(id, { hn: hn.trim() });
+        goBack();
+      } catch (err) {
+        setError(errorMessage(err, 'Couldn’t save. Please try again.'));
+        setSaving(false);
+      }
+      return;
+    }
 
     const name = fullName.trim();
     if (!name) {
@@ -82,7 +98,9 @@ function ChildFormPage() {
       sex,
       dateOfBirth,
       relation,
+      hn: hn.trim(),
     };
+    if (!isEdit && !body.hn) delete body.hn;
 
     setSaving(true);
     try {
@@ -90,7 +108,7 @@ function ChildFormPage() {
       else await addChild(body);
       goBack();
     } catch (err) {
-      setError(err?.response?.data?.message ?? 'Couldn’t save. Please try again.');
+      setError(errorMessage(err, 'Couldn’t save. Please try again.'));
       setSaving(false);
     }
   }
@@ -118,7 +136,9 @@ function ChildFormPage() {
   return (
     <div className="min-h-screen px-4 pb-16 pt-10 dark:bg-slate-900">
     <div className="mx-auto w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-2xs border border-slate-200 dark:border-slate-700 sm:p-8">
-      <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">{isEdit ? 'Edit child' : 'Add your child'}</h1>
+      <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">
+        {hnOnly ? `Hospital number for ${existingChild.fullName}` : isEdit ? 'Edit child' : 'Add your child'}
+      </h1>
       <p className="mt-1 mb-6 text-sm text-slate-500 dark:text-slate-400">
         We&apos;ll use this to personalize growth tracking and charts.
       </p>
@@ -129,6 +149,23 @@ function ChildFormPage() {
         </p>
       )}
 
+      {hnOnly ? (
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+          <FloatingLabelField label="Hospital number (HN)">
+            <input type="text" value={hn} onChange={(e) => setHn(e.target.value)} className={fieldClasses} />
+          </FloatingLabelField>
+          <p className="-mt-3 text-xs text-slate-500 dark:text-slate-400">
+            You find patients by this number. The family can see it; caretakers cannot.
+          </p>
+          <button
+            type="submit"
+            disabled={saving}
+            className="mt-1 rounded-xl bg-[#056559] dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300 disabled:opacity-60"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </form>
+      ) : (
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         <div>
           <p className="mb-1 text-sm font-medium text-slate-900 dark:text-slate-100">Choose an avatar</p>
@@ -209,6 +246,10 @@ function ChildFormPage() {
           </button>
         </div>
 
+        <FloatingLabelField label="Hospital number (HN), optional">
+          <input type="text" value={hn} onChange={(e) => setHn(e.target.value)} className={fieldClasses} />
+        </FloatingLabelField>
+
         <FloatingLabelField label="Your relationship to this child">
           <select
             value={relation}
@@ -229,6 +270,7 @@ function ChildFormPage() {
           {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Save and continue'}
         </button>
       </form>
+      )}
     </div>
     </div>
   );

@@ -1,24 +1,37 @@
 import { useState } from "react";
 import { MapPin, Mail, Bug, CheckCircle2, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { api, errorMessage } from "../lib/api";
 import "./ContactPage.css";
 
 function ContactPage() {
   const { email: userEmail } = useAuth() || {};
-  const activeEmail = userEmail || "growth.admin.support@gmail.com";
+  const activeEmail = userEmail || "";
 
   const [email, setEmail] = useState(activeEmail);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleSubmit = (e) => {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Goes to the admin portal's inbox. Signed in, the message is linked to the account.
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) return;
-
-    setShowSuccess(true);
-    setSubject("");
-    setMessage("");
+    setError(null);
+    setSending(true);
+    try {
+      await api.post("/support/contact", { email: email.trim(), subject: subject.trim(), message: message.trim() });
+      setShowSuccess(true);
+      setSubject("");
+      setMessage("");
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -50,7 +63,7 @@ function ContactPage() {
             <div className="gt-info-content">
               <strong>Email</strong>
               <p>
-                Contact the Faculty of Engineering, KKU DME program directly — exact department email TBD.
+                <a href="mailto:growth.admin.support@gmail.com">growth.admin.support@gmail.com</a>
               </p>
             </div>
           </div>
@@ -126,8 +139,9 @@ function ContactPage() {
               <label htmlFor="contactMessage">Message*</label>
             </div>
 
-            <button type="submit" className="gt-send-btn">
-              Send message
+            {error && <p role="alert" style={{ color: "#dc2626", fontSize: 14 }}>{error}</p>}
+            <button type="submit" className="gt-send-btn" disabled={sending}>
+              {sending ? "Sending…" : "Send message"}
             </button>
           </form>
         </div>

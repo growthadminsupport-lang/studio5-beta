@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { useArticles } from "../../content/articles";
 
 import growthIcon from "../../assets/icons_knowledge/growth.png";
 import nutritionIcon from "../../assets/icons_knowledge/nutrition.png";
@@ -8,11 +9,6 @@ import pubertyIcon from "../../assets/icons_knowledge/puberty.png";
 import healthyHabitsIcon from "../../assets/icons_knowledge/healthy.png";
 
 import boneAgeImg from "../../assets/knowledgeImg/ba1.png";
-import nutritionExploreImg from "../../assets/knowledgeImg/nutritionExplore.png";
-import growthExploreImg from "../../assets/knowledgeImg/growthExplore.png";
-import pubertyExploreImg from "../../assets/knowledgeImg/pubertyExplore.png";
-import boneAgeExploreImg from "../../assets/knowledgeImg/boneAgeExplore.png";
-import supportHealthExploreImg from "../../assets/knowledgeImg/supportHealthExplore.png";
 import quickFactsImg from "../../assets/knowledgeImg/quickFacts.png";
 import "./Knowledge.css";
 
@@ -20,80 +16,10 @@ import knowledgeBG from "../../assets/knowledgeBG.png";
 
 
 /* =========================================================
-   ARTICLES
-   ========================================================= */
-
-const articles = [
-  {
-    id: 1,
-    slug: "navigating-growth-spurts",
-    label: "Article",
-    tag: "growth",
-    title: "Growth Spurts",
-    blurb: "When and how your body speeds up.",
-    category: "growth",
-  },
-
-  {
-    id: 2,
-    slug: "nutrition-for-pre-teens",
-    label: "Guide",
-    tag: "nutrition",
-    title: "Nutrition",
-    blurb: "Key nutrients for strong bones and healthy growth.",
-    category: "nutrition",
-  },
-
-  {
-    id: 3,
-    slug: "understanding-puberty",
-    label: "Explainer",
-    tag: "puberty",
-    title: "Puberty",
-    blurb: "What to expect and how to prepare.",
-    category: "puberty",
-  },
-
-  {
-    id: 4,
-    slug: "understanding-bone-age",
-    label: "Explainer",
-    tag: "bone age",
-    title: "Understanding Bone Age",
-    blurb: "How skeletal maturity is read from a hand X-ray.",
-    category: "bone age",
-  },
-
-  {
-    id: 5,
-    slug: "support-healthy-growth",
-    label: "Guide",
-    tag: "healthy habits",
-    title: "Support Healthy Growth",
-    blurb: "Everyday habits that make a big difference.",
-    category: "healthy habits",
-  },
-];
-
-
-/* =========================================================
    FEATURED ARTICLE
    ========================================================= */
 
 const featuredSlug = "understanding-bone-age";
-
-const featured = articles.find(
-  (article) => article.slug === featuredSlug
-);
-
-
-/* =========================================================
-   EXPLORE MORE
-   ========================================================= */
-
-const exploreMore = articles.filter(
-  (article) => article.slug !== featuredSlug
-);
 
 
 /* =========================================================
@@ -139,36 +65,29 @@ const categoryChips = [
 
 
 /* =========================================================
-   EXPLORE MORE IMAGES
-   ========================================================= */
-
-const exploreImages = {
-  growth: growthExploreImg,
-  nutrition: nutritionExploreImg,
-  puberty: pubertyExploreImg,
-  "bone age": boneAgeExploreImg,
-  "healthy habits": supportHealthExploreImg,
-};
-
-
-/* =========================================================
    MAIN COMPONENT
    ========================================================= */
 
 function ArticleList() {
   const [category, setCategory] = useState("all");
+  const [query, setQuery] = useState("");
+  const articles = useArticles();
+  const featured = articles.find((article) => article.slug === featuredSlug);
 
 
   /* -------------------------------------------------------
      Filter articles
      ------------------------------------------------------- */
 
-  const filtered =
-    category === "all"
-      ? articles
-      : articles.filter(
-          (article) => article.category === category
-        );
+  // FR-21: browse by topic (the chips) and search by keyword.
+  const q = query.trim().toLowerCase();
+  const filtered = articles.filter(
+    (article) =>
+      (category === "all" || article.category === category) &&
+      (!q || `${article.title} ${article.blurb} ${article.category}`.toLowerCase().includes(q)),
+  );
+  const browsing = category === "all" && !q;
+  const exploreMore = articles.filter((article) => article.slug !== featuredSlug);
 
 
   return (
@@ -266,9 +185,19 @@ function ArticleList() {
          MAIN HEADING
          ===================================================== */}
 
-      <h2 className="knowledge-heading">
-        Parenting Resources
-      </h2>
+      <div className="kn-heading-row">
+        <h2 className="knowledge-heading">
+          Parenting Resources
+        </h2>
+        <input
+          type="search"
+          className="kn-search"
+          placeholder="Search articles"
+          aria-label="Search articles"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
 
 
       {/* =====================================================
@@ -364,7 +293,7 @@ function ArticleList() {
 
           <div className="knowledge-grid">
 
-            {(category === "all"
+            {(browsing
               ? exploreMore
               : filtered
             ).map((article) => (
@@ -388,9 +317,7 @@ function ArticleList() {
                   )}`}
                 >
 
-                  <ExploreImage
-                    tag={article.tag}
-                  />
+                  <img src={article.image} alt="" className="kn-explore-image" />
 
                 </div>
 
@@ -584,24 +511,5 @@ function Spark({ className }) {
     </svg>
   );
 }
-
-
-/* =========================================================
-   EXPLORE MORE IMAGE COMPONENT
-   ========================================================= */
-
-function ExploreImage({ tag }) {
-
-  const image = exploreImages[tag] || growthExploreImg;
-
-  return (
-    <img
-      src={image}
-      alt=""
-      className="kn-explore-image"
-    />
-  );
-}
-
 
 export default ArticleList;

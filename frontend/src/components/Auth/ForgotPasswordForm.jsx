@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
+import { api, errorMessage } from "../../lib/api";
 import "./Auth.css";
 
 function ForgotPasswordForm() {
@@ -9,16 +9,23 @@ function ForgotPasswordForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  const { requestPasswordReset } = useAuth();
+  const [devToken, setDevToken] = useState(null);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (requestPasswordReset) {
-      requestPasswordReset(email);
+    setSending(true);
+    try {
+      const res = await api.post("/auth/forgot-password", { email: email.trim() });
+      // Local development only: with no mail provider the API hands the token back.
+      setDevToken(res.data.resetToken ?? null);
+      setIsSubmitted(true);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSending(false);
     }
-    setIsSubmitted(true);
   };
 
   return (
@@ -43,7 +50,7 @@ function ForgotPasswordForm() {
               />
             </label>
 
-            <button type="submit">Send reset link</button>
+            <button type="submit" disabled={sending}>{sending ? "Sending…" : "Send reset link"}</button>
           </>
         ) : (
           <div className="auth-success-box">
@@ -53,6 +60,9 @@ function ForgotPasswordForm() {
               link to it. Check your inbox (and spam folder) — the link expires
               in 1 hour.
             </p>
+            {devToken && (
+              <Link to={`/reset-password?token=${devToken}`}>Development: open the reset link</Link>
+            )}
           </div>
         )}
 

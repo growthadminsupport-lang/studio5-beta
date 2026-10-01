@@ -7,7 +7,7 @@ import logo from "../../assets/logo_dashboard.png";
 import "./Navbar.css";
 
 function Navbar() {
-  const { isLoggedIn } = useAuth() || {};
+  const { isLoggedIn, isAdmin } = useAuth() || {};
   const navigate = useNavigate();
 
   return (
@@ -30,6 +30,7 @@ function Navbar() {
                 <span className="navbar-divider" />
                 <NavLink to="/knowledge">Resources</NavLink>
                 <NavLink to="/contact">Contact</NavLink>
+                {isAdmin && <NavLink to="/admin">Admin</NavLink>}
               </>
             ) : (
               <>

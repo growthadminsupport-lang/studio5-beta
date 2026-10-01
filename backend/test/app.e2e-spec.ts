@@ -11,6 +11,8 @@ describe('AppController (e2e)', () => {
     // Self-contained: a fresh clone has no backend/.env, and AuthModule refuses to boot without these.
     process.env.JWT_ACCESS_SECRET ??= 'e2e-secret';
     process.env.JWT_ACCESS_EXPIRES_IN ??= '15m';
+    // Prisma connects on boot, so the health check needs a database too; reuse the e2e one.
+    process.env.DATABASE_URL ??= process.env.E2E_DATABASE_URL;
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();

@@ -1,14 +1,62 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { api, errorMessage } from "../lib/api";
 import "./SettingsPage.css";
 
 function SettingsPage() {
-  const { user } = useAuth() || {};
-  
-  // Safely extract email from auth context with fallback
-  const email = user?.email || localStorage.getItem("userEmail") || "";
-  const initial = email ? email.trim().charAt(0).toUpperCase() : "G";
+  const { user, setUser } = useAuth() || {};
+  const initial = (user?.fullName || user?.email || "U").trim().charAt(0).toUpperCase();
+  const fileRef = useRef(null);
+  const [uploadedPhoto, setUploadedPhoto] = useState(null); // { key, url }
+  const [photoError, setPhotoError] = useState(null);
+  const [passwordError, setPasswordError] = useState(null);
+
+  // An uploaded photo is streamed through an authenticated route, never served as a public file.
+  // A Google sign-up's photo is Google's own https URL and is used directly.
+  const stored = user?.avatarUrl ?? null;
+  const isUpload = Boolean(stored?.startsWith("/uploads/"));
+  useEffect(() => {
+    if (!isUpload) return;
+    let url;
+    let cancelled = false;
+    api
+      .get("/users/me/avatar", { responseType: "blob" })
+      .then((res) => {
+        if (cancelled) return;
+        url = URL.createObjectURL(res.data);
+        setUploadedPhoto({ key: stored, url });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [isUpload, stored]);
+  const avatarUrl = isUpload
+    ? uploadedPhoto?.key === stored
+      ? uploadedPhoto.url
+      : null
+    : stored?.startsWith("https://")
+      ? stored
+      : null;
+
+  async function handlePhoto(file) {
+    if (!file) return;
+    setPhotoError(null);
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setPhotoError("Use a JPEG, PNG or WebP image up to 5 MB.");
+      return;
+    }
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await api.post("/users/me/avatar", form);
+      setUser(res.data);
+    } catch (err) {
+      setPhotoError(errorMessage(err));
+    }
+  }
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -21,13 +69,18 @@ function SettingsPage() {
   const showNewPwError = newPassword.length > 0 && !isValidNewPassword(newPassword);
   const isFormValid = currentPassword.trim().length > 0 && isValidNewPassword(newPassword);
 
-  const handleUpdatePassword = (e) => {
+  const handleUpdatePassword = async (e) => {
     e.preventDefault();
     if (!isFormValid) return;
-
-    setPasswordSuccess(true);
-    setCurrentPassword("");
-    setNewPassword("");
+    setPasswordError(null);
+    try {
+      await api.post("/auth/change-password", { currentPassword, newPassword });
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+    } catch (err) {
+      setPasswordError(err?.response?.status === 401 ? "Your current password is incorrect." : errorMessage(err));
+    }
   };
 
   return (
@@ -40,21 +93,35 @@ function SettingsPage() {
           <h2>Profile photo</h2>
           <div className="avatar-wrapper">
             <div className="avatar">
-              <span className="avatar-initial">{initial}</span>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+              ) : (
+                <span className="avatar-initial">{initial}</span>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                onChange={(e) => handlePhoto(e.target.files?.[0])}
+              />
               <button
                 type="button"
                 className="camera-badge"
                 aria-label="Upload photo"
+                onClick={() => fileRef.current?.click()}
               >
                 <Camera size={14} color="#ffffff" />
               </button>
             </div>
           </div>
+          {photoError && <p className="error-message">{photoError}</p>}
         </div>
 
         {/* Change Password Card */}
         <div className="settings-card">
           <h2>Change password</h2>
+          {passwordError && <p className="error-message">{passwordError}</p>}
 
           {passwordSuccess && (
             <div className="success-alert">
