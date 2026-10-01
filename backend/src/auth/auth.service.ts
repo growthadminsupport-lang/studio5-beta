@@ -223,6 +223,13 @@ export class AuthService {
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
+  private revokeAllSessions(userId: string) {
+    return this.prisma.session.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   async logout(refreshToken: string) {
     await this.prisma.session.updateMany({
       where: { refreshToken: hashToken(refreshToken), revokedAt: null },
@@ -302,10 +309,15 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash, resetTokenHash: null, resetTokenExpiresAt: null },
-    });
+    // A reset is what someone does after losing control of the account, so every session
+    // signed in with the old password ends here, not when its refresh token runs out.
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash, resetTokenHash: null, resetTokenExpiresAt: null },
+      }),
+      this.revokeAllSessions(user.id),
+    ]);
 
     return { success: true };
   }
@@ -331,14 +343,19 @@ export class AuthService {
 
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) {
-      throw new UnauthorizedException('Current password is incorrect');
+      // 400, not 401: the caller is signed in. A 401 here reads as an expired session.
+      throw new BadRequestException('Current password is incorrect');
     }
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash },
-    });
-    return { success: true };
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      }),
+      this.revokeAllSessions(userId),
+    ]);
+    // Every other device is signed out; this one gets a fresh pair so it stays signed in.
+    return { success: true, ...(await this.issueTokens(user)) };
   }
 
   async getProfile(userId: string) {

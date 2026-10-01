@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { api, errorMessage } from "../lib/api";
+import { api, errorMessage, setAccessToken, storeRefreshToken } from "../lib/api";
 import "./SettingsPage.css";
 
 function SettingsPage() {
@@ -74,12 +74,15 @@ function SettingsPage() {
     if (!isFormValid) return;
     setPasswordError(null);
     try {
-      await api.post("/auth/change-password", { currentPassword, newPassword });
+      const res = await api.post("/auth/change-password", { currentPassword, newPassword });
+      // Changing the password signs out every session; keep this one with the new pair.
+      setAccessToken(res.data.accessToken);
+      storeRefreshToken(res.data.refreshToken);
       setPasswordSuccess(true);
       setCurrentPassword("");
       setNewPassword("");
     } catch (err) {
-      setPasswordError(err?.response?.status === 401 ? "Your current password is incorrect." : errorMessage(err));
+      setPasswordError(errorMessage(err));
     }
   };
 

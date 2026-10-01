@@ -90,11 +90,23 @@ export function refreshSession() {
   return refreshing;
 }
 
+// Routes where a 401 means "wrong credentials or token", not "access token expired". Everything
+// else under /auth (profile, change-password) is a signed-in call and should refresh like any other.
+const SIGN_IN_ROUTES = new Set([
+  "/auth/login",
+  "/auth/register",
+  "/auth/google",
+  "/auth/refresh",
+  "/auth/logout",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+]);
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && original && !original._retry && !original.url?.startsWith("/auth/")) {
+    if (error.response?.status === 401 && original && !original._retry && !SIGN_IN_ROUTES.has(original.url)) {
       original._retry = true;
       const session = await refreshSession();
       if (session) {

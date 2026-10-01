@@ -393,8 +393,52 @@ maybe('roles and permissions (e2e)', () => {
         .delete(`/children/${childId}/members/${id.parent}`)
         .expect(400);
       await as('doctor').delete(`/children/${childId}`).expect(403);
+      const xrays = await prisma.boneAgePrediction.findMany({
+        where: { childId },
+        select: { imageUrl: true },
+      });
+      const files = xrays.map((x) =>
+        join(UPLOADS, x.imageUrl.split('/').pop()!),
+      );
+      expect(files.length).toBeGreaterThan(0);
+      expect(files.every((f) => existsSync(f))).toBe(true);
+
       await as('parent').delete(`/children/${childId}`).expect(200);
       await as('doctor').get(`/children/${childId}`).expect(403);
+      // The rows cascade; the radiographs on disk must go with them.
+      expect(files.some((f) => existsSync(f))).toBe(false);
+    });
+  });
+
+  describe('password change', () => {
+    it('signs out every other session and keeps this one', async () => {
+      const login = () =>
+        http()
+          .post('/auth/login')
+          .send({ email: 'caretaker@e2e.test', password: PASSWORD })
+          .expect(200);
+      const otherDevice = (await login()).body.refreshToken as string;
+      const thisDevice = (await login()).body.accessToken as string;
+
+      await http()
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${thisDevice}`)
+        .send({ currentPassword: 'wrong-Pass1', newPassword: 'Changed123!' })
+        .expect(400);
+      const res = await http()
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${thisDevice}`)
+        .send({ currentPassword: PASSWORD, newPassword: 'Changed123!' })
+        .expect(200);
+
+      await http()
+        .post('/auth/refresh')
+        .send({ refreshToken: otherDevice })
+        .expect(401);
+      await http()
+        .post('/auth/refresh')
+        .send({ refreshToken: res.body.refreshToken })
+        .expect(200);
     });
   });
 });
