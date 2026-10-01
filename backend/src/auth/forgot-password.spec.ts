@@ -21,12 +21,22 @@ const USER = {
   resetTokenExpiresAt: null as Date | null,
 };
 
+let sessionsRevoked = false;
+
 const prismaStub = {
   $connect: async () => {},
   $disconnect: async () => {},
   $queryRaw: async () => [
     { hits: 1, expiresAt: new Date(Date.now() + 60000), blockedUntil: null },
   ],
+  // Array form only, as the service uses it: the operations are already-started promises.
+  $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
+  session: {
+    updateMany: async () => {
+      sessionsRevoked = true;
+      return { count: 1 };
+    },
+  },
   user: {
     findUnique: async ({ where }: any) =>
       where.email === USER.email || where.id === USER.id ? USER : null,
@@ -135,6 +145,7 @@ describe('forgot-password → email → reset (full chain)', () => {
       .send({ token, newPassword: 'newpassw0rd' })
       .expect(200);
     expect(USER.passwordHash).toMatch(/^\$2[aby]\$/); // bcrypt
+    expect(sessionsRevoked).toBe(true); // every device signed in with the old password is out
   });
 
   it('6. the token is single-use — replay is rejected', async () => {

@@ -1,4 +1,7 @@
-import { Fragment, useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
+import Markdown from "react-markdown";
+import { api } from "../lib/api";
+import { fromApi } from "../content/articles";
 import { Link, useParams, useLocation } from "react-router-dom";
 import growthSpurtImg from "../assets/knowledgeImg/growthPage1.png";
 import nutriImg from "../assets/knowledgeImg/nutriPage1.png";
@@ -552,7 +555,68 @@ function ArticlePage() {
   const backTarget = fromHome ? "/" : "/knowledge";
   const backLabel = fromHome ? "← Back to Home" : "← Back to Resources";
 
-  const article = articles[slug];
+  const builtin = articles[slug];
+
+  // Not one of the built-in designed pages: an article the admin published, from the API.
+  const [fetched, setFetched] = useState({ slug: null, article: null });
+  useEffect(() => {
+    if (articles[slug]) return;
+    let cancelled = false;
+    api
+      .get(`/articles/${encodeURIComponent(slug)}`)
+      .then((res) => !cancelled && setFetched({ slug, article: fromApi(res.data) }))
+      .catch(() => !cancelled && setFetched({ slug, article: null }));
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+  const remote = fetched.slug === slug ? fetched.article : null;
+  const remoteState = builtin ? "idle" : fetched.slug !== slug ? "loading" : remote ? "idle" : "missing";
+
+  if (!builtin && remoteState === "loading") {
+    return (
+      <div className="article-bg">
+        <div className="article-page">
+          <div className="article-card">
+            <p>Loading…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!builtin && remote) {
+    return (
+      <div className="article-bg">
+        <div className="article-page">
+          <Link to={backTarget} className="article-back-link article-back-top">
+            {backLabel}
+          </Link>
+          <div className="article-type">{remote.label}</div>
+          <article className="article-card">
+            <h1 className="article-title">{remote.title}</h1>
+            <p className="article-description">{remote.blurb}</p>
+            {remote.image && (
+              <div className="article-main-image-wrap">
+                <img src={remote.image} alt={remote.title} className="article-main-image" />
+              </div>
+            )}
+            {/* Markdown from the admin portal. react-markdown renders no raw HTML, so an
+                article cannot inject script into the page. */}
+            <div className="article-section article-markdown">
+              <Markdown>{remote.contentMd}</Markdown>
+            </div>
+            <p className="article-disclaimer">
+              General information for parents — not medical advice. Talk to your child&apos;s doctor about anything
+              specific to them.
+            </p>
+          </article>
+        </div>
+      </div>
+    );
+  }
+
+  const article = builtin;
 
   if (!article) {
     return (

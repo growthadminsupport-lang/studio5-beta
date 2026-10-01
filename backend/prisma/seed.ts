@@ -5,10 +5,13 @@ import { understandingBoneAge, nutritionForPreTeens, navigatingGrowthSpurts } fr
 const prisma = new PrismaClient();
 
 async function main() {
+  // The same five topics as the Knowledge page's category chips.
   const categories = [
     { name: 'Growth', slug: 'growth' },
     { name: 'Nutrition', slug: 'nutrition' },
     { name: 'Bone Age', slug: 'bone-age' },
+    { name: 'Puberty', slug: 'puberty' },
+    { name: 'Healthy Habits', slug: 'healthy-habits' },
   ];
 
   for (const c of categories) {
@@ -22,8 +25,8 @@ async function main() {
   const articles = [
     {
       categoryId: growth.id,
-      title: 'Navigating Growth Spurts',
-      slug: 'navigating-growth-spurts',
+      title: 'Navigating Growth Spurts (detailed)',
+      slug: 'navigating-growth-spurts-detailed',
       summary:
         'When the pubertal growth spurt happens, how fast it goes, and which changes are worth a doctor’s attention.',
       contentMd: navigatingGrowthSpurts,
@@ -31,8 +34,8 @@ async function main() {
     },
     {
       categoryId: nutrition.id,
-      title: 'Nutrition for Pre-teens',
-      slug: 'nutrition-for-pre-teens',
+      title: 'Nutrition for Pre-teens (detailed)',
+      slug: 'nutrition-for-pre-teens-detailed',
       summary:
         'Calcium, vitamin D, iron and protein targets for ages 9–13 — and the everyday habits that matter more than any single nutrient.',
       contentMd: nutritionForPreTeens,
@@ -40,8 +43,8 @@ async function main() {
     },
     {
       categoryId: boneAge.id,
-      title: 'Understanding Bone Age',
-      slug: 'understanding-bone-age',
+      title: 'Understanding Bone Age (detailed)',
+      slug: 'understanding-bone-age-detailed',
       summary:
         'How skeletal maturity is read from a hand X-ray, why a doctor would order one, and the limits of what it can tell you.',
       contentMd: understandingBoneAge,
@@ -49,14 +52,19 @@ async function main() {
     },
   ];
 
+  // These three are the longer, fully referenced versions of topics the website already covers
+  // with the team's designed pages (frontend/src/content/articles.js). They are seeded as
+  // unpublished drafts so the admin can edit and publish them, without a second article on the
+  // same topic appearing by surprise.
+  //
+  // Create only. Once an article exists the admin portal owns it: this seed runs on every
+  // deploy, and overwriting here would silently undo whatever an admin changed.
   for (const article of articles) {
-    // Create only. Once an article exists the admin portal owns it: this seed runs on every
-    // deploy, and overwriting here would silently undo whatever an admin changed.
     const { slug, ...fields } = article;
     await prisma.article.upsert({
       where: { slug },
       update: {},
-      create: { ...fields, slug, publishedAt: new Date() },
+      create: { ...fields, slug, publishedAt: null },
     });
   }
 

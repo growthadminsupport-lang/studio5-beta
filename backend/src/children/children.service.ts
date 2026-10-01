@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Child, ChildRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { removeUpload } from '../common/uploads';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
 import { can, Capability, ChildAccess } from './child-access';
@@ -203,7 +204,13 @@ export class ChildrenService {
       where: { childId, role: 'PARENT' },
     });
     if (parentCount <= 1) {
+      const xrays = await this.prisma.boneAgePrediction.findMany({
+        where: { childId },
+        select: { imageUrl: true },
+      });
       await this.prisma.child.delete({ where: { id: childId } });
+      // The rows cascade; the radiographs on disk do not.
+      await Promise.all(xrays.map((x) => removeUpload('bone-age', x.imageUrl)));
     } else {
       await this.prisma.childGuardian.delete({
         where: { childId_userId: { childId, userId } },

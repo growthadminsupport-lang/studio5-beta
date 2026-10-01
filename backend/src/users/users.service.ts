@@ -3,7 +3,7 @@ import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { publicUser } from './public-user';
 import { UpdateProfileDto } from '../auth/dto/update-profile.dto';
-import { streamUpload } from '../common/uploads';
+import { removeUpload, streamUpload } from '../common/uploads';
 
 @Injectable()
 export class UsersService {
@@ -43,10 +43,17 @@ export class UsersService {
   }
 
   async uploadAvatar(userId: string, avatarUrl: string) {
+    const previous = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
     });
+    if (previous.avatarUrl !== avatarUrl) {
+      await removeUpload('avatars', previous.avatarUrl);
+    }
     return this.sanitize(user);
   }
 
@@ -64,6 +71,7 @@ export class UsersService {
       select: { childId: true },
     });
     const childIds = parentLinks.map((l) => l.childId);
+    let xrays: { imageUrl: string }[] = [];
 
     if (childIds.length > 0) {
       const parentCounts = await this.prisma.childGuardian.groupBy({
@@ -75,13 +83,24 @@ export class UsersService {
         .filter((c) => c._count.userId === 1)
         .map((c) => c.childId);
       if (soleParentChildIds.length > 0) {
+        xrays = await this.prisma.boneAgePrediction.findMany({
+          where: { childId: { in: soleParentChildIds } },
+          select: { imageUrl: true },
+        });
         await this.prisma.child.deleteMany({
           where: { id: { in: soleParentChildIds } },
         });
       }
     }
 
-    await this.prisma.user.delete({ where: { id: userId } });
+    const { avatarUrl } = await this.prisma.user.delete({
+      where: { id: userId },
+    });
+    // Rows cascade; files on disk do not. A deleted account leaves no photo or radiograph behind.
+    await Promise.all([
+      removeUpload('avatars', avatarUrl),
+      ...xrays.map((x) => removeUpload('bone-age', x.imageUrl)),
+    ]);
     return { success: true };
   }
 }

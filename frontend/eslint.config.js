@@ -18,4 +18,10 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // Each context file exports its provider and its useX() hook together, which is the point
+    // of the file. Fast refresh then reloads the module instead of hot-swapping it; harmless.
+    files: ['src/context/**/*.jsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 ])

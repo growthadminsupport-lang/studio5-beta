@@ -5,6 +5,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ChildrenProvider } from "./context/ChildrenContext";
+import MuiThemeBridge from "./lib/muiTheme";
 import "./index.css";
 import App from "./App.jsx";
 
@@ -14,9 +15,11 @@ createRoot(document.getElementById("root")).render(
       <AuthProvider>
         <NotificationsProvider>
           <ThemeProvider>
-            <ChildrenProvider>
-              <App />
-            </ChildrenProvider>
+            <MuiThemeBridge>
+              <ChildrenProvider>
+                <App />
+              </ChildrenProvider>
+            </MuiThemeBridge>
           </ThemeProvider>
         </NotificationsProvider>
       </AuthProvider>

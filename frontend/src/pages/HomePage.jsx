@@ -1,57 +1,25 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import { 
-  Play, 
-  TrendingUp, 
-  Sparkles, 
-  Ruler, 
-  Utensils, 
-  Bandage 
-} from "lucide-react";
+import { TrendingUp, Sparkles } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import logoDarkVideo from "../assets/logo_motion_black_small.mp4";
 import logoLightVideo from "../assets/logo_motion_white_small.mp4";
 import posterDark from "../assets/poster_dark.webp";
 import posterLight from "../assets/poster_light.webp";
 import { useTheme } from "../context/ThemeContext";
-import growthExploreImg from "../assets/knowledgeImg/growthExplore.png";
-import nutritionExploreImg from "../assets/knowledgeImg/nutritionExplore.png";
-import boneAgeExploreImg from "../assets/knowledgeImg/boneAgeExplore.png";
-import pubertyExploreImg from "../assets/knowledgeImg/pubertyExplore.png";
+import { BUILTIN_ARTICLES } from "../content/articles";
 
-// Shared article dataset
-const articles = [
-  {
-    id: 1,
-    slug: "navigating-growth-spurts",
-    label: "Article",
-    title: "Growth Spurts",                                   // was: Navigating Growth Spurts
-    desc: "When and how your body speeds up.",                // was: the long text
-    category: "growth",
-    image: growthExploreImg,
-    bgColor: "bg-[#e4f0e8] dark:bg-green-500/10",
-  },
-  {
-    id: 2,
-    slug: "nutrition-for-pre-teens",
-    label: "Guide",
-    title: "Nutrition",                                       // was: Nutrition for Pre-teens
-    desc: "Key nutrients for strong bones and healthy growth.",
-    category: "nutrition",
-    image: nutritionExploreImg,
-    bgColor: "bg-[#fdecec] dark:bg-red-500/10",
-  },
-  {
-    id: 3,
-    slug: "understanding-bone-age",
-    label: "Explainer",
-    title: "Understanding Bone Age",
-    desc: "How skeletal maturity is read from a hand X-ray.",
-    category: "bone age",
-    image: boneAgeExploreImg,
-    bgColor: "bg-[#eaf6f5] dark:bg-teal-500/10",
-  },
-];
+// Same cards as the Knowledge page (content/articles.js), with Home's tile colours.
+const HOME_SLUGS = ["navigating-growth-spurts", "nutrition-for-pre-teens", "understanding-bone-age"];
+const TILE_BG = {
+  growth: "bg-[#e4f0e8] dark:bg-green-500/10",
+  nutrition: "bg-[#fdecec] dark:bg-red-500/10",
+  "bone age": "bg-[#eaf6f5] dark:bg-teal-500/10",
+};
+const articles = HOME_SLUGS.map((slug) => BUILTIN_ARTICLES.find((a) => a.slug === slug)).map((a) => ({
+  ...a,
+  desc: a.blurb,
+  bgColor: TILE_BG[a.category],
+}));
 
 export default function HomePage() {
   const { theme } = useTheme();
@@ -271,31 +239,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ----------------- Promo Video Banner ----------------- */}
-      <section className="w-full bg-white dark:bg-slate-800/30 py-16 my-12 border-y border-slate-100 dark:border-slate-800/80 transition-colors">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-[#056559] via-[#045248] to-[#023832] rounded-3xl h-64 md:h-80 flex flex-col items-center justify-center text-white relative shadow-xl shadow-teal-950/10 overflow-hidden border border-teal-800/40">
-            <div className="absolute -top-24 -left-24 w-72 h-72 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-teal-300/10 rounded-full blur-3xl pointer-events-none" />
-
-            <button 
-              aria-label="Play Promo Video"
-              type="button"
-              className="relative z-10 w-16 h-16 bg-white/90 hover:bg-white text-[#056559] rounded-full flex items-center justify-center transition-all duration-300 shadow-lg hover:scale-105 group cursor-pointer"
-            >
-              <Play 
-                size={26} 
-                className="ml-1 text-[#056559] fill-[#056559] group-hover:scale-110 transition-transform duration-200" 
-              />
-            </button>
-
-            <span className="relative z-10 text-xs sm:text-sm text-teal-100/80 mt-4 tracking-wide font-medium bg-teal-950/30 px-3 py-1 rounded-full border border-teal-700/30">
-              Promo video — coming soon
-            </span>
-          </div>
-        </div>
-      </section>
-
       {/* ----------------- Nurturing Knowledge Section ----------------- */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 text-left">
         <div className="flex justify-between items-end mb-8">
@@ -314,7 +257,6 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-[18px] items-stretch">
           {articles.map((a) => {
-            const IconComponent = a.Icon;
             return (
               <div key={a.id} className="rounded-[14px] overflow-hidden bg-white dark:bg-slate-800/60 border border-transparent dark:border-slate-700 shadow-[0_4px_12px_rgba(0,0,0,0.02)] dark:shadow-none flex flex-col justify-between">
                 <div className={`h-[180px] overflow-hidden ${a.bgColor}`}>

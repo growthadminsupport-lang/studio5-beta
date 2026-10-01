@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Brain } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Brain, AlertTriangle, CheckCircle2, Send, CalendarClock } from 'lucide-react';
+import { api, errorMessage } from '../lib/api';
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
 
@@ -57,34 +58,174 @@ function SignQuestion({ label, description, value, onChange, ageValue, onAgeChan
   );
 }
 
+
+// ============================================================
+// Result — compiled by the API (FR-13). Parents and doctors only;
+// a caretaker's submission comes back without it.
+// ============================================================
+
+const OUTCOME_TONE = {
+  EARLY_SIGNS: 'warning',
+  DELAYED_ONSET: 'warning',
+  INSUFFICIENT_INFO: 'neutral',
+  TYPICAL_ONSET: 'ok',
+  NO_SIGNS_YET: 'ok',
+};
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function ResultCard({ result, assessedAt }) {
+  const tone = OUTCOME_TONE[result.outcome] ?? 'neutral';
+  const box =
+    tone === 'warning'
+      ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10'
+      : tone === 'ok'
+        ? 'border-[#bcece0] dark:border-teal-500/30 bg-[#f2fbf9] dark:bg-teal-500/10'
+        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800';
+  return (
+    <div className={`mb-6 rounded-2xl border p-5 ${box}`}>
+      <div className="flex items-start gap-3">
+        {tone === 'warning' ? (
+          <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+        ) : (
+          <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-[#056559] dark:text-teal-300" />
+        )}
+        <div className="min-w-0">
+          <p className="text-xs text-slate-500 dark:text-slate-400">Screening result · {formatDate(assessedAt)}</p>
+          <h2 className="mt-0.5 text-base font-semibold text-slate-900 dark:text-slate-100">{result.title}</h2>
+          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{result.summary}</p>
+          {result.signsReported?.length > 0 && (
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Signs reported: {result.signsReported.join(', ')}</p>
+          )}
+          {result.guidance?.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+              {result.guidance.map((g) => (
+                <li key={g} className="flex gap-2">
+                  <span className="text-[#056559] dark:text-teal-300">•</span>
+                  <span>{g}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            A screening aid, not a diagnosis. {result.seeDoctor ? 'Please book an appointment with a doctor.' : 'Talk to a doctor if anything worries you.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FollowUpPlan({ plan }) {
+  if (!plan?.active && !plan?.conclusion) return null;
+  const next = plan.steps?.find((s) => !s.completedAt && s.dueAt);
+  return (
+    <div className="mb-6 rounded-2xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 shadow-2xs">
+      <div className="flex items-center gap-2">
+        <CalendarClock size={18} className="text-[#056559] dark:text-teal-300" />
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Follow-up plan</h2>
+      </div>
+      {plan.conclusion ? (
+        <div className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+          <p className="font-medium">{plan.conclusion.title}</p>
+          <p className="mt-1">{plan.conclusion.summary}</p>
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+          {plan.completedRounds} of {plan.totalRounds} follow-up screenings done.
+          {next?.dueAt && ` Next one due around ${formatDate(next.dueAt)}.`}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ============================================================
 // Puberty Page
 // ============================================================
 
+// Keyed by child, so switching child starts from a clean form and an empty history.
 function PubertyPage() {
   const { activeChild: child } = useChildren();
+  if (!child) return <NoChildState />;
+  return <PubertyContent key={child.id} child={child} />;
+}
+
+function PubertyContent({ child }) {
   const isFemale = child?.sex === 'FEMALE';
+  // Caretakers fill in the questionnaire but never see results (docs/user-flows.md §2): the API
+  // returns "submitted" only, and the parent and doctor are notified to read it.
+  const seesResults = child?.myRole === 'PARENT' || child?.myRole === 'DOCTOR';
   const [formOpen, setFormOpen] = useState(false);
   const [answers, setAnswers] = useState({});
   const [notes, setNotes] = useState('');
-  // Just a submission log — no scored outcome. Real scoring against
-  // clinical age ranges needs backend logic; this only captures answers.
   const [submissions, setSubmissions] = useState([]);
+  const [plan, setPlan] = useState(null);
+  const [justSent, setJustSent] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    if (!child) return;
+    try {
+      const res = await api.get('/puberty/history', { params: { childId: child.id } });
+      setSubmissions(res.data);
+      if (seesResults) {
+        const p = await api.get('/puberty/plan', { params: { childId: child.id } });
+        setPlan(p.data);
+      } else {
+        setPlan(null);
+      }
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }, [child, seesResults]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = { params: { childId: child.id } };
+    api
+      .get('/puberty/history', params)
+      .then((res) => !cancelled && setSubmissions(res.data))
+      .catch((err) => !cancelled && setError(errorMessage(err)));
+    if (seesResults) {
+      api
+        .get('/puberty/plan', params)
+        .then((res) => !cancelled && setPlan(res.data))
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [child.id, seesResults]);
 
   function set(key, value) {
     setAnswers((a) => ({ ...a, [key]: value }));
   }
 
-  function handleSubmit() {
-    setSubmissions((prev) => [{ id: `${Date.now()}`, date: new Date().toISOString() }, ...prev]);
-    setAnswers({});
-    setNotes('');
-    setFormOpen(false);
+  async function handleSubmit() {
+    setError(null);
+    setSaving(true);
+    try {
+      const clean = Object.fromEntries(Object.entries(answers).filter(([, v]) => v !== undefined && v !== ''));
+      await api.post('/puberty/questionnaire', { childId: child.id, answers: clean, notes: notes.trim() || undefined });
+      setAnswers({});
+      setNotes('');
+      setFormOpen(false);
+      setJustSent(!seesResults);
+      await load();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
   }
 
   const hasHistory = submissions.length > 0;
-
-  if (!child) return <NoChildState />;
+  const latest = submissions[0];
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-900 py-8">
@@ -106,6 +247,25 @@ function PubertyPage() {
             A guided screening tool, not a clinical diagnosis. Talk to a pediatrician for a formal assessment.
           </p>
         </div>
+
+        {error && (
+          <p role="alert" className="mb-4 rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+            {error}
+          </p>
+        )}
+
+        {justSent && (
+          <div className="mb-6 flex gap-3 rounded-2xl border border-[#bcece0] dark:border-teal-500/30 bg-[#f2fbf9] dark:bg-teal-500/10 p-4">
+            <Send size={18} className="mt-0.5 shrink-0 text-[#056559] dark:text-teal-300" />
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              <span className="font-semibold">Submitted.</span> {child.familyName ?? 'The parent'} and {child.fullName}&apos;s doctor have
+              been notified and will read the result.
+            </p>
+          </div>
+        )}
+
+        {!formOpen && seesResults && latest?.result && <ResultCard result={latest.result} assessedAt={latest.assessedAt} />}
+        {!formOpen && seesResults && <FollowUpPlan plan={plan} />}
 
         {/* ====================================================
             Landing — before the form opens, and only when there's
@@ -147,7 +307,8 @@ function PubertyPage() {
               <li className="flex gap-2">
                 <span className="text-[#056559] dark:text-teal-300">•</span>
                 <span>
-                  Answers are stored against {child.fullName}&apos;s profile and visible only to their guardians.
+                  Answers are stored against {child.fullName}&apos;s profile. The result is shared with the parent and the
+                  child&apos;s doctor only.
                 </span>
               </li>
             </ul>
@@ -349,14 +510,16 @@ function PubertyPage() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="rounded-full bg-[#056559] dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300"
+                disabled={saving}
+                className="rounded-full bg-[#056559] dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300 disabled:opacity-60"
               >
-                See result
+                {saving ? 'Submitting…' : seesResults ? 'See result' : 'Submit'}
               </button>
-              <p className="text-center text-xs text-slate-400">
-                Scoring against clinical age ranges isn&apos;t wired up yet — this saves your answers but
-                doesn&apos;t produce a result yet.
-              </p>
+              {!seesResults && (
+                <p className="text-center text-xs text-slate-400">
+                  The result goes to the parent and the child&apos;s doctor.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -370,11 +533,21 @@ function PubertyPage() {
             <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">History</h2>
             <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
               {submissions.map((s) => (
-                <div key={s.id} className="flex items-center justify-between py-2 text-sm">
-                  <span className="text-slate-500 dark:text-slate-400">
-                    {new Date(s.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </span>
-                  <span className="text-xs font-medium text-slate-400">Submitted — awaiting scoring</span>
+                <div key={s.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">{formatDate(s.assessedAt)}</span>
+                  {s.result ? (
+                    <span
+                      className={`text-right text-xs font-medium ${
+                        OUTCOME_TONE[s.result.outcome] === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-[#056559] dark:text-teal-300'
+                      }`}
+                    >
+                      {s.result.title}
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium text-slate-400">
+                      Submitted{s.submittedByMe ? ' by you' : ''} · result shared with parent and doctor
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

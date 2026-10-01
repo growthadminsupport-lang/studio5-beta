@@ -595,3 +595,33 @@
     border-radius: 12px;
   }
 }
+/* =========================
+   ACCOUNT TYPE (register)
+   ========================= */
+
+.account-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1.5px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-input);
+  overflow: hidden;
+}
+
+.account-type-toggle button {
+  padding: 10px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+  cursor: pointer;
+}
+
+.account-type-toggle button + button {
+  border-left: 1.5px solid var(--color-border, #e2e8f0);
+}
+
+.account-type-toggle button.active {
+  background: var(--color-primary);
+  color: white;
+}

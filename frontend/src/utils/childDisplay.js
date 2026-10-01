@@ -50,3 +50,10 @@ export function getSexLabel(sex) {
   if (sex === 'MALE') return 'Boy';
   return '';
 }
+// Your role for a child, as the API sends it on `child.myRole`.
+export function getRoleLabel(role) {
+  if (role === 'PARENT') return 'Parent';
+  if (role === 'CARETAKER') return 'Caretaker';
+  if (role === 'DOCTOR') return 'Doctor';
+  return '';
+}

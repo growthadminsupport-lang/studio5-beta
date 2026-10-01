@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { errorMessage } from "../../lib/api";
+import GoogleButton from "./GoogleButton";
 import { useTheme } from "../../context/ThemeContext";
 import logoDarkVideo from "../../assets/logo_motion_black_small.mp4";
 import logoLightVideo from "../../assets/logo_motion_white_small.mp4";
@@ -17,7 +20,18 @@ function RegisterForm() {
     phone: "",
     password: "",
     confirmPassword: "",
+    licenseNumber: "",
+    hospital: "",
   });
+  // USER covers parents and caretakers: what someone is for a child is set by the child's
+  // parent (creating the child, or inviting them). Only doctors register differently, because
+  // an admin has to approve them before they can see any child's X-rays.
+  const [accountType, setAccountType] = useState("USER");
+  const [submitting, setSubmitting] = useState(false);
+  const { register, loginWithGoogle } = useAuth();
+  const [params] = useSearchParams();
+  const next = params.get("next");
+  const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -33,7 +47,7 @@ function RegisterForm() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -41,24 +55,41 @@ function RegisterForm() {
       setError("You must accept the terms of use and privacy notice.");
       return;
     }
-
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
-    console.log("Register:", form);
-    navigate("/login", { replace: true });
+    setSubmitting(true);
+    try {
+      await register({
+        fullName: form.name.trim(),
+        email: form.email.trim(),
+        phoneNumber: form.phone.trim() || undefined,
+        password: form.password,
+        acceptedTerms: true,
+        accountType,
+        ...(accountType === "DOCTOR"
+          ? { licenseNumber: form.licenseNumber.trim(), hospital: form.hospital.trim() }
+          : {}),
+      });
+      navigate(destination, { replace: true });
+    } catch (err) {
+      setError(
+        err?.response?.status === 409 ? "That email already has an account. Log in instead." : errorMessage(err),
+      );
+      setSubmitting(false);
+    }
   };
 
-  const handleGoogleSignUp = () => {
-    if (!acceptedTerms) {
-      setError("You must accept the terms of use and privacy notice.");
-      return;
+  const handleGoogleSignUp = async (credential) => {
+    setError("");
+    try {
+      await loginWithGoogle(credential, acceptedTerms);
+      navigate(destination, { replace: true });
+    } catch (err) {
+      setError(errorMessage(err));
     }
-
-    // Connect your Google authentication here
-    console.log("Continue with Google");
   };
 
   return (
@@ -83,6 +114,30 @@ function RegisterForm() {
       </p>
 
       {error && <p className="auth-error">{error}</p>}
+
+      {/* Account type */}
+      <div className="account-type-toggle" role="radiogroup" aria-label="Account type">
+        {[
+          { v: "USER", label: "Parent or caretaker" },
+          { v: "DOCTOR", label: "Doctor" },
+        ].map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            role="radio"
+            aria-checked={accountType === o.v}
+            className={accountType === o.v ? "active" : ""}
+            onClick={() => setAccountType(o.v)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      {accountType === "DOCTOR" && (
+        <p className="auth-subtitle" style={{ marginTop: 0 }}>
+          Doctor accounts are checked by the GrowTH team before they can see a child&apos;s records.
+        </p>
+      )}
 
       {/* Full Name */}
       <label>
@@ -119,6 +174,31 @@ function RegisterForm() {
           required
         />
       </label>
+
+      {accountType === "DOCTOR" && (
+        <>
+          <label>
+            <input
+              type="text"
+              name="licenseNumber"
+              placeholder="Medical license number"
+              value={form.licenseNumber}
+              onChange={handleChange}
+              required
+            />
+          </label>
+          <label>
+            <input
+              type="text"
+              name="hospital"
+              placeholder="Hospital or clinic"
+              value={form.hospital}
+              onChange={handleChange}
+              required
+            />
+          </label>
+        </>
+      )}
 
       {/* Password */}
       <label className="password-field">
@@ -214,36 +294,30 @@ function RegisterForm() {
       </label>
 
       {/* Create Account */}
-      <button type="submit" disabled={!acceptedTerms}>
-        Create Account
+      <button type="submit" disabled={!acceptedTerms || submitting}>
+        {submitting ? "Creating account…" : "Create Account"}
       </button>
 
-      {/* Divider */}
-      <div className="auth-divider">
-        <span>or</span>
-      </div>
-
-      {/* Google Sign Up */}
-      <button
-        type="button"
-        className="google-login-button"
-        onClick={handleGoogleSignUp}
-        disabled={!acceptedTerms}
-        aria-disabled={!acceptedTerms}
-      >
-        <img
-          src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-          alt=""
-          className="google-icon"
-        />
-        <span>Sign up with Google</span>
-      </button>
+      {/* Google sign-up creates a parent/caretaker account; doctors register with the form. */}
+      {accountType === "USER" && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+        <>
+          <div className="auth-divider">
+            <span>or</span>
+          </div>
+          <GoogleButton
+            onCredential={handleGoogleSignUp}
+            disabled={!acceptedTerms}
+            disabledReason="Tick the box above to sign up with Google."
+            label="Sign up with Google"
+          />
+        </>
+      )}
 
       {/* Login Link */}
       <div className="auth-links">
         <span>
           Already have an account?{" "}
-          <Link to="/login">Log in</Link>
+          <Link to={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}>Log in</Link>
         </span>
       </div>
     </form>

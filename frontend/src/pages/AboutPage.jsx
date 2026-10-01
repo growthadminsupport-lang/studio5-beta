@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { LineChart, Lightbulb, PlusSquare, Shield } from "lucide-react";
 
 export default function AboutPage() {

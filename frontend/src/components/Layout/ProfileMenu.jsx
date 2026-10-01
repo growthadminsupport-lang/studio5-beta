@@ -5,21 +5,25 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  Bug,
+  ShieldCheck,
 } from "lucide-react";
+import ReportProblemDialog from "./ReportProblemDialog";
 import { useAuth } from "../../context/AuthContext";
 import "./ProfileMenu.css";
 
 function ProfileMenu() {
   const [open, setOpen] = useState(false);
 
-  const { logout, email } = useAuth();
+  const { logout, email, user, isAdmin } = useAuth();
+  const [reportOpen, setReportOpen] = useState(false);
   const navigate = useNavigate();
 
-  const initial = email ? email.charAt(0).toUpperCase() : "U";
+  const initial = (user?.fullName || email || "U").charAt(0).toUpperCase();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setOpen(false);
-    logout();
+    await logout();
     navigate("/login", { replace: true });
   };
 
@@ -59,6 +63,27 @@ function ProfileMenu() {
             <span>Setting</span>
           </Link>
 
+          {isAdmin && (
+            <Link
+              to="/admin"
+              onClick={() => setOpen(false)}
+            >
+              <ShieldCheck size={17} strokeWidth={1.8} />
+              <span>Admin portal</span>
+            </Link>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setReportOpen(true);
+            }}
+          >
+            <Bug size={17} strokeWidth={1.8} />
+            <span>Report a problem</span>
+          </button>
+
           <div className="profile-dropdown-divider" />
 
           <button onClick={handleLogout}>
@@ -67,6 +92,7 @@ function ProfileMenu() {
           </button>
         </div>
       )}
+      <ReportProblemDialog open={reportOpen} onClose={() => setReportOpen(false)} />
     </div>
   );
 }

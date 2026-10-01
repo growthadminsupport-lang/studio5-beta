@@ -1,8 +1,10 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { errorMessage } from "../../lib/api";
+import GoogleButton from "./GoogleButton";
 import { useTheme } from "../../context/ThemeContext";
 import logoDarkVideo from "../../assets/logo_motion_black_small.mp4";
 import logoLightVideo from "../../assets/logo_motion_white_small.mp4";
@@ -19,30 +21,43 @@ function LoginForm() {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
 
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const { login, loginWithGoogle } = useAuth();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Back to where sign-in was asked for (an invitation link, a notification), never off-site.
+  const next = params.get("next");
+  const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    const result = login(email, remember);
-
-    if (result && !result.success) {
-      setError(result.error);
-      return;
+    setSubmitting(true);
+    try {
+      await login(email.trim(), password, remember);
+      navigate(destination, { replace: true });
+    } catch (err) {
+      setError(
+        err?.response?.status === 401 ? "Incorrect email or password." : errorMessage(err),
+      );
+      setSubmitting(false);
     }
-
-    navigate("/dashboard", { replace: true });
   };
 
-  const handleGoogleLogin = () => {
-    // Temporary Google login
-    // Replace this later with real Google authentication
-    console.log("Google Login clicked");
-
-    // For now, go to dashboard
-    navigate("/dashboard", { replace: true });
+  const handleGoogle = async (credential) => {
+    setError("");
+    try {
+      await loginWithGoogle(credential, false);
+      navigate(destination, { replace: true });
+    } catch (err) {
+      // A first-time Google user has no account yet; creating one needs the terms accepted.
+      if (err?.response?.status === 400 && /terms/i.test(errorMessage(err))) {
+        setError("No account yet for that Google address. Create one first and accept the terms.");
+      } else {
+        setError(errorMessage(err));
+      }
+    }
   };
 
   return (
@@ -120,34 +135,25 @@ function LoginForm() {
       </div>
 
       {/* Login button */}
-      <button type="submit">
-        Log In
+      <button type="submit" disabled={submitting}>
+        {submitting ? "Logging in…" : "Log In"}
       </button>
 
       {/* Divider */}
-      <div className="auth-divider">
-        <span>or</span>
-      </div>
+      {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
+      )}
 
       {/* Google Login */}
-      <button
-        type="button"
-        className="google-login-button"
-        onClick={handleGoogleLogin}
-      >
-        <img
-          src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-          alt="Google"
-          className="google-icon"
-        />
-        <span>Continue with Google</span>
-      </button>
+      <GoogleButton onCredential={handleGoogle} />
 
       {/* Register */}
       <div className="auth-links">
         <span>
           New here?{" "}
-          <Link to="/register">
+          <Link to={next ? `/register?next=${encodeURIComponent(next)}` : "/register"}>
             Create an account
           </Link>
         </span>
