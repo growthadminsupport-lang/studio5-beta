@@ -120,12 +120,12 @@ The server also shapes responses by role. Hiding a field in the UI is not enough
 | POST | `/auth/refresh` | *Public.* `{ refreshToken }`. Rotates the pair. |
 | POST | `/auth/logout` | *Public.* `{ refreshToken }`. Revokes it. |
 | POST | `/auth/forgot-password` | *Public.* Always `200`, so it does not reveal which emails exist. Sends a reset link through Resend. |
-| POST | `/auth/reset-password` | *Public.* `token`, `newPassword`. The token is single-use, 1 hour. |
-| POST | `/auth/change-password` | `currentPassword`, `newPassword`. Refused for Google-only accounts, which have no password. |
+| POST | `/auth/reset-password` | *Public.* `token`, `newPassword`. The token is single-use, 1 hour. Revokes every session. |
+| POST | `/auth/change-password` | `currentPassword`, `newPassword`. A wrong current password is `400`. Revokes every session and returns a new `{ accessToken, refreshToken }` for this device. Refused for Google-only accounts, which have no password. |
 | GET / PATCH | `/auth/profile` | Alias of `/users/me`, kept for older clients. |
 | GET | `/users/me` | The signed-in user, including `role`, `doctorStatus`, `hospital`. Never the password hash. |
 | PATCH | `/users/me` | `fullName`, `phoneNumber`. |
-| DELETE | `/users/me` | Deletes the account. Children where this account is the only parent are deleted with it. |
+| DELETE | `/users/me` | Deletes the account and its avatar. Children where this account is the only parent are deleted with it, X-ray files included. |
 | GET / POST | `/users/me/avatar` | Profile photo. JPEG/PNG/WebP, 5 MB. |
 
 ### Children and members
@@ -136,7 +136,7 @@ The server also shapes responses by role. Hiding a field in the UI is not enough
 | POST | `/children` | Creates a child with the caller as `PARENT`. `fullName`, `sex`, `dateOfBirth`, `hn?`. |
 | GET | `/children/:id` | `child.read` |
 | PATCH | `/children/:id` | `child.edit` for details. `child.setHn` for `hn`, so a doctor may change the HN only. |
-| DELETE | `/children/:id` | `child.delete`. With one parent, deletes the child and every record. With two parents, removes only the caller's link. |
+| DELETE | `/children/:id` | `child.delete`. With one parent, deletes the child, every record and the X-ray files. With two parents, removes only the caller's link. |
 | GET | `/children/:id/members` | `members.manage`. Returns `members` and `pendingInvites`. |
 | DELETE | `/children/:id/members/:userId` | A parent removes anyone except a parent. A caretaker or doctor may remove only themselves ("leave"). |
 | POST | `/children/:id/invites` | `members.manage`. `role` `CARETAKER` or `DOCTOR`, `email?`. Returns `{ id, link, expiresAt, email, emailed }`. The link carries a random 24-byte token, stored only as a SHA-256 hash. It is single-use and lasts 7 days. |
