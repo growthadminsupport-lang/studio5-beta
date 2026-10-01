@@ -145,7 +145,7 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟡 Preprocessing and augmentation are documented in `ai-service/refine9/README.md` and the team's `train.py`: CLAHE, 456 px, rotation ±15°, jitter, flip, and 4-view TTA. **Limitations by age and sex are not.** |
 | 6.3 | UI itself presents bone age as a screening aid, not only in docs | 🟢 |
 | 6.4 | Video production standards | ⚪ Videos are the team's part |
-| 6.5 | Functional testing before each milestone, test record maintained | 🟢 96 unit tests (including the refine9 preprocessing against cv2/torchvision output), 24 API e2e tests (the role matrix over HTTP), and 22 scripted browser flows covering all four roles and a PDF upload. |
+| 6.5 | Functional testing before each milestone, test record maintained | 🟢 100 unit tests (including the refine9 preprocessing against cv2/torchvision output), 26 API e2e tests (the role matrix over HTTP, X-ray file handling), and 24 scripted browser flows covering all four roles and PDF, JPEG and WebP uploads. |
 | 6.5 | Test on ≥2 browsers and ≥1 mobile viewport | 🟡 Chromium desktop and a 390 px mobile viewport. **Safari and Firefox are not tested yet.** |
 
 ---

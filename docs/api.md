@@ -168,7 +168,7 @@ The server also shapes responses by role. Hiding a field in the UI is not enough
 
 | Method | Path | Capability and notes |
 | --- | --- | --- |
-| POST | `/bone-age/upload` | `boneAge.write`. Multipart `file` (JPEG, PNG or WebP, 10 MB, 40 megapixels), `childId`, `examDate?` (defaults to today). The browser turns PDFs into an image first; the server never parses a PDF. The image is stored as channel 0, at most 2048 px, as lossless WebP. Returns the doctor view below with status `PENDING`; refine9 runs in the background. |
+| POST | `/bone-age/upload` | `boneAge.write`. Multipart `file` (JPEG, PNG or WebP, 10 MB, 40 megapixels), `childId`, `examDate?` (defaults to today). The browser turns PDFs into an image first; the server never parses a PDF. The server checks the file's header (format, size, at most 40 megapixels), names it by its real format and keeps the bytes as uploaded; the model reads channel 0, scaled to at most 2048 px, at prediction time. Returns the doctor view below with status `PENDING`; refine9 runs in the background. |
 | GET | `/bone-age/model-status` | Whether the model is loaded, its version, MAE and ±12-month accuracy. |
 | GET | `/bone-age/history?childId=` | `boneAge.full` gets every record. `boneAge.status` gets reviewed records in the family shape. |
 | GET | `/bone-age/:id` | Same shaping. |
@@ -239,8 +239,7 @@ dashboard.
 | `GOOGLE_CLIENT_ID` | Verifies Google sign-in tokens |
 | `ADMIN_EMAIL` | Promoted to `ADMIN` by the seed, once that email has signed in with Google |
 | `EXPORT_SALT` | Key for the anonymised export. Falls back to `JWT_ACCESS_SECRET` |
-| `BONE_AGE_MODEL_PATH`, `BONE_AGE_MODEL_VERSION` | refine9 ONNX model and its rotation maps. Downloaded and checksum-checked at build time from the GitHub release `model-v2` |
-| `BONE_AGE_MAE_MONTHS`, `BONE_AGE_ACCURACY_12M` | Measured accuracy, shown with every estimate (7.43, 0.802) |
+| `BONE_AGE_MODEL` | Path of the refine9 ONNX model. Its rotation maps and `refine9.json` (version, MAE 7.43, 80.2% within a year) sit next to it. All are downloaded and checksum-checked at build time from the GitHub release `model-v2`. The old `BONE_AGE_MODEL_PATH`, `_VERSION`, `_MAE_MONTHS`, `_ACCURACY_12M` and `_AGE_*` keys are ignored |
 | `BONE_AGE_TTA` | `on` (default): average 4 views, as the MAE was measured. `off`: one view, 4× faster |
 | `MALLOC_ARENA_MAX` | `2`, which keeps the API and the model inside 512 MB |
 

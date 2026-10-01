@@ -21,7 +21,7 @@ services:
       npx prisma db seed &&
       npm run build &&
       mkdir -p models && cd models &&
-      for f in refine9.onnx refine9_rot+5.i32 refine9_rot-5.i32 SHA256SUMS; do
+      for f in refine9.onnx refine9.json refine9_rot+5.i32 refine9_rot-5.i32 SHA256SUMS; do
       curl -fsSL -o "$f" "https://github.com/growthadminsupport-lang/studio5-beta/releases/download/model-v2/$f"; done &&
       sha256sum -c SHA256SUMS && cd ..
     startCommand: npm run start:prod
@@ -75,20 +75,13 @@ services:
       # cold starts onto the first request of a demo. Node and Python ONNX Runtime were checked
       # against each other on identical input and agree to the last decimal.
       # refine9 from the ML team (branch Backend+AI): EfficientNet-B5 at 456 px with the sex
-      # input, predicting months directly, so no calibration constants are needed. Converted
-      # by ai-service/refine9/export.py; the build checks the release files' SHA-256.
-      - key: BONE_AGE_MODEL_PATH
+      # input, predicting months directly. The build checks the release files' SHA-256. Its
+      # version and measured accuracy (MAE 7.43 months, 80.2% within a year) come from
+      # models/refine9.json, released with the weights, not from env vars. The old
+      # BONE_AGE_MODEL_PATH / _VERSION / _MAE_MONTHS / _ACCURACY_12M / _AGE_* keys are no
+      # longer read, so values left over in the dashboard are harmless.
+      - key: BONE_AGE_MODEL
         value: models/refine9.onnx
-      - key: BONE_AGE_MODEL_VERSION
-        value: effnetb5-refine9-rsna
-      # Measured with 4-view test-time augmentation on the 1,425-image RSNA validation set,
-      # recomputed by the ML team on 2026-09-29. That set was also used to pick the model, so
-      # these are research validation figures, not an independent test (TOR 6.3).
-      - key: BONE_AGE_MAE_MONTHS
-        value: "7.43"
-      # 80.2% within a year: about one estimate in five is out by more than 12 months.
-      - key: BONE_AGE_ACCURACY_12M
-        value: "0.802"
       # "off" runs one view instead of four: 4x faster, at the cost of the measured accuracy.
       # Only for when the free instance's CPU cannot keep up.
       - key: BONE_AGE_TTA

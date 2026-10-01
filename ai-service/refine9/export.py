@@ -8,6 +8,7 @@ Writes to ./out:
   refine9.onnx            EfficientNet-B5 + sex input, months out (opset 17)
   refine9_rot+5.i32       nearest-neighbour index maps for the +5 / -5 degree TTA views,
   refine9_rot-5.i32       produced by torchvision's own TF.rotate so Node replays them exactly
+  refine9.json            what the backend reports about the model (version, measured accuracy)
   SHA256SUMS
 
 model.py and manifest.json are copied unchanged from the ML team's branch Backend+AI
@@ -69,6 +70,16 @@ def main():
     for angle in (5, -5):
         rotated = TF.rotate(index, angle=angle)[0, 0].round().to(torch.int64) - 1
         rotated.numpy().astype('<i4').tofile(OUT / f'refine9_rot{angle:+d}.i32')
+
+    # The backend reads these from here rather than from env vars, so a value left in the
+    # Render dashboard by a previous model cannot mislabel this one.
+    (OUT / 'refine9.json').write_text(json.dumps({
+        'modelVersion': MANIFEST['modelVersion'].replace('-tta', ''),
+        'maeMonths': round(MANIFEST['maeMonths'], 2),
+        'accuracyWithin12Months': round(MANIFEST['accuracyWithin12Months'], 3),
+        'validationSamples': MANIFEST['validationSamples'],
+        'checkpointSha256': MANIFEST['sha256'],
+    }, indent=2) + '\n')
 
     sums = [f'{sha256(p)}  {p.name}' for p in sorted(OUT.iterdir()) if p.name != 'SHA256SUMS']
     (OUT / 'SHA256SUMS').write_text('\n'.join(sums) + '\n')

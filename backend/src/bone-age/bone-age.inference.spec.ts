@@ -1,4 +1,12 @@
-import { readFileSync } from 'fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'fs';
+import { tmpdir } from 'os';
+import sharp from 'sharp';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { BoneAgeInferenceService } from './bone-age.inference';
@@ -78,27 +86,93 @@ describe('BoneAgeInferenceService', () => {
   const config = (values: Record<string, string> = {}) =>
     ({ get: (k: string) => values[k] }) as unknown as ConfigService;
 
-  it('reports refine9 and its measured accuracy by default', () => {
-    const svc = new BoneAgeInferenceService(config());
-    expect(svc.status).toMatchObject({
-      modelVersion: 'effnetb5-refine9-rsna-tta',
-      maeMonths: 7.43,
-      accuracyWithin12Months: 0.802,
-    });
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'bone-age-'));
   });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  it('marks the version when test-time augmentation is switched off', () => {
-    const svc = new BoneAgeInferenceService(config({ BONE_AGE_TTA: 'off' }));
-    expect(svc.modelVersion).toBe('effnetb5-refine9-rsna');
-  });
+  /** A model folder with a stub ONNX file is enough for everything but running it. */
+  const modelDir = (card: object) => {
+    writeFileSync(join(dir, 'm.json'), JSON.stringify(card));
+    return config({ BONE_AGE_MODEL: join(dir, 'm.onnx') });
+  };
 
-  it('stays unready, without throwing, when the model files are missing', async () => {
+  it('reports nothing about a model it could not load', async () => {
     const svc = new BoneAgeInferenceService(
-      config({ BONE_AGE_MODEL_PATH: 'models/nope.onnx' }),
+      config({ BONE_AGE_MODEL: join(dir, 'nope.onnx') }),
     );
     await svc.onModuleInit();
     expect(svc.isReady).toBe(false);
+    expect(svc.status).toMatchObject({
+      modelVersion: null,
+      maeMonths: null,
+    });
     expect(svc.status.detail).toContain('nope.onnx');
+    expect(svc.status.detail).toContain('nope.json');
     expect(svc.status.detail).toContain('nope_rot+5.i32');
+  });
+
+  it('ignores the old BONE_AGE_MODEL_PATH a dashboard may still hold', async () => {
+    const svc = new BoneAgeInferenceService(
+      config({ BONE_AGE_MODEL_PATH: 'models/bone_age.onnx' }),
+    );
+    await svc.onModuleInit();
+    expect(svc.status.detail ?? '').not.toContain('bone_age.onnx');
+  });
+
+  it("gives each record its own model's accuracy, flagging retired B0 results", () => {
+    const svc = new BoneAgeInferenceService(config());
+    expect(
+      svc.accuracyFor('effnetb0-v1-rsna (provisional calibration)'),
+    ).toEqual({ maeMonths: 8.78, accuracyWithin12Months: 0.731, legacy: true });
+    expect(svc.accuracyFor('effnetb5-refine9-rsna-tta').legacy).toBe(false);
+  });
+
+  describe('validateUpload', () => {
+    const svc = () => new BoneAgeInferenceService(modelDir({}));
+    const image = (format: 'jpeg' | 'png' | 'webp') =>
+      sharp({
+        create: { width: 40, height: 60, channels: 3, background: '#333' },
+      })
+        .toFormat(format)
+        .toBuffer();
+
+    it('keeps a WebP upload as it is, under the same name', async () => {
+      const file = join(dir, 'a.webp');
+      const bytes = await image('webp');
+      writeFileSync(file, bytes);
+      await expect(svc().validateUpload(file)).resolves.toBe(file);
+      expect(readFileSync(file).equals(bytes)).toBe(true);
+    });
+
+    it('names the file by its real format, not the one the client sent', async () => {
+      const file = join(dir, 'a.html');
+      writeFileSync(file, await image('png'));
+      const stored = await svc().validateUpload(file);
+      expect(stored).toBe(join(dir, 'a.png'));
+      expect(existsSync(file)).toBe(false);
+    });
+
+    it('refuses something that is not an image', async () => {
+      const file = join(dir, 'a.png');
+      writeFileSync(file, '<script>alert(1)</script>');
+      await expect(svc().validateUpload(file)).rejects.toThrow(
+        /Could not read the image/,
+      );
+    });
+
+    it('refuses image formats the model pipeline does not take', async () => {
+      const file = join(dir, 'a.gif');
+      writeFileSync(
+        file,
+        await sharp({
+          create: { width: 4, height: 4, channels: 3, background: '#000' },
+        })
+          .gif()
+          .toBuffer(),
+      );
+      await expect(svc().validateUpload(file)).rejects.toThrow(/gif image/);
+    });
   });
 });

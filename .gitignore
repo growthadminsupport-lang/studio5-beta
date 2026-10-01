@@ -48,3 +48,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Downloaded at build time from the model release (render.yaml)
+backend/models/

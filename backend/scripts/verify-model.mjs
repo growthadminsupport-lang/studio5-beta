@@ -18,8 +18,7 @@ import { fileURLToPath } from 'url';
 import { basename, dirname, join } from 'path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const MODEL =
-  process.env.BONE_AGE_MODEL_PATH ?? join(root, 'models/refine9.onnx');
+const MODEL = process.env.BONE_AGE_MODEL ?? join(root, 'models/refine9.onnx');
 const IMAGE = process.env.VERIFY_IMAGE ?? join(root, 'test/fixtures/hand.png');
 const EXPECT = process.env.VERIFY_EXPECT_MALE
   ? Number(process.env.VERIFY_EXPECT_MALE)
@@ -36,7 +35,7 @@ const { BoneAgeInferenceService } = await import(
   join(root, 'dist/bone-age/bone-age.inference.js')
 );
 const env = {
-  BONE_AGE_MODEL_PATH: MODEL,
+  BONE_AGE_MODEL: MODEL,
   BONE_AGE_TTA: process.env.BONE_AGE_TTA,
 };
 const svc = new BoneAgeInferenceService({ get: (k) => env[k] });
@@ -55,12 +54,12 @@ console.log(
 );
 check('model loads', svc.isReady, svc.status.detail ?? undefined);
 
-// The upload path: normalise to lossless greyscale WebP, then predict from that.
+// The upload path: header check, kept as uploaded, then predicted from that file.
 const dir = await mkdtemp(join(tmpdir(), 'verify-'));
 const copy = join(dir, basename(IMAGE));
 await copyFile(IMAGE, copy);
-const stored = await svc.normaliseUpload(copy);
-check('upload is stored as lossless WebP', stored.endsWith('.webp'));
+const stored = await svc.validateUpload(copy);
+check('upload passes validation', existsSync(stored), stored);
 
 const rss = () => Math.round(process.memoryUsage().rss / 1048576);
 const male = await svc.predict(stored, 'MALE');
@@ -95,11 +94,28 @@ if (EXPECT !== null) {
 
 let rejected = false;
 try {
-  await svc.normaliseUpload(join(dir, 'missing.png'));
+  await svc.validateUpload(join(dir, 'missing.png'));
 } catch {
   rejected = true;
 }
 check('an unreadable file is rejected', rejected);
+
+// Preprocessing runs in a worker thread, so the main thread (every other request, the health
+// check) must stay free while a prediction runs.
+let maxLag = 0;
+let last = Date.now();
+const lag = setInterval(() => {
+  maxLag = Math.max(maxLag, Date.now() - last - 10);
+  last = Date.now();
+}, 10);
+await svc.predict(stored, 'MALE');
+clearInterval(lag);
+check(
+  'main thread stays responsive during a prediction',
+  maxLag < 100,
+  `longest stall ${maxLag} ms`,
+);
+await svc.onModuleDestroy();
 
 console.log(
   failures ? `\n${failures} check(s) failed\n` : '\nall checks passed\n',

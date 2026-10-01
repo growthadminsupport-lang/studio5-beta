@@ -110,7 +110,8 @@ function XrayThumb({ id }) {
 // Doctor: one record, with the review form
 // ============================================================
 
-function DoctorRecord({ record, accuracy, onSaved, onDelete }) {
+function DoctorRecord({ record, onSaved, onDelete }) {
+  const accuracy = record.accuracyWithin12Months;
   const [review, setReview] = useState(record.review ?? record.suggestedReview ?? '');
   const [note, setNote] = useState(record.doctorNote ?? '');
   const [examDate, setExamDate] = useState(dateOnly(record.examDate));
@@ -177,6 +178,7 @@ function DoctorRecord({ record, accuracy, onSaved, onDelete }) {
               </div>
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              {record.legacy && 'Estimated by the previous model, whose calibration was never confirmed. '}
               Model error is typically ±{Math.round(record.maeMonths)} months
               {accuracy ? `, and about 1 estimate in ${Math.round(1 / (1 - accuracy))} is out by more than a year` : ''}. AI suggests:{' '}
               <span className="font-medium">{REVIEW[record.suggestedReview]?.label ?? '—'}</span> (gap of 2 years or more).
@@ -379,7 +381,6 @@ function DoctorView({ child }) {
             <DoctorRecord
               key={`${r.id}-${r.status}-${r.updatedAt}`}
               record={r}
-              accuracy={model?.accuracyWithin12Months}
               onSaved={load}
               onDelete={setPendingDeleteId}
             />

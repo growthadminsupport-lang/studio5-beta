@@ -16,6 +16,13 @@
  */
 
 export const REFINE9_SIZE = 456;
+/**
+ * Longest side the model reads; bigger images are scaled down first. That bounds memory on a
+ * 512 MB instance and moved predictions by at most 0.25 months on the test radiographs.
+ */
+export const MAX_SIDE = 2048;
+/** Refused before decoding, so a decompression bomb costs nothing. */
+export const MAX_INPUT_PIXELS = 40_000_000;
 const MEAN = [0.485, 0.456, 0.406];
 const STD = [0.229, 0.224, 0.225];
 

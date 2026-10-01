@@ -43,7 +43,7 @@ export class BoneAgeService {
       gapMonths,
       suggestedReview: gapMonths != null ? suggestReview(gapMonths) : null,
       implausibleGap: gapMonths != null && isImplausibleGap(gapMonths),
-      maeMonths: this.inference.maeMonths,
+      ...this.inference.accuracyFor(p.modelVersion),
     };
   }
 
@@ -84,9 +84,9 @@ export class BoneAgeService {
     let prediction: BoneAgePrediction;
     try {
       await this.childrenService.access(childId, userId, 'boneAge.write');
-      // Keep only what the model reads, smaller and lossless (see normaliseUpload).
+      // Header check only; the bytes are kept as uploaded (see validateUpload).
       const stored = await this.inference
-        .normaliseUpload(join(UPLOADS_ROOT, 'bone-age', basename(imageUrl)))
+        .validateUpload(join(UPLOADS_ROOT, 'bone-age', basename(imageUrl)))
         .catch((err: Error) => {
           throw new BadRequestException(err.message);
         });

@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import request from 'supertest';
+import sharp from 'sharp';
 import { AppModule } from '../src/app.module';
 
 /**
@@ -285,6 +286,43 @@ maybe('roles and permissions (e2e)', () => {
       recordId = res.body.id;
       // Ten years to the day after 2016-03-15, measured the same way growth records are.
       expect(res.body.chronologicalAgeMonths).toBe(120);
+    });
+
+    it('a WebP X-ray is kept as uploaded and served back as WebP', async () => {
+      const webp = await sharp(HAND).webp({ lossless: true }).toBuffer();
+      const res = await as('doctor')
+        .post('/bone-age/upload')
+        .field('childId', childId)
+        .attach('file', webp, {
+          filename: 'hand.webp',
+          contentType: 'image/webp',
+        })
+        .expect(201);
+      const image = await as('doctor')
+        .get(`/bone-age/${res.body.id}/image`)
+        .buffer(true)
+        .parse((r, cb) => {
+          const chunks: Buffer[] = [];
+          r.on('data', (c: Buffer) => chunks.push(c));
+          r.on('end', () => cb(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+      expect(image.headers['content-type']).toBe('image/webp');
+      expect((image.body as Buffer).equals(webp)).toBe(true);
+      await as('doctor').delete(`/bone-age/${res.body.id}`).expect(200);
+    });
+
+    it('a file that is not an image is refused and not kept', async () => {
+      const before = countUploads();
+      await as('doctor')
+        .post('/bone-age/upload')
+        .field('childId', childId)
+        .attach('file', Buffer.from('<html>not an x-ray</html>'), {
+          filename: 'x.png',
+          contentType: 'image/png',
+        })
+        .expect(400);
+      expect(countUploads()).toBe(before);
     });
 
     it('the family sees nothing until the doctor has reviewed it', async () => {

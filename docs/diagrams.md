@@ -80,7 +80,7 @@ flowchart TB
 - **Guard order matters.** The throttler runs before `JwtAuthGuard`, so a credential flood is rejected before it costs a verify or a bcrypt compare. The counters live in Postgres because Render can run more than one instance.
 - **One service.** Inference runs inside the API through `onnxruntime-node`. Render's free hours are per workspace, so a second service would burn them twice as fast and add a second cold start. The model is a release asset, not in git. See [`model-updates.md`](./model-updates.md).
 - **The dashed box is the remaining gap.** Render's disk does not survive a redeploy, so X-rays are lost while their rows remain. Doctors now keep an X-ray history, which makes this matter more. Cloudflare R2's free tier is the low-cost fix (`tor-compliance.md` §5).
-- **The model is the ML team's refine9** (EfficientNet-B5, MAE 7.43 months). It outputs months directly, so the old provisional calibration is gone. Doctors may upload a PDF; the browser renders it and crops to the film. The server stores channel 0 as lossless WebP. Details: [`ai-service/refine9/README.md`](../ai-service/refine9/README.md).
+- **The model is the ML team's refine9** (EfficientNet-B5, MAE 7.43 months). It outputs months directly, so the old provisional calibration is gone. Doctors may upload a PDF; the browser renders it and crops to the film. The server keeps the uploaded bytes and runs preprocessing and the model in a worker thread, so requests are never blocked. Details: [`ai-service/refine9/README.md`](../ai-service/refine9/README.md).
 
 ---
 
