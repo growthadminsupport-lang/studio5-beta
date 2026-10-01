@@ -13,9 +13,9 @@ GrowTH Drive folder, owned by growth.admin.support@gmail.com.
 | D1 | UX/UI design package | 🟡 | Figma project and prototype: team Drive. Hi-fi and low-fi exports: [`design/mockups/`](../design/mockups/) (46 PNG screens, desktop and mobile, plus SVG and zip). The Drive's `Growth-Studio5` UI-flow document. |
 | D2 | Web application (front end) | 🟢 | https://studio5-beta.vercel.app · source in [`frontend/`](../frontend/) |
 | D3 | Backend, API, database | 🟢 | Render service `growth-api`, Swagger at `/docs` on the API · [`api.md`](./api.md) · schema [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma) · Neon (growth.admin org) |
-| D4 | AI model + training and evaluation report | 🟡 | Model: GitHub release [`model-v1`](https://github.com/growthadminsupport-lang/studio5-beta/releases/tag/model-v1) (`bone_age.onnx`). Integration: [`ai-integration.md`](./ai-integration.md), [`model-updates.md`](./model-updates.md). Team write-up: `data-knowledge/Studio5 Backend+Ai.pdf`. **The training and evaluation report is still owed by the ML team.** |
+| D4 | AI model + training and evaluation report | 🟡 | Model: GitHub release [`model-v1`](https://github.com/growthadminsupport-lang/studio5-beta/releases/tag/model-v1) (`bone_age.onnx`). Integration: [`ai-integration.md`](./ai-integration.md), [`model-updates.md`](./model-updates.md). Team write-up: `data-knowledge/Studio5%20Backend+Ai.pdf.pdf`. **The training and evaluation report is still owed by the ML team.** |
 | D5 | Doctor interview video | 🟢 | Team Drive: `Final Doctor interview ver3.mp4` |
-| D6 | 2D motion graphic narrative video | ⚪ | Team. Briefs: [`animation-briefs.md`](./animation-briefs.md). Storyboard: `data-knowledge/Video — Storyboard & Script (Draft).pdf` |
+| D6 | 2D motion graphic narrative video | ⚪ | Team. Briefs: [`animation-briefs.md`](./animation-briefs.md). Storyboard: `data-knowledge/Video%20%E2%80%94%20Storyboard%20&%20Script%20(Draft).pdf.pdf` |
 | D7 | Promotional video | ✂️ | Dropped by the client on 2026-09-30 |
 | D8 | Demonstration video | ⚪ | Team. Script: [`demo-script.md`](./demo-script.md). Shot list: the role flows in [`user-flows.md`](./user-flows.md) |
 | D9 | Short-form social clips | ⚪ | Team. Ask the client whether "no promotional work" covers these |
