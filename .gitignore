@@ -5,6 +5,7 @@
 *.pt
 *.pth
 *.onnx
+*.i32
 *.h5
 *.ckpt
 *.safetensors

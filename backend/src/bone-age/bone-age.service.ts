@@ -84,6 +84,13 @@ export class BoneAgeService {
     let prediction: BoneAgePrediction;
     try {
       await this.childrenService.access(childId, userId, 'boneAge.write');
+      // Keep only what the model reads, smaller and lossless (see normaliseUpload).
+      const stored = await this.inference
+        .normaliseUpload(join(UPLOADS_ROOT, 'bone-age', basename(imageUrl)))
+        .catch((err: Error) => {
+          throw new BadRequestException(err.message);
+        });
+      imageUrl = `/uploads/bone-age/${basename(stored)}`;
       const exam = examDate ? new Date(examDate) : new Date();
       if (Number.isNaN(exam.getTime())) {
         throw new BadRequestException('Exam date is not a valid date');
@@ -137,9 +144,7 @@ export class BoneAgeService {
         data: {
           status: 'COMPLETED',
           predictedAgeMonths: result.boneAgeMonths,
-          modelVersion: result.provisional
-            ? `${result.modelVersion} (provisional calibration)`
-            : result.modelVersion,
+          modelVersion: result.modelVersion,
           completedAt: new Date(),
           failureReason: null,
         },
