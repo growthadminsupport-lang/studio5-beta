@@ -1,182 +1,296 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { existsSync } from 'fs';
-import { readFile } from 'fs/promises';
-import * as ort from 'onnxruntime-node';
+import { existsSync, readFileSync } from 'fs';
+import { rename } from 'fs/promises';
+import { dirname, extname, join, parse } from 'path';
+import { Worker } from 'worker_threads';
 import sharp from 'sharp';
+import { MAX_INPUT_PIXELS } from './refine9.preprocess';
 
 /**
- * Bone-age inference, in-process.
+ * Bone-age inference, in-process, with the ML team's refine9 model: EfficientNet-B5 at
+ * 456 x 456 plus the sex input, predicting months directly, averaged over four test-time
+ * views. Conversion and parity checks: ai-service/refine9/README.md.
  *
- * This started life as a separate Python FastAPI service. It runs here instead because
- * Render's free tier bills **750 instance hours per workspace per month**, not per service —
- * two always-waking services burn that at double the rate and get the whole workspace
- * suspended mid-month. Two services also means two cold starts chained on the first request,
- * which for a ~1 minute spin-up each is a poor way to open a demo.
+ * It runs here rather than as a second service because Render's free tier bills instance
+ * hours per workspace, so a second always-waking service burns them twice as fast and adds a
+ * second cold start.
  *
- * Node and Python ONNX Runtime were checked against each other on identical input and return
- * the same value to the last decimal (1.223963), so nothing is given up by moving it here.
- * `ai-service/` is kept for local experimentation and for the one-off .pt -> .onnx conversion.
+ * What the model is (version, measured accuracy) is read from `<model>.json`, released with
+ * the weights, not from environment variables: a dashboard value left over from the previous
+ * model would otherwise label refine9's results with B0's accuracy.
  */
 
-const IMG_SIZE = 224;
-
-// ImageNet normalisation, per channel. Standard for a torchvision EfficientNet-B0 — still
-// unconfirmed against the actual training run.
-const NORM_MEAN = [0.485, 0.456, 0.406];
-const NORM_STD = [0.229, 0.224, 0.225];
+sharp.cache(false);
 
 // A result outside this band means something upstream is wrong, not that a child is unusual.
 const MIN_PLAUSIBLE_MONTHS = 0;
 const MAX_PLAUSIBLE_MONTHS = 300;
 
-export interface BoneAgeResult {
-  boneAgeMonths: number;
+const FORMATS: Record<string, string> = {
+  jpeg: '.jpg',
+  png: '.png',
+  webp: '.webp',
+};
+
+interface ModelCard {
   modelVersion: string;
-  inferenceMs: number;
-  /** True while the denormalisation constants are inferred rather than supplied. */
-  provisional: boolean;
+  maeMonths: number;
+  accuracyWithin12Months: number;
+  validationSamples: number;
 }
 
+export interface BoneAgeResult {
+  boneAgeMonths: number;
+  /** Before rounding; for comparing against the PyTorch pipeline. */
+  exactMonths: number;
+  modelVersion: string;
+  inferenceMs: number;
+}
+
+type Job = {
+  resolve: (months: number) => void;
+  reject: (err: Error) => void;
+};
+
 @Injectable()
-export class BoneAgeInferenceService implements OnModuleInit {
+export class BoneAgeInferenceService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BoneAgeInferenceService.name);
-  private session: ort.InferenceSession | null = null;
+  private card: ModelCard | null = null;
   private loadError: string | null = null;
+  // One prediction at a time: four B5 passes in parallel would not fit a 512 MB instance.
+  private queue: Promise<unknown> = Promise.resolve();
+  private worker: Promise<Worker> | null = null;
+  private jobs = new Map<number, Job>();
+  private nextJob = 0;
 
   constructor(private config: ConfigService) {}
 
   async onModuleInit() {
-    const path = this.modelPath;
-    if (!existsSync(path)) {
-      this.loadError = `no model at ${path}`;
+    const files = [this.modelPath, this.cardPath, ...this.rotationMaps];
+    const missing = files.filter((p) => !existsSync(p));
+    if (missing.length) {
+      this.loadError = `missing ${missing.join(', ')}`;
       this.logger.warn(
-        `Bone-age model not found at ${path} — predictions stay PENDING.`,
+        `Bone-age model files missing (${missing.join(', ')}); predictions stay PENDING.`,
       );
       return;
     }
     try {
-      this.session = await ort.InferenceSession.create(path);
+      this.card = JSON.parse(readFileSync(this.cardPath, 'utf8')) as ModelCard;
+      await this.startWorker();
       this.logger.log(
-        `Bone-age model loaded from ${path} (${this.modelVersion})`,
+        `Bone-age model loaded from ${this.modelPath}: ${this.modelVersion}, MAE ${this.card.maeMonths} months`,
       );
-      if (this.isProvisional) {
-        this.logger.warn(
-          'Bone-age calibration is PROVISIONAL — AGE_MEAN/AGE_STD were inferred from the ' +
-            'reported metrics, not supplied by the ML team. Results are flagged as such.',
-        );
-      }
     } catch (err) {
+      this.card = null;
       this.loadError = (err as Error).message;
       this.logger.error(
-        `Failed to load bone-age model from ${path}`,
+        `Failed to load bone-age model from ${this.modelPath}`,
         err as Error,
       );
     }
   }
 
+  async onModuleDestroy() {
+    const worker = await this.worker?.catch(() => null);
+    this.worker = null;
+    await worker?.terminate();
+  }
+
+  /**
+   * `BONE_AGE_MODEL`, not the old `BONE_AGE_MODEL_PATH`: a dashboard still holding the B0
+   * path under the old name must not stop refine9 from loading.
+   */
   private get modelPath(): string {
-    return (
-      this.config.get<string>('BONE_AGE_MODEL_PATH') ?? 'models/bone_age.onnx'
-    );
+    return this.config.get<string>('BONE_AGE_MODEL') ?? 'models/refine9.onnx';
+  }
+
+  /** `refine9.onnx` -> `refine9<suffix>`, next to it. */
+  private sibling(suffix: string): string {
+    const { dir, name } = parse(this.modelPath);
+    return join(dir, `${name}${suffix}`);
+  }
+
+  private get cardPath(): string {
+    return this.sibling('.json');
+  }
+
+  /** Test-time augmentation, as the reported MAE was measured. Off only to save CPU. */
+  private get useTta(): boolean {
+    return this.config.get<string>('BONE_AGE_TTA') !== 'off';
+  }
+
+  private get rotationMaps(): string[] {
+    return this.useTta
+      ? [this.sibling('_rot+5.i32'), this.sibling('_rot-5.i32')]
+      : [];
   }
 
   get modelVersion(): string {
-    return this.config.get<string>('BONE_AGE_MODEL_VERSION') ?? 'unset';
-  }
-
-  /** Mean absolute error in months on the held-out test set — the "±" FR-18 shows. */
-  get maeMonths(): number {
-    return Number(this.config.get<string>('BONE_AGE_MAE_MONTHS') ?? 0);
+    const base = this.card?.modelVersion ?? 'unknown';
+    return this.useTta ? `${base}-tta` : base;
   }
 
   /**
-   * Share of test predictions within a year. Reported alongside the MAE because the mean
-   * hides the spread: at 73.1%, roughly one estimate in four is out by more than a year, and
-   * quoting "±9 months" alone would imply a bound the model does not have.
+   * The accuracy that goes with a stored result: the current model's, or the retired B0's for
+   * records it produced. Those also carry `legacy`, because their months were converted with
+   * calibration constants that were derived rather than supplied.
    */
-  get accuracyWithin12Months(): number {
-    return Number(this.config.get<string>('BONE_AGE_ACCURACY_12M') ?? 0);
+  accuracyFor(modelVersion: string | null): {
+    maeMonths: number | null;
+    accuracyWithin12Months: number | null;
+    legacy: boolean;
+  } {
+    if (modelVersion?.startsWith('effnetb0')) {
+      return { maeMonths: 8.78, accuracyWithin12Months: 0.731, legacy: true };
+    }
+    return {
+      maeMonths: this.card?.maeMonths ?? null,
+      accuracyWithin12Months: this.card?.accuracyWithin12Months ?? null,
+      legacy: false,
+    };
   }
 
-  /**
-   * The checkpoint's training target was normalised — it emits ~2.4, not ~120 — so months are
-   * `raw * std + mean`. Those constants did not arrive with the weights.
-   *
-   * Until they do, these are derived: the reported MSE and R² give
-   * `Var(y) = MSE / (1 - R²)`, so the test set's true bone ages have SD ≈ 41.7 months, and the
-   * RSNA training mean is ≈ 127.3. Every result computed this way is marked `provisional` all
-   * the way to the UI, so a demo can run without a guess quietly becoming the truth.
-   */
-  private get ageMean(): number {
-    return Number(this.config.get<string>('BONE_AGE_AGE_MEAN') ?? 127.3);
-  }
-
-  private get ageStd(): number {
-    return Number(this.config.get<string>('BONE_AGE_AGE_STD') ?? 41.7);
-  }
-
-  get isProvisional(): boolean {
-    return this.config.get<string>('BONE_AGE_CALIBRATION') !== 'confirmed';
-  }
-
+  /** The model loaded once; a crashed worker is restarted on the next prediction. */
   get isReady(): boolean {
-    return this.session !== null;
+    return this.card !== null && this.loadError === null;
   }
 
   get status() {
     return {
       ready: this.isReady,
-      modelVersion: this.modelVersion,
-      maeMonths: this.maeMonths,
-      accuracyWithin12Months: this.accuracyWithin12Months,
-      calibration: this.isProvisional ? 'provisional' : 'confirmed',
+      modelVersion: this.card ? this.modelVersion : null,
+      /** Mean absolute error in months on the validation set: the "±" FR-18 shows. */
+      maeMonths: this.card?.maeMonths ?? null,
+      /** Share within a year, shown with the MAE because the mean hides the spread. */
+      accuracyWithin12Months: this.card?.accuracyWithin12Months ?? null,
       detail: this.loadError,
     };
   }
 
-  /** Decode, resize to the training resolution, normalise, and lay out as NCHW float32. */
-  private async preprocess(file: string): Promise<Float32Array> {
-    const { data } = await sharp(await readFile(file))
-      .removeAlpha()
-      .resize(IMG_SIZE, IMG_SIZE, { fit: 'fill' })
-      .toColourspace('srgb')
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-
-    const pixels = IMG_SIZE * IMG_SIZE;
-    const out = new Float32Array(3 * pixels);
-    for (let i = 0; i < pixels; i++) {
-      for (let c = 0; c < 3; c++) {
-        // sharp gives interleaved RGB; the model wants planar CHW.
-        out[c * pixels + i] =
-          (data[i * 3 + c] / 255 - NORM_MEAN[c]) / NORM_STD[c];
+  /**
+   * Checks an upload from its header only (no decode, so it is quick) and names it by what it
+   * really is. The bytes are kept as uploaded: the browser has already cropped and scaled
+   * them, and the model reads channel 0 of the original at prediction time. Re-encoding was
+   * slower, and for JPEGs larger, and a lossy one moved predictions by months.
+   */
+  async validateUpload(file: string): Promise<string> {
+    let format: string | undefined;
+    try {
+      const meta = await sharp(file, {
+        limitInputPixels: MAX_INPUT_PIXELS,
+      }).metadata();
+      if (!meta.width || !meta.height) throw new Error('no dimensions');
+      if (meta.width * meta.height > MAX_INPUT_PIXELS) {
+        throw new Error('over 40 megapixels');
       }
+      format = meta.format;
+    } catch (err) {
+      throw new Error(
+        `Could not read the image (${(err as Error).message}). Upload a JPEG, PNG or WebP, or a PDF from the app.`,
+      );
     }
-    return out;
+    const ext = format ? FORMATS[format] : undefined;
+    if (!ext) {
+      throw new Error(
+        `This is a ${format ?? 'unknown'} image. Upload a JPEG, PNG or WebP, or a PDF from the app.`,
+      );
+    }
+    if (extname(file).toLowerCase() === ext) return file;
+    // The stored name decides the Content-Type it is served with, so it follows the bytes,
+    // not the name the client sent.
+    const named = join(dirname(file), `${parse(file).name}${ext}`);
+    await rename(file, named);
+    return named;
   }
 
   async predict(file: string, sex: 'MALE' | 'FEMALE'): Promise<BoneAgeResult> {
-    if (!this.session) {
+    const run = this.queue.then(() => this.predictNow(file, sex));
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  private get workerPath(): string {
+    return join(__dirname, 'refine9.worker.js');
+  }
+
+  /**
+   * Starts the worker and loads the model in it. Resolves once it is ready. If the worker
+   * dies (out of memory, a native crash), the pending prediction fails and the next one
+   * starts a new worker.
+   */
+  private startWorker(): Promise<Worker> {
+    if (this.worker) return this.worker;
+    this.worker = new Promise<Worker>((resolve, reject) => {
+      if (!existsSync(this.workerPath)) {
+        reject(new Error(`inference worker not built (${this.workerPath})`));
+        return;
+      }
+      const worker = new Worker(this.workerPath);
+      worker.unref();
+      worker.on(
+        'message',
+        (msg: {
+          type?: string;
+          id?: number;
+          months?: number;
+          error?: string;
+        }) => {
+          if (msg.type === 'ready') return resolve(worker);
+          if (msg.type === 'initError') return reject(new Error(msg.error));
+          const job = this.jobs.get(msg.id!);
+          if (!job) return;
+          this.jobs.delete(msg.id!);
+          if (msg.error) job.reject(new Error(msg.error));
+          else job.resolve(msg.months!);
+        },
+      );
+      const fail = (err: Error) => {
+        reject(err);
+        for (const job of this.jobs.values()) job.reject(err);
+        this.jobs.clear();
+        this.worker = null;
+      };
+      worker.on('error', fail);
+      worker.on('exit', (code) =>
+        fail(new Error(`inference worker exited (${code})`)),
+      );
+      worker.postMessage({
+        type: 'init',
+        modelPath: this.modelPath,
+        threads: Number(this.config.get<string>('BONE_AGE_THREADS') ?? 1),
+      });
+    });
+    this.worker.catch(() => (this.worker = null));
+    return this.worker;
+  }
+
+  private async predictNow(
+    file: string,
+    sex: 'MALE' | 'FEMALE',
+  ): Promise<BoneAgeResult> {
+    if (!this.isReady) {
       throw new Error(this.loadError ?? 'model not loaded');
     }
-
     const started = Date.now();
-    const pixels = await this.preprocess(file);
-
-    const feeds = {
-      image: new ort.Tensor('float32', pixels, [1, 3, IMG_SIZE, IMG_SIZE]),
-      // Which value means male is still unconfirmed — a flip degrades one sex quietly.
-      sex: new ort.Tensor(
-        'float32',
-        new Float32Array([sex === 'MALE' ? 1 : 0]),
-        [1, 1],
-      ),
-    };
-
-    const output = await this.session.run(feeds);
-    const raw = Number((output.bone_age.data as Float32Array)[0]);
-    const months = raw * this.ageStd + this.ageMean;
+    const worker = await this.startWorker();
+    const id = this.nextJob++;
+    const months = await new Promise<number>((resolve, reject) => {
+      this.jobs.set(id, { resolve, reject });
+      worker.postMessage({
+        type: 'predict',
+        id,
+        file,
+        male: sex === 'MALE',
+        rotationMaps: this.rotationMaps,
+      });
+    });
 
     if (
       !Number.isFinite(months) ||
@@ -184,16 +298,15 @@ export class BoneAgeInferenceService implements OnModuleInit {
       months > MAX_PLAUSIBLE_MONTHS
     ) {
       throw new Error(
-        `model returned ${months.toFixed(1)} months, outside 0-300 (raw ${raw.toFixed(4)}) — ` +
-          'AGE_MEAN/AGE_STD are the usual cause',
+        `model returned ${months.toFixed(1)} months, outside 0-300. Is this a hand X-ray?`,
       );
     }
 
     return {
       boneAgeMonths: Math.round(months),
+      exactMonths: months,
       modelVersion: this.modelVersion,
       inferenceMs: Date.now() - started,
-      provisional: this.isProvisional,
     };
   }
 }

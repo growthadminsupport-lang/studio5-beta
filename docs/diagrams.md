@@ -35,7 +35,7 @@ flowchart TB
             ACCESS["ChildrenService.access<br/>role on the child × capability<br/>PARENT · CARETAKER · DOCTOR"]
             MOD["Modules<br/>auth · users · children + invites<br/>growth · puberty · bone-age<br/>articles · notifications · support<br/>suggestions · admin"]
             LMS["GrowthReference<br/>CDC 2000 LMS, in-process"]
-            ORT["onnxruntime-node<br/>EfficientNet-B0 + sex input"]
+            ORT["onnxruntime-node<br/>refine9: EfficientNet-B5 + sex<br/>456 px, 4-view TTA"]
             GUARD --> MOD
             MOD --> ACCESS
             MOD --> LMS
@@ -47,7 +47,7 @@ flowchart TB
     NEON[("Neon Postgres, via Prisma 5<br/>users · children · child_guardians · child_invites<br/>records · notifications · support · rate_limits")]
     RESEND["Resend, from hacklgroups.com<br/>reset · invitations · alerts · doctor decisions"]
     GOOGLE["Google Identity Services<br/>ID-token sign-in"]
-    REL[("GitHub Release model-v1<br/>bone_age.onnx, fetched at build")]
+    REL[("GitHub Release model-v2<br/>refine9.onnx, checked at build")]
     DNS["Cloudflare DNS<br/>hacklgroups.com"]
 
     UI -- "HTTPS · Bearer JWT" --> GUARD
@@ -80,7 +80,7 @@ flowchart TB
 - **Guard order matters.** The throttler runs before `JwtAuthGuard`, so a credential flood is rejected before it costs a verify or a bcrypt compare. The counters live in Postgres because Render can run more than one instance.
 - **One service.** Inference runs inside the API through `onnxruntime-node`. Render's free hours are per workspace, so a second service would burn them twice as fast and add a second cold start. The model is a release asset, not in git. See [`model-updates.md`](./model-updates.md).
 - **The dashed box is the remaining gap.** Render's disk does not survive a redeploy, so X-rays are lost while their rows remain. Doctors now keep an X-ray history, which makes this matter more. Cloudflare R2's free tier is the low-cost fix (`tor-compliance.md` §5).
-- **Calibration is still provisional.** `AGE_MEAN`/`AGE_STD` were derived, not supplied, and every estimate says so.
+- **The model is the ML team's refine9** (EfficientNet-B5, MAE 7.43 months). It outputs months directly, so the old provisional calibration is gone. Doctors may upload a PDF; the browser renders it and crops to the film. The server keeps the uploaded bytes and runs preprocessing and the model in a worker thread, so requests are never blocked. Details: [`ai-service/refine9/README.md`](../ai-service/refine9/README.md).
 
 ---
 

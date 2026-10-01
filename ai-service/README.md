@@ -1,5 +1,11 @@
 # Bone-age inference service (`growth-ai`)
 
+> **Superseded on 2026-10-01 for the model in production.** The backend now runs the ML team's
+> refine9 (EfficientNet-B5, 456 px, MAE 7.43 months), which outputs months directly. How it was
+> converted and checked: [`ai-service/refine9/README.md`](refine9/README.md). This file describes the original
+> EfficientNet-B0 (`model-v1`) and is kept as history.
+
+
 FastAPI wrapper around the trained EfficientNet-B0. One endpoint the NestJS backend calls; it
 holds no database and knows nothing about accounts or children.
 

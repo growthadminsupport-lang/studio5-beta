@@ -31,7 +31,7 @@ Representative's written agreement, because each one changes a numbered requirem
 | C5 | **Doctor accounts are approved by an admin** | new | A doctor registers with a licence number and hospital. They cannot follow any child until an admin approves them. |
 | C6 | **Admin portal** | new (FR-20 content upkeep) | Approve doctors, write and publish articles, one inbox for contact messages and problem reports, usage statistics, anonymised CSV export. |
 | C7 | **Find a child by hospital number (HN)** | new | A doctor searches only their own patients. Caretakers never see the HN. |
-| C8 | **D7 promotional video dropped**, with the Home page's promo section | D7 | Removed from the app. No promotional work from now on. |
+| C8 | **Promotional work dropped:** D7 promotional video, D9 social clips, and the Home page's promo section | D7, D9 | Removed from the app. No promotional work from now on (D9 confirmed as promotional on 2026-10-01). |
 
 The flows and permission matrix are in `docs/user-flows.md`, and the API is in `docs/api.md`.
 
@@ -80,10 +80,10 @@ better but still a deviation, so put it to the client together with §0.
 
 | FR | Requirement | Status |
 | --- | --- | --- |
-| FR-15 | Upload a hand-and-wrist X-ray for a selected child | 🟡 **Client-directed (C2):** doctor only. JPEG/PNG. |
+| FR-15 | Upload a hand-and-wrist X-ray for a selected child | 🟡 **Client-directed (C2):** doctor only. PDF, JPEG, PNG or WebP. The browser renders a PDF, proposes a crop around the film that the doctor can adjust, and downsizes to 2048 px without lossy re-encoding. |
 | FR-16 | Validate format and size, clear feedback on failure | 🟢 10 MB cap. Refused files are deleted, not kept. |
-| FR-17 | Submit to the model and display the result in reasonable time | 🟢 ONNX model run in-process, under 3 s measured in production |
-| FR-18 | Explanatory note: what it means, **its margin of error**, support-not-replace | 🟡 **Client-directed (C3):** the doctor sees the estimate, the real age, the gap and the margin of error (MAE 8.78 months; 73 % of estimates within 12 months). Families see the doctor's reading with a "discuss with your doctor" note. |
+| FR-17 | Submit to the model and display the result in reasonable time | 🟡 refine9 runs in-process: about 4.5 s per X-ray on one ARM core. **Not yet measured on Render's free CPU.** The upload returns at once and the page polls; `BONE_AGE_TTA=off` is the 4× faster fallback. |
+| FR-18 | Explanatory note: what it means, **its margin of error**, support-not-replace | 🟡 **Client-directed (C3):** the doctor sees the estimate, the real age, the gap and the margin of error (refine9: MAE 7.43 months; 80 % of estimates within 12 months). Families see the doctor's reading with a "discuss with your doctor" note. |
 | FR-19 | Associate each prediction with the child profile and growth/screening history | 🟢 Stored against the child with the exam date. The dashboard shows growth, puberty and bone-age status together. |
 
 **AI estimate vs real age.** The gap between the AI bone age and the child's real age is
@@ -118,12 +118,12 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | D1 | UX/UI design package: Figma file, exported hi-fi screens, prototype link | 🟡 Figma project on the team Drive; exports in `design/mockups/`. **Add the Figma and prototype links to `docs/deliverables.md`.** |
 | D2 | Web application (front end), deployed + repo | 🟢 `studio5-beta.vercel.app`, repo `growthadminsupport-lang/studio5-beta` |
 | D3 | Backend, API, database: deployed, documented API, schema docs | 🟢 Render `growth-api` + Neon. Swagger at `/docs`, reference in `docs/api.md`, schema in `backend/prisma/schema.prisma`. |
-| D4 | AI model: trained artifact, training + evaluation report with MAE, integrated | 🟡 Model integrated and released (`model-v1`); MAE 8.78. **No written training/evaluation report**, and the test split is undocumented (§3, 6.3). |
+| D4 | AI model: trained artifact, training + evaluation report with MAE, integrated | 🟡 The ML team's refine9 (EfficientNet-B5) is integrated and released (`model-v2`), with MAE 7.43 months. The Node port is checked against their PyTorch pipeline to within 0.013 months (`ai-service/refine9/README.md`). **No written training/evaluation report yet**, and no independent test set (§3, 6.3). |
 | D5 | Doctor interview video | 🟢 `Final Doctor interview ver3.mp4` on the team Drive |
 | D6 | 2D motion graphic narrative video | ⚪ Team status. Briefs in `docs/animation-briefs.md`. The logo motion is in the app, but it is not D6. |
 | D7 | Application promotional video | ✂️ **Dropped by the client (C8)** |
 | D8 | Application demonstration video | ⚪ Team status. Script in `docs/demo-script.md`; the flows in `docs/user-flows.md` are the shot list. |
-| D9 | Short-form social clips | ⚪ Team status. **Check with the client whether "no promotional work" covers D9 too.** |
+| D9 | Short-form social clips | ✂️ **Dropped by the client (C8)**, as promotional work |
 | D10 | Documentation set: system overview, **user manual for parents**, final report | 🟡 System overview, user flows, API and many technical docs exist. **No parent-facing user manual and no final report yet.** |
 | D11 | Source files and handover package | 🟡 Everything is in one repo now. **The handover index is `docs/deliverables.md`**, which still needs the Drive links. |
 
@@ -140,12 +140,12 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | 6.2 | X-rays stored securely, only accessible to the uploading account | 🟢 Readable only by the child's doctor, through a checked route. They are not static files. **⚠️ Stored on Render's ephemeral disk, so a redeploy loses them** (§5). |
 | 6.2 | Passwords never plain text, industry-standard hashing | 🟢 bcrypt |
 | 6.2 | Document what data is collected, stored, and deleted on request | 🟢 The privacy notice lists it. Deleting a child or account removes the rows **and** the X-ray and avatar files. |
-| 6.3 | Documented train/test split, **no overlap** | 🔴 **Unverified.** The AI team's document lists 12,611 training and 1,425 validation images, but not which set the MAE was measured on. |
-| 6.3 | MAE in months on held-out test set | 🟢 8.78, plus MSE, R² and ±12-month accuracy. Which set it comes from is the 6.3 question above. |
-| 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟡 Preprocessing is documented (224×224, ImageNet normalisation). **Augmentation and limitations by age and sex are not.** |
+| 6.3 | Documented train/test split, **no overlap** | 🔴 **No independent test set.** refine9 trained on the 12,611 RSNA training images. Its MAE comes from the 1,425 validation images, which were also used to choose it from nine runs. The RSNA test set (200 images) is the obvious held-out check. |
+| 6.3 | MAE in months on held-out test set | 🟡 7.43 months and 80.2 % within a year, on validation rather than held-out test images (above). |
+| 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟡 Preprocessing and augmentation are documented in `ai-service/refine9/README.md` and the team's `train.py`: CLAHE, 456 px, rotation ±15°, jitter, flip, and 4-view TTA. **Limitations by age and sex are not.** |
 | 6.3 | UI itself presents bone age as a screening aid, not only in docs | 🟢 |
 | 6.4 | Video production standards | ⚪ Videos are the team's part |
-| 6.5 | Functional testing before each milestone, test record maintained | 🟢 94 unit tests, 24 API e2e tests (the role matrix over HTTP), and 21 scripted browser flows covering all four roles. |
+| 6.5 | Functional testing before each milestone, test record maintained | 🟢 100 unit tests (including the refine9 preprocessing against cv2/torchvision output), 26 API e2e tests (the role matrix over HTTP, X-ray file handling), and 24 scripted browser flows covering all four roles and PDF, JPEG and WebP uploads. |
 | 6.5 | Test on ≥2 browsers and ≥1 mobile viewport | 🟡 Chromium desktop and a 390 px mobile viewport. **Safari and Firefox are not tested yet.** |
 
 ---
@@ -169,21 +169,20 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 1. Sign off §0, changes C1 to C8.
 2. Ratify **FR-8** (BMI from 2 years).
 3. Confirm the growth reference under **§2A.2**.
-4. Confirm whether D9 social clips count as promotional work.
-5. Decide whether the phone number should be required (FR-1).
+4. Decide whether the phone number should be required (FR-1).
 
 **Needs the ML team**
 
-6. Write the training and evaluation report (D4, §6.3). It must cover:
+5. Write the training and evaluation report (D4, §6.3). It must cover:
    - the split
-   - which set the 8.78 MAE comes from
-   - augmentation
+   - refine9's MAE on the RSNA **test** images, which were not used to choose it
    - errors by age band and sex
-7. Supply the real `AGE_MEAN` / `AGE_STD`. Production uses 127.3 / 41.7, which we derived from the reported MSE and R². The AI team's own EDA gives the training set as mean 127.32, SD 41.18. If the targets were normalised with those values, the estimates are stretched by about 1 %, up to about 1.3 months at the age extremes (0 and 19 years) and near zero around 10 years. Until confirmed, every result is labelled provisional.
+6. ~~Supply the real `AGE_MEAN` / `AGE_STD`~~ **Resolved 2026-10-01:** refine9 predicts months directly, so no calibration constants are needed and nothing is labelled provisional.
 
 **Ours, small**
 
-8. Test on Safari and Firefox (§6.5).
-9. Write the parent user manual and the final report (D10).
-10. Add the Drive links (Figma, prototype, D5, logo files) to `docs/deliverables.md` (D1, D11).
+7. Test on Safari and Firefox (§6.5).
+8. Write the parent user manual and the final report (D10).
+9. Add the Drive links (Figma, prototype, D5, logo files) to `docs/deliverables.md` (D1, D11).
+10. Time one refine9 prediction on Render after deploying (`inferenceMs` in the logs). If it is too slow, set `BONE_AGE_TTA=off`.
 11. Move X-ray storage off the ephemeral disk before real use. Doctors now keep a history, so a redeploy wiping it matters more. A free option is Cloudflare R2 (10 GB free, no egress fees), which fits the existing Cloudflare account.
