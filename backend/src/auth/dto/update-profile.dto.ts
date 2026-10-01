@@ -1,4 +1,5 @@
 import { IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { PHONE_MESSAGE, PHONE_REGEX } from '../../common/validators/phone';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -13,6 +14,6 @@ export class UpdateProfileDto {
   /** Same format as registration. Empty string clears it. */
   @IsOptional()
   @IsString()
-  @Matches(/^$|^[0-9+\-\s()]{9,15}$/, { message: 'Enter a valid phone number' })
+  @Matches(PHONE_REGEX, { message: PHONE_MESSAGE })
   phoneNumber?: string;
 }

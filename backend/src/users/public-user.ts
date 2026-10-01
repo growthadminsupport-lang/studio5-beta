@@ -17,6 +17,9 @@ export function publicUser(user: User) {
     doctorReviewNote: user.doctorReviewNote,
     avatarUrl: user.avatarUrl,
     isVerified: user.isVerified,
+    /** Which ways in this account has, so Settings can offer "add a password". */
+    hasPassword: user.passwordHash !== null,
+    hasGoogle: user.googleId !== null,
     createdAt: user.createdAt,
   };
 }

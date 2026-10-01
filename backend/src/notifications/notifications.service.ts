@@ -91,11 +91,17 @@ export class NotificationsService {
     if (!notice.email) return;
     const users = await this.prisma.user.findMany({
       where: { id: { in: ids }, deletedAt: null },
-      select: { email: true },
+      select: { email: true, fullName: true },
     });
     await Promise.all(
       users.map((u) =>
-        this.mail.sendNotice(u.email, notice.title, notice.body, notice.path),
+        this.mail.sendNotice(
+          u.email,
+          notice.title,
+          notice.body,
+          notice.path,
+          u.fullName,
+        ),
       ),
     ).catch((err) =>
       this.logger.error('Notification email failed', err as Error),

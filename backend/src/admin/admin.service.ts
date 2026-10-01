@@ -81,6 +81,7 @@ export class AdminService {
         hospital: true,
         doctorStatus: true,
         doctorReviewNote: true,
+        isVerified: true,
         createdAt: true,
       },
     });
@@ -92,6 +93,13 @@ export class AdminService {
     });
     if (!doctor || doctor.role !== 'DOCTOR') {
       throw new NotFoundException('Doctor account not found');
+    }
+    // A doctor sees children's records and X-rays. Approving an address nobody has confirmed
+    // would approve whoever typed it in.
+    if (dto.decision === 'APPROVED' && !doctor.isVerified) {
+      throw new BadRequestException(
+        'This doctor has not confirmed their email address yet. Approve once they have.',
+      );
     }
     if (dto.decision === 'REJECTED' && !dto.note?.trim()) {
       throw new BadRequestException(

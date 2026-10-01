@@ -1,13 +1,10 @@
 import { IsString, Matches } from 'class-validator';
 import {
-  PASSWORD_REGEX,
   PASSWORD_MESSAGE,
+  PASSWORD_REGEX,
 } from '../../common/validators/password';
 
-export class ChangePasswordDto {
-  @IsString()
-  currentPassword: string;
-
+export class SetPasswordDto {
   @IsString()
   @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   newPassword: string;
