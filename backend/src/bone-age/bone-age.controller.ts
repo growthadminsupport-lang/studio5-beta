@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -14,6 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { BoneAgeService } from './bone-age.service';
+import { UpdateBoneAgeDto } from './dto/update-bone-age.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 
@@ -60,6 +62,7 @@ export class BoneAgeController {
     @CurrentUser() user: AuthUser,
     @Body('childId') childId: string,
     @UploadedFile() file: Express.Multer.File,
+    @Body('examDate') examDate?: string,
   ) {
     if (!file) {
       throw new BadRequestException(
@@ -70,6 +73,7 @@ export class BoneAgeController {
       user.userId,
       childId,
       `/uploads/bone-age/${file.filename}`,
+      examDate,
     );
   }
 
@@ -92,6 +96,15 @@ export class BoneAgeController {
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.boneAgeService.findOne(user.userId, id);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateBoneAgeDto,
+  ) {
+    return this.boneAgeService.update(user.userId, id, dto);
   }
 
   @Delete(':id')

@@ -1,3 +1,4 @@
+import { ageInMonths } from '../common/age';
 import { Injectable } from '@nestjs/common';
 import weightInfant from './reference-data/weight-infant.json';
 import heightInfant from './reference-data/height-infant.json';
@@ -56,7 +57,8 @@ function sexCode(sex: Sex): 1 | 2 {
 
 function pickTable(measure: Measure, ageMonths: number): LmsRow[] {
   if (measure === 'bmi') return bmiChild as LmsRow[];
-  if (measure === 'headCircumference') return headCircumferenceInfant as LmsRow[];
+  if (measure === 'headCircumference')
+    return headCircumferenceInfant as LmsRow[];
   const infant =
     measure === 'weight'
       ? (weightInfant as LmsRow[])
@@ -87,7 +89,8 @@ function tableRange(
   toMonths: number,
 ): LmsRow[] {
   if (measure === 'bmi') return bmiChild as LmsRow[];
-  if (measure === 'headCircumference') return headCircumferenceInfant as LmsRow[];
+  if (measure === 'headCircumference')
+    return headCircumferenceInfant as LmsRow[];
   const infant =
     measure === 'weight'
       ? (weightInfant as LmsRow[])
@@ -281,7 +284,8 @@ function probitUpper(q: number): number {
     const t = Math.sqrt(-2 * Math.log(q));
     return (
       -(
-        ((((PROBIT_C[0] * t + PROBIT_C[1]) * t + PROBIT_C[2]) * t + PROBIT_C[3]) *
+        ((((PROBIT_C[0] * t + PROBIT_C[1]) * t + PROBIT_C[2]) * t +
+          PROBIT_C[3]) *
           t +
           PROBIT_C[4]) *
           t +
@@ -359,9 +363,7 @@ export interface GrowthMetric {
 export class GrowthReferenceService {
   /** Age in whole months (fractional) between two dates. */
   ageInMonths(dateOfBirth: Date, on: Date): number {
-    const msPerDay = 24 * 60 * 60 * 1000;
-    const days = (on.getTime() - dateOfBirth.getTime()) / msPerDay;
-    return days / 30.4375;
+    return ageInMonths(dateOfBirth, on);
   }
 
   compute(

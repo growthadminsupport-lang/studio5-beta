@@ -1,4 +1,11 @@
-import { IsDateString, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { ChildSex, GuardianRelation } from '@prisma/client';
 
 export class CreateChildDto {
@@ -23,4 +30,10 @@ export class CreateChildDto {
   @IsOptional()
   @IsString()
   avatarUrl?: string;
+
+  /** Hospital number. Optional; the child's doctor can add it later. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  hn?: string;
 }

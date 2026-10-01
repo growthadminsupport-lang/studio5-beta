@@ -1,4 +1,13 @@
-import { Controller, Delete, Get, Param, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
@@ -12,9 +21,20 @@ export class NotificationsController {
     return this.notificationsService.findAll(user.userId);
   }
 
+  @HttpCode(HttpStatus.OK)
+  @Post('read-all')
+  markAllRead(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.markAllRead(user.userId);
+  }
+
   @Patch(':id')
   markRead(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.notificationsService.markRead(user.userId, id);
+  }
+
+  @Delete()
+  clearAll(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.clearAll(user.userId);
   }
 
   @Delete(':id')

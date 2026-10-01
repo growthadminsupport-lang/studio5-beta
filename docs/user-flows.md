@@ -128,7 +128,7 @@ flowchart TD
     M2 --> M3[Doctor sets exam date, status<br/>Normal / Advanced / Delayed, and a note.<br/>The AI suggests the status; the doctor decides.]
     M3 --> M4[Save to the child's history]
     M4 -. notification .-> P[Parent and caretakers:<br/>a new bone-age result is available]
-    M --> M5[History: open, edit, replace the X-ray, delete]
+    M --> M5[History: open, edit date, status and note,<br/>delete and re-upload a better X-ray]
 ```
 
 The AI's suggested status comes from the gap between bone age and the child's real age (two years

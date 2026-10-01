@@ -29,6 +29,7 @@ Every account is owned by `growth.admin.support@gmail.com`.
    | `RESEND_API_KEY` | Resend API key | Forgot-password returns 200 but no email is sent |
    | `MAIL_FROM` | Verified sender, e.g. `GrowTH <noreply@hacklgroups.com>` (domain verified in Resend, DNS records in Cloudflare) | Falls back to `onboarding@resend.dev` |
    | `GOOGLE_CLIENT_ID` | Google OAuth web client ID | Google sign-in is refused; email sign-in still works |
+   | `ADMIN_EMAIL` | `growth.admin.support@gmail.com` | Nobody can open the admin portal |
 
    Render generates `JWT_ACCESS_SECRET`. The bone-age calibration values are set in
    `render.yaml` itself.
@@ -59,6 +60,14 @@ relying on them.
 3. Redeploy. Vite inlines `VITE_*` values at build time, so changing one needs a redeploy.
 4. Set Render's `CORS_ORIGIN` and `FRONTEND_URL` to this Vercel URL if you have not already.
 
+## Admin account
+
+1. Set `ADMIN_EMAIL` on Render.
+2. Open the site and **Sign in with Google** as that address once. Google verifies the address;
+   a password registration does not, and an unverified address is never promoted.
+3. Redeploy (Manual Deploy → Deploy latest commit). The seed promotes the account, and the
+   admin portal appears after signing in again.
+
 ## Local development
 
 Everything in containers, app on http://localhost:8080:
@@ -75,6 +84,15 @@ cp backend/.env.example backend/.env
 cd backend && npm ci && npx prisma migrate dev && npx prisma db seed && npm run start:dev
 cd frontend && npm ci && npm run dev    # http://localhost:5173
 ```
+
+The permission tests run the whole API against a real, migrated Postgres. They truncate every
+table, so point them at a throwaway database:
+
+```bash
+cd backend && E2E_DATABASE_URL=postgresql://growth:growth_dev_pw@localhost:5432/growth_test npm run test:e2e
+```
+
+Set `SEED_DEMO=true` locally for one demo account per role (password `Demo1234!`).
 
 Leave `RESEND_API_KEY` unset locally: forgot-password then returns the reset token in the
 response instead of emailing it.

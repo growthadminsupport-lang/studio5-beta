@@ -1,5 +1,18 @@
-import { Equals, IsEmail, IsOptional, IsString, Matches, MinLength } from 'class-validator';
-import { PASSWORD_REGEX, PASSWORD_MESSAGE } from '../../common/validators/password';
+import {
+  Equals,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
+import {
+  PASSWORD_REGEX,
+  PASSWORD_MESSAGE,
+} from '../../common/validators/password';
 
 export class RegisterDto {
   @IsEmail()
@@ -14,17 +27,35 @@ export class RegisterDto {
   fullName: string;
 
   /**
-   * Optional. Dropped from the registration form on 2026-08-22 — nothing in the app contacts
-   * a parent by phone, and asking a stranger for a number before they have seen anything is
-   * friction that buys nothing. Kept on the DTO and the column so the profile screen can add
-   * one later, and so existing records keep theirs.
+   * FR-1 lists the phone number among the minimum registration fields, and the team's
+   * registration form collects it. Optional here so a Google sign-up, which never sees the
+   * form, can still create an account; Profile can add it later.
    */
-  @IsOptional()
-  @IsString()
-  @Matches(/^[0-9+\-\s()]{9,15}$/, { message: 'Enter a valid phone number' })
   phoneNumber?: string;
 
+  /**
+   * `DOCTOR` creates an account that is pending until an admin approves it. Until then it
+   * works like any other account, but cannot accept a doctor invitation or touch bone age.
+   */
+  @IsOptional()
+  @IsIn(['USER', 'DOCTOR'])
+  accountType?: 'USER' | 'DOCTOR';
+
+  @ValidateIf((o: RegisterDto) => o.accountType === 'DOCTOR')
+  @IsString()
+  @MinLength(3)
+  @MaxLength(40)
+  licenseNumber?: string;
+
+  @ValidateIf((o: RegisterDto) => o.accountType === 'DOCTOR')
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  hospital?: string;
+
   /** FR-2: terms of use and privacy notice must be accepted before account creation. */
-  @Equals(true, { message: 'You must accept the terms of use and privacy notice' })
+  @Equals(true, {
+    message: 'You must accept the terms of use and privacy notice',
+  })
   acceptedTerms: boolean;
 }
