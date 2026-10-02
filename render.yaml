@@ -68,6 +68,18 @@ services:
       # (signed in with Google at least once), so registering the address first gains nothing.
       - key: ADMIN_EMAIL
         sync: false
+      # --- file storage -------------------------------------------------------------
+      # X-rays and profile photos are kept in a private Cloudflare R2 bucket, because this
+      # free instance's disk is wiped on every deploy. Unset = local disk only (files lost on
+      # redeploy). Steps: DEPLOY.md, "File storage (Cloudflare R2)".
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
       # --- bone age, in-process -------------------------------------------------------
       # Deliberately NOT a second Render service. The free tier bills 750 instance hours per
       # *workspace* per month, not per service, so two always-waking services burn the quota

@@ -245,5 +245,6 @@ dashboard.
 | `BONE_AGE_MODEL` | Path of the refine9 ONNX model. Its rotation maps and `refine9.json` (version, MAE 7.43, 80.2% within a year) sit next to it. All are downloaded and checksum-checked at build time from the GitHub release `model-v2`. The old `BONE_AGE_MODEL_PATH`, `_VERSION`, `_MAE_MONTHS`, `_ACCURACY_12M` and `_AGE_*` keys are ignored |
 | `BONE_AGE_TTA` | `on` (default): average 4 views, as the MAE was measured. `off`: one view, 4× faster |
 | `MALLOC_ARENA_MAX` | `2`, which keeps the API and the model inside 512 MB |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Private Cloudflare R2 bucket for X-rays and profile photos, so they survive deploys. Unset: local disk only |
 
 The frontend needs `VITE_API_URL` and `VITE_GOOGLE_CLIENT_ID`, set in Vercel.

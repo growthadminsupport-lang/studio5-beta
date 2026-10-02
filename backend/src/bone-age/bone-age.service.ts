@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { BoneAgePrediction } from '@prisma/client';
 import { basename, join } from 'path';
@@ -10,7 +11,13 @@ import { ageInMonths } from '../common/age';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildrenService } from '../children/children.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { removeUpload, streamUpload, UPLOADS_ROOT } from '../common/uploads';
+import {
+  ensureLocal,
+  persistUpload,
+  removeUpload,
+  streamUpload,
+  UPLOADS_ROOT,
+} from '../common/uploads';
 import { BoneAgeInferenceService } from './bone-age.inference';
 import { isImplausibleGap, suggestReview } from './bone-age.rules';
 import { UpdateBoneAgeDto } from './dto/update-bone-age.dto';
@@ -91,6 +98,12 @@ export class BoneAgeService {
           throw new BadRequestException(err.message);
         });
       imageUrl = `/uploads/bone-age/${basename(stored)}`;
+      // Kept in R2 when configured, so the X-ray survives a redeploy.
+      await persistUpload('bone-age', imageUrl).catch((err: Error) => {
+        throw new ServiceUnavailableException(
+          `Could not store the X-ray (${err.message}). Please try again.`,
+        );
+      });
       const exam = examDate ? new Date(examDate) : new Date();
       if (Number.isNaN(exam.getTime())) {
         throw new BadRequestException('Exam date is not a valid date');
@@ -132,11 +145,8 @@ export class BoneAgeService {
         include: { child: true },
       });
 
-      const file = join(
-        UPLOADS_ROOT,
-        'bone-age',
-        basename(prediction.imageUrl),
-      );
+      // After a redeploy the local copy is gone; it comes back from R2.
+      const file = await ensureLocal('bone-age', prediction.imageUrl);
       const result = await this.inference.predict(file, prediction.child.sex);
 
       await this.prisma.boneAgePrediction.update({

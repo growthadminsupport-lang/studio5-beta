@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { publicUser } from './public-user';
 import { UpdateProfileDto } from '../auth/dto/update-profile.dto';
-import { removeUpload, streamUpload } from '../common/uploads';
+import { persistUpload, removeUpload, streamUpload } from '../common/uploads';
 
 @Injectable()
 export class UsersService {
@@ -47,6 +47,14 @@ export class UsersService {
       where: { id: userId },
       select: { avatarUrl: true },
     });
+    try {
+      await persistUpload('avatars', avatarUrl);
+    } catch (err) {
+      await removeUpload('avatars', avatarUrl);
+      throw new ServiceUnavailableException(
+        `Could not store the photo (${(err as Error).message}). Please try again.`,
+      );
+    }
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },

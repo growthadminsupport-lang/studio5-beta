@@ -16,6 +16,27 @@ NestJS runs, and the record of how the port was checked.
 The validation set was also used to choose refine9 from nine runs, so these figures are
 research validation, not an independent test. See TOR §6.3 in `docs/tor-compliance.md`.
 
+The ML team's comparison (1,425 validation images, 4-view TTA, 2026-10-02):
+
+| Metric | refine5 B3 | **refine9 B5** (in use) | refine10 B7 (latest run) |
+| --- | --- | --- | --- |
+| MAE, months ↓ | 8.120 | **7.425** | 20.488 |
+| MSE ↓ | 115.14 | **97.28** | 751.01 |
+| R² ↑ | 0.9338 | **0.9441** | 0.5683 |
+| Within ±12 months ↑ | 76.8 % | **80.2 %** | 38.7 % |
+| Within ±6 months ↑ | 48.4 % | **52.6 %** | 20.6 % |
+| Male MAE ↓ | 7.57 | **7.14** | 20.12 |
+| Female MAE ↓ | 8.77 | **7.76** | 20.92 |
+
+refine10 is the newest run but much worse, so refine9 stays. The model is about 0.6 months less
+accurate for girls than for boys.
+
+**Production runs with `BONE_AGE_TTA=off`** (one view instead of four, 4× faster on Render's
+free CPU). Every figure above was measured with four views; single-view accuracy has not been
+measured, and on the six test radiographs single and four-view predictions differed by 4.2
+months on one image and 0.4–1.9 months on the other five. Ask the ML team for the single-view MAE, or
+switch TTA back on when the server has more CPU.
+
 ## The pipeline, exactly as trained
 
 From the team's `train.py`. Note that `refine9_b5_456` **overrides** the default transform
