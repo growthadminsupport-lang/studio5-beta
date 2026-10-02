@@ -177,13 +177,30 @@ try {
   await parent.locator('form input[type=date]').fill('2026-09-15');
   await parent.getByRole('button', { name: 'Add measurement' }).click();
   await parent.waitForTimeout(1500);
-  const dots = await parent.locator('.recharts-scatter-symbol').count();
+  const dots = await parent.locator('.growth-own-dot').count();
   check('growth: guidance after entry, child plotted on CDC chart', dots >= 4, `${dots} points across charts`);
-  const firstDot = parent.locator('.recharts-scatter-symbol').first();
+  const firstDot = parent.locator('.growth-own-dot').first();
   await firstDot.hover();
   await parent.waitForTimeout(300);
   const tip = await parent.locator('.recharts-tooltip-wrapper').first().textContent();
   check('chart tooltip speaks plainly (usual range, average), no ageYears or P3/P97', /Usual for girls this age/.test(tip) && /Average/.test(tip) && !/ageYears|P3|P97/.test(tip), tip.slice(0, 120));
+  // Every height point's tooltip must compare it with children of *that* age: a 128-134 cm child
+  // against a usual range somewhere around it, never a toddler's (a past Recharts index bug).
+  const heightDots = parent.locator('div.mb-6').filter({ has: parent.getByRole('heading', { name: 'Height', exact: true }) }).locator('.growth-own-dot');
+  const ranges = [];
+  for (let i = 0; i < (await heightDots.count()); i++) {
+    await parent.mouse.move(0, 0);
+    await parent.waitForTimeout(150);
+    await heightDots.nth(i).hover({ force: true });
+    await parent.waitForTimeout(300);
+    const t = await parent.locator('.recharts-tooltip-wrapper').first().textContent();
+    const m = t.match(/Usual for girls this age: ([\d.]+) cm to ([\d.]+) cm/);
+    const v = t.match(/Mali Test: ([\d.]+) cm/);
+    ranges.push(m && v ? [Number(v[1]), Number(m[1]), Number(m[2])] : null);
+  }
+  check('each point is compared with children of its own age',
+    ranges.length >= 2 && new Set(ranges.map((r) => r?.[0])).size === ranges.length && ranges.every((r) => r && r[1] > r[0] * 0.75 && r[2] < r[0] * 1.25),
+    JSON.stringify(ranges));
   await shot(parent, '01-parent-growth');
 
   await parent.goto(`${APP}/puberty`);

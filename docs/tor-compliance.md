@@ -124,7 +124,7 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | D7 | Application promotional video | ✂️ **Dropped by the client (C8)** |
 | D8 | Application demonstration video | ⚪ Team status. Script in `docs/demo-script.md`; the flows in `docs/user-flows.md` are the shot list. |
 | D9 | Short-form social clips | ✂️ **Dropped by the client (C8)**, as promotional work |
-| D10 | Documentation set: system overview, **user manual for parents**, final report | 🟡 System overview, user flows, API and many technical docs exist. **No parent-facing user manual and no final report yet.** |
+| D10 | Documentation set: system overview, **user manual for parents**, final report | 🟢 `docs/manual/user-manual.md` (with PDF), `docs/final-report.md` (with PDF; §6 is the system overview and stack justification) |
 | D11 | Source files and handover package | 🟡 Everything is in one repo now. **The handover index is `docs/deliverables.md`**, which still needs the Drive links. |
 
 ---
@@ -134,7 +134,7 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | § | Requirement | Status |
 | --- | --- | --- |
 | 6.1 | Responsive, major browsers, stable URL | 🟢 |
-| 6.1 | Stack selected **and justified in the system overview document** | 🟡 Stack matches `data-knowledge/Growth-techstack.jpg`. The justification is spread across `diagrams.md` and `ai-integration.md` and needs consolidating into the D10 overview. |
+| 6.1 | Stack selected **and justified in the system overview document** | 🟢 Each choice and the reason for it: `docs/final-report.md` §6.2 |
 | 6.2 | Data minimisation | 🟢 Caretakers do not receive HN or results. The admin export has no names, contacts, HN or exact dates. |
 | 6.2 | Privacy notice **prior to registration** | 🟢 Linked from the register form. Rewritten on 2026-10-01 for roles, sharing, processors and the export. |
 | 6.2 | X-rays stored securely, only accessible to the uploading account | 🟢 Readable only by the child's doctor, through a checked route. They are not static files. **⚠️ Stored on Render's ephemeral disk, so a redeploy loses them** (§5). |
@@ -145,8 +145,8 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟡 Preprocessing and augmentation are documented in `ai-service/refine9/README.md` and the team's `train.py`: CLAHE, 456 px, rotation ±15°, jitter, flip, and 4-view TTA. **Limitations by age and sex are not.** |
 | 6.3 | UI itself presents bone age as a screening aid, not only in docs | 🟢 |
 | 6.4 | Video production standards | ⚪ Videos are the team's part |
-| 6.5 | Functional testing before each milestone, test record maintained | 🟢 100 unit tests (including the refine9 preprocessing against cv2/torchvision output), 26 API e2e tests (the role matrix over HTTP, X-ray file handling), and 24 scripted browser flows covering all four roles and PDF, JPEG and WebP uploads. |
-| 6.5 | Test on ≥2 browsers and ≥1 mobile viewport | 🟡 Chromium desktop and a 390 px mobile viewport. **Safari and Firefox are not tested yet.** |
+| 6.5 | Functional testing before each milestone, test record maintained | 🟢 105 unit tests, 35 API e2e tests, and a 38-check browser walk-through of every role; results per release in `docs/test-record.md` |
+| 6.5 | Test on ≥2 browsers and ≥1 mobile viewport | 🟢 Chromium, Firefox and WebKit (Safari's engine), plus a 390 px phone viewport: `docs/test-record.md` |
 
 ---
 
@@ -181,8 +181,8 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 
 **Ours, small**
 
-7. Test on Safari and Firefox (§6.5).
-8. Write the parent user manual and the final report (D10).
+7. ~~Test on Safari and Firefox~~ Done (`docs/test-record.md`); a manual check on a real iPhone is still worthwhile.
+8. ~~Write the parent user manual and the final report~~ Done (D10).
 9. Add the Drive links (Figma, prototype, D5, logo files) to `docs/deliverables.md` (D1, D11).
 10. Time one refine9 prediction on Render after deploying (`inferenceMs` in the logs). If it is too slow, set `BONE_AGE_TTA=off`.
 11. Move X-ray storage off the ephemeral disk before real use. Doctors now keep a history, so a redeploy wiping it matters more. A free option is Cloudflare R2 (10 GB free, no egress fees), which fits the existing Cloudflare account.

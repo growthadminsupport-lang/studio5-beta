@@ -1,6 +1,6 @@
 # Browser end-to-end test
 
-`flows.mjs` walks through the product the way people use it, in a real browser: a parent, a
+`flows.mjs` (38 checks) walks through the product the way people use it, in a real browser: a parent, a
 caretaker, a doctor and an admin, each in their own browser context. It is the test record for
 TOR §6.5 (`docs/test-record.md` has the latest results).
 

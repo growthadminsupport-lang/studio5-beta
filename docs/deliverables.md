@@ -19,7 +19,7 @@ GrowTH Drive folder, owned by growth.admin.support@gmail.com.
 | D7 | Promotional video | ✂️ | Dropped by the client on 2026-09-30 |
 | D8 | Demonstration video | ⚪ | Team. Script: [`demo-script.md`](./demo-script.md). Shot list: the role flows in [`user-flows.md`](./user-flows.md) |
 | D9 | Short-form social clips | ✂️ | Dropped by the client as promotional work (2026-10-01) |
-| D10 | Documentation set | 🟡 | See the documentation list below. **Parent user manual and final report not written yet.** |
+| D10 | Documentation set | 🟢 | [User manual](manual/user-manual.md) ([PDF](manual/GrowTH-user-manual.pdf)) · [Final report](final-report.md) ([PDF](GrowTH-final-report.pdf)) · system overview in the report §6 and the documents below |
 | D11 | Source files and handover | 🟡 | This repository and this index. The logo, logo motion and avatar sources (PSD) are on the team Drive. Add the remaining Drive items here as they are finished. |
 
 ## Documentation in this repository
@@ -27,6 +27,9 @@ GrowTH Drive folder, owned by growth.admin.support@gmail.com.
 | Document | What it is for |
 | --- | --- |
 | [`../README.md`](../README.md) | What GrowTH is, the stack, how to run it locally |
+| [`manual/user-manual.md`](manual/user-manual.md) | For parents, caretakers and doctors: every screen, with screenshots |
+| [`final-report.md`](final-report.md) | The final project report |
+| [`test-record.md`](test-record.md) | Test results per release and browser |
 | [`../DEPLOY.md`](../DEPLOY.md) | Hosting setup: Neon, Render, Vercel, Resend, Google sign-in |
 | [`user-flows.md`](./user-flows.md) | Roles, the permission matrix, a flow for each role, invitations, notifications, edge cases |
 | [`diagrams.md`](./diagrams.md) | System architecture and route map |
@@ -40,8 +43,6 @@ GrowTH Drive folder, owned by growth.admin.support@gmail.com.
 
 ## Still to produce
 
-1. **Parent user manual (D10).** Base it on the parent and caretaker flows in `user-flows.md`, with screenshots from the live app.
-2. **Final project report (D10).** It should consolidate the stack justification (TOR §6.1) now spread across `diagrams.md` and `ai-integration.md`.
-3. **Model training and evaluation report (D4).** ML team. It must cover the split, which set the MAE comes from, augmentation, and errors by age and sex.
-4. **Videos D6 and D8.** Team.
-5. **Drive items in this index.** Add each item's exact Drive file and folder name once it is final.
+1. **Model training and evaluation report (D4).** ML team. It must cover the split, which set the MAE comes from, augmentation, and errors by age and sex.
+2. **Videos D6 and D8.** Team.
+3. **Drive items in this index.** Add each item's exact Drive file and folder name once it is final.
