@@ -11,7 +11,7 @@ function MainLayout() {
   const { pathname } = useLocation();
 
   return (
-    <div className="main-layout">
+    <div className={`main-layout${isLoggedIn ? " has-bottom-nav" : ""}`}>
       <Navbar />
       <main className="page-content">
         <AccountBanner />

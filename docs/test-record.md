@@ -3,6 +3,24 @@
 TOR §6.5: functional testing before each milestone, on at least two browsers and one mobile
 viewport, with a record kept. This is that record.
 
+## 2026-10-02 (afternoon), avatar picker, child card and phone layout
+
+| Check | Result |
+| --- | --- |
+| Browser walk-through, now 40 checks (adds: editing shows only the saved relationship; a caretaker has no edit button) | Chromium, Firefox, WebKit: **40 / 40** each |
+| Phone and tablet layout: 27 pages for parent, doctor, admin and signed-out visitors at 360, 390 and 768 px wide, in Chromium (mobile emulation) and WebKit. The script flags any element running past the screen edge. | **No overflow** |
+
+Found and fixed:
+- Hair colour did not apply to hairstyles drawn in black (baby styles 1, 2, 4 and 9). Their
+  fringe stayed black whatever colour was picked. The hair layers are rebuilt with shading
+  taken from each tone's rank, so every style takes the colour.
+- The hairstyle picker cut the hair off at the circle; it now shows the whole figure. The
+  clothes picker showed each outfit tiny inside an empty frame; it is now cropped to the outfit.
+- On phones, the bottom tab bar covered the footer's last lines. The iPhone home-indicator
+  inset was ignored because `viewport-fit=cover` was missing. Safari zoomed into every form
+  field, because the text was under 16 px.
+- On a 390 px phone the height card showed "137.5…"; the unit is now smaller, so it fits.
+
 ## 2026-10-02, release with Google onboarding, avatars, refine9 and R2 storage
 
 Commit under test: `main` at the time of PR "Fix sign-out on reload", plus that fix.

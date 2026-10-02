@@ -83,7 +83,9 @@ remove a caretaker and the child's doctor, and delete the profile. Caretakers an
 join only when you invite them, and can do less (see [section 6](#6-invite-a-caretaker-or-your-childs-doctor)).
 
 **To change any of this later,** choose the green pencil on your child's card. It opens a
-window over the page you are on:
+window over the page you are on. Only you and the child's doctor see the pencil; the doctor can
+change only the hospital number. Your answer to "You are this child's" shows on its own there;
+choose **Change** to pick a different one.
 
 ![Edit child](img/04-edit-child.png)
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeftRight, Pencil, Plus, X, Check, AlertTriangle, Users, Search } from 'lucide-react';
 import ChildAvatar from './ChildAvatar';
+import { avatarVersion } from '../../lib/avatar';
 import ChildEditDialog from './ChildEditDialog';
 import PeopleDialog from '../People/PeopleDialog';
 import { useAuth } from '../../context/AuthContext';
@@ -368,10 +369,13 @@ export default function ChildProfileCard() {
             )}
           </div>
 
-          <div className="flex items-center gap-4 pr-28 sm:gap-5 sm:pr-32">
-            <ChildAvatar child={child} size={72} />
+          {/* Phones: the figure on top, name and details full width under it. */}
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-6 sm:pr-32">
+            <div className="flex shrink-0 items-end justify-center rounded-2xl bg-gradient-to-b from-[#eaf6f3] to-white px-3 pt-2 dark:from-teal-500/10 dark:to-slate-800">
+              <ChildAvatar child={child} size={avatarVersion(child.dateOfBirth) === 'baby' ? 128 : 104} variant="full" />
+            </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 max-w-full">
               <h2 className="truncate text-lg font-bold text-slate-900 dark:text-slate-100">{child.fullName}</h2>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {[

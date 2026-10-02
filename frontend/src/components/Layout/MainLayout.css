@@ -9,10 +9,11 @@
   flex: 1;
 }
 
-/* Ensures mobile content is never hidden behind the persistent bottom bar */
+/* Room under the footer for the bottom tab bar (BottomNav.css), so the last lines can scroll
+   clear of it, including the iPhone home-indicator inset. */
 @media (max-width: 768px) {
-  .page-content {
-    padding-bottom: 64px;
+  .main-layout.has-bottom-nav {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
 }
 

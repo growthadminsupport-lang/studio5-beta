@@ -194,8 +194,16 @@ function DashboardPage() {
                       <Icon size={12} className="shrink-0" />
                       {measure.label}
                     </span>
-                    <span className="mt-1 block truncate text-base font-bold text-slate-900 dark:text-slate-100 sm:text-lg">
-                      {value !== null ? `${value}${measure.unit}` : '—'}
+                    {/* The unit is smaller, so "137.5 cm" fits a phone-width third without "…". */}
+                    <span className="mt-1 block whitespace-nowrap text-base font-bold text-slate-900 dark:text-slate-100 sm:text-lg">
+                      {value !== null ? (
+                        <>
+                          {value}
+                          <span className="ml-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400 sm:text-sm">{measure.unit}</span>
+                        </>
+                      ) : (
+                        '—'
+                      )}
                     </span>
                     {status && (
                       <span className={`mt-0.5 block text-[10px] ${status.tone}`} title={status.figure}>{status.label}</span>
