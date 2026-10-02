@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { useChildren } from "../../context/ChildrenContext";
 import { errorMessage } from "../../lib/api";
 import { BABY_OUTFITS, HAIR_COLORS, SKIN_TONES, avatarVersion, hairCount, withDefaults } from "../../lib/avatar";
-import ChildAvatar, { AvatarFigure } from "./ChildAvatar";
+import { AvatarFigure } from "./ChildAvatar";
 
 function todayIso() {
   const d = new Date();
@@ -70,7 +70,7 @@ function OptionTile({ active, onClick, label, children }) {
       className={`flex items-center justify-center rounded-xl border-2 p-1 transition active:scale-95 ${
         active
           ? "border-[#056559] bg-[#eaf6f3] dark:border-teal-400 dark:bg-teal-500/10"
-          : "border-slate-200 hover:border-slate-300 dark:border-slate-700"
+          : "border-slate-200 bg-slate-50 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/40"
       }`}
     >
       {children}
@@ -86,7 +86,6 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
   const set = (patch) => onChange({ ...a, ...patch });
   const tabs = TABS.filter((t) => !t.babyOnly || version === "baby");
   const current = tabs.some((t) => t.id === tab) ? tab : "skin";
-  const preview = (patch) => ({ sex, dateOfBirth, avatar: { ...a, ...patch } });
 
   return (
     <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
@@ -107,7 +106,7 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
             role="tab"
             aria-selected={current === t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
+            className={`flex-1 whitespace-nowrap rounded-lg px-1 py-1.5 text-xs font-semibold transition ${
               current === t.id
                 ? "bg-white text-[#056559] shadow-sm dark:bg-slate-700 dark:text-teal-300"
                 : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
@@ -134,22 +133,23 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
           </div>
         )}
         {current === "hair" && (
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {Array.from({ length: hairCount(version) }, (_, i) => i + 1).map((n) => {
               const key = version === "baby" ? "babyHair" : "youngHair";
               return (
                 <OptionTile key={n} label={`Hairstyle ${n}`} active={a[key] === n} onClick={() => set({ [key]: n })}>
-                  <ChildAvatar child={preview({ [key]: n })} size={48} />
+                  {/* The whole figure, so long styles show their full length. */}
+                  <AvatarFigure version={version} sex={sex} avatar={{ ...a, [key]: n }} height={version === "baby" ? 92 : 72} />
                 </OptionTile>
               );
             })}
           </div>
         )}
         {current === "outfit" && (
-          <div className="grid grid-cols-6 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {Array.from({ length: BABY_OUTFITS }, (_, i) => i + 1).map((n) => (
               <OptionTile key={n} label={`Outfit ${n}`} active={a.babyOutfit === n} onClick={() => set({ babyOutfit: n })}>
-                <img src={`/avatars/baby/outfit-${n}.webp`} alt="" className="h-14 object-contain" style={{ objectPosition: "center 70%" }} />
+                <img src={`/avatars/baby/outfit-${n}-thumb.webp`} alt="" className="h-16 w-full object-contain p-1" draggable={false} />
               </OptionTile>
             ))}
           </div>
@@ -173,6 +173,7 @@ export default function ChildForm({ child, onDone, submitLabel }) {
   const [dateOfBirth, setDateOfBirth] = useState(child?.dateOfBirth ?? "");
   const [sex, setSex] = useState(child?.sex ?? "FEMALE");
   const [relation, setRelation] = useState(child?.myRelation ?? "PARENT");
+  const [changingRelation, setChangingRelation] = useState(false);
   const [hn, setHn] = useState(child?.hn ?? "");
   const [avatar, setAvatar] = useState(child?.avatar ?? null);
   const [saving, setSaving] = useState(false);
@@ -276,7 +277,8 @@ export default function ChildForm({ child, onDone, submitLabel }) {
         <fieldset>
           <legend className="mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-200">You are this child’s</legend>
           <div className="grid gap-2">
-            {RELATIONS.map((r) => (
+            {/* Editing shows just the saved answer; the other options open only on request. */}
+            {RELATIONS.filter((r) => !isEdit || changingRelation || r.value === relation).map((r) => (
               <label
                 key={r.value}
                 className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-2.5 text-sm transition ${
@@ -293,6 +295,15 @@ export default function ChildForm({ child, onDone, submitLabel }) {
               </label>
             ))}
           </div>
+          {isEdit && !changingRelation && (
+            <button
+              type="button"
+              onClick={() => setChangingRelation(true)}
+              className="mt-1.5 text-xs font-semibold text-[#056559] hover:underline dark:text-teal-300"
+            >
+              Change
+            </button>
+          )}
           <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600 dark:bg-slate-900/50 dark:text-slate-300">
             {isEdit ? "As the person who manages this profile, you" : "You will manage this profile. You"} can edit it, invite or
             remove a caretaker and the child’s doctor, and delete it. A caretaker (for example a nanny or a teacher) and the

@@ -110,6 +110,11 @@ try {
   await parent.getByRole('button', { name: 'Edit child profile' }).click();
   await parent.getByRole('dialog').getByText('Edit Mali Test').waitFor();
   const stayed = parent.url().endsWith('/dashboard');
+  const dlg = parent.getByRole('dialog');
+  const onlySaved = (await dlg.getByLabel('Mother or father').isChecked()) && (await dlg.getByLabel('Legal guardian').count()) === 0;
+  await dlg.getByRole('button', { name: 'Change', exact: true }).click();
+  check('editing shows only the saved relationship until "Change" is pressed',
+    onlySaved && (await dlg.getByLabel('Legal guardian').isVisible()));
   await parent.getByRole('dialog').getByRole('button', { name: 'Deep' }).click();
   await parent.getByRole('dialog').getByRole('tab', { name: 'Hairstyle' }).click();
   await parent.getByRole('dialog').getByRole('button', { name: 'Hairstyle 3' }).click();
@@ -227,6 +232,8 @@ try {
   await caretaker.waitForURL('**/dashboard');
   await caretaker.getByText('You: Caretaker').waitFor();
   check('caretaker accepts and sees the child, no HN', !(await caretaker.textContent('body')).includes('HN-77001'));
+  check('caretaker cannot edit the child (only the parent and doctor can)',
+    (await caretaker.getByRole('button', { name: /Edit child profile|Set hospital number/ }).count()) === 0);
 
   await caretaker.goto(`${APP}/puberty`);
   await caretaker.getByRole('button', { name: /Start screening|Screen again/ }).click();

@@ -67,10 +67,20 @@ def tintable(im):
     dist = np.minimum(np.abs(hue - main), 1 - np.abs(hue - main))
     accessory = solid & (sat > 0.25) & (val > 0.3) & (dist > 0.12)
     lum = rgb @ np.array([0.299, 0.587, 0.114], np.float32)
-    # Normalise so the hair's typical tone maps near white: multiplying by it then keeps the
-    # chosen colour, with the drawing's highlights and shadows on top.
-    ref = np.percentile(lum[solid & ~accessory], 75) if (solid & ~accessory).any() else 1
-    shade = np.clip(lum / max(ref, 1e-3), 0, 1.35) / 1.35
+    # Shade by each pixel's rank among the hair's tones, not by its brightness. Some styles
+    # are drawn near-black with brown strokes, others mid-orange: dividing by a reference tone
+    # left the black fringe of the former at ~0, so it stayed black whatever colour was picked.
+    # Ranking makes every style's fill land mid-scale. Tones are binned first so the slight
+    # noise inside a flat black fill counts as one tone rather than being stretched into blotches.
+    bins = np.round(lum * 25)
+    hair = solid & ~accessory
+    if hair.any():
+        values, counts = np.unique(bins[hair], return_counts=True)
+        below = np.concatenate([[0], np.cumsum(counts)[:-1]])
+        rank = (below + counts / 2) / counts.sum()
+        shade = 0.5 + 0.5 * np.interp(bins, values, rank)
+    else:
+        shade = np.ones_like(lum)
     shade_img = np.dstack([shade, shade, shade, alpha * ~accessory])
     acc_img = np.dstack([rgb, alpha * accessory])
     to = lambda x: Image.fromarray((np.clip(x, 0, 1) * 255).astype(np.uint8), 'RGBA')
@@ -121,6 +131,8 @@ def baby(manifest):
     save(rendered['shoes'], OUT / 'baby' / 'shoes.webp', box, H)
     for i, im in enumerate(rendered['outfits'], 1):
         save(im, OUT / 'baby' / f'outfit-{i}.webp', box, H)
+        # The clothes picker shows each outfit on its own, cropped to it, so it fills the tile.
+        save(im, OUT / 'baby' / f'outfit-{i}-thumb.webp', union_box([im], pad=6), 160)
     acc = []
     for i, im in enumerate(rendered['hair'], 1):
         shade, accessories, has_acc = tintable(im)

@@ -158,3 +158,13 @@ textarea {
     animation: none;
   }
 }
+
+/* iPhone Safari zooms the page into any field whose text is under 16px and leaves it zoomed.
+   The forms use 14px text, so on iOS only (the one browser that does this) fields get 16px. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
