@@ -145,7 +145,7 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟢 Preprocessing and augmentation: `ai-service/refine9/README.md`. Limitations on the test set (`docs/model-evaluation.md`): boys 6.29, girls 6.97; reads older under 10 years (about +5 months) and younger from 15 (about −6); most accurate at 10–15 (MAE 5.6). Not checked on Thai children. |
 | 6.3 | UI itself presents bone age as a screening aid, not only in docs | 🟢 |
 | 6.4 | Video production standards | ⚪ Videos are the team's part |
-| 6.5 | Functional testing before each milestone, test record maintained | 🟢 106 unit tests, 35 API e2e tests, and a 40-check browser walk-through of every role; results per release in `docs/test-record.md` |
+| 6.5 | Functional testing before each milestone, test record maintained | 🟢 106 unit tests, 35 API e2e tests, and a 42-check browser walk-through of every role; results per release in `docs/test-record.md` |
 | 6.5 | Test on ≥2 browsers and ≥1 mobile viewport | 🟢 Chromium, Firefox and WebKit (Safari's engine), plus a 390 px phone viewport: `docs/test-record.md` |
 
 ---

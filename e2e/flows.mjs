@@ -267,6 +267,9 @@ try {
   await doctor.goto(`${APP}/verify-email?token=${resent.token}`);
   await doctor.getByText('Email address confirmed').waitFor();
   check('the confirmation link confirms the address', true);
+  await doctor.reload();
+  await doctor.getByText('Email address confirmed').waitFor();
+  check('opening the confirmation link again still says confirmed', true);
   await doctor.goto(`${APP}${doctorInvite}`);
   await admin.reload();
   await admin.getByText(DR).waitFor();
@@ -402,6 +405,22 @@ try {
   check('edit window is full-screen and fits on a phone', fitsScreen);
   await m.keyboard.press('Escape');
   check('mobile dark dashboard renders', true);
+
+  // ---------------------------------------------------------------- A refresh that never reaches the server keeps the session
+  // An expired access token (the 401) whose refresh is aborted, as happens when the page
+  // reloads mid-refresh, must not sign the person out: only a server rejection does.
+  await parent.goto(`${APP}/dashboard`);
+  await parent.getByText('Mali Test').first().waitFor();
+  await parent.route('**/puberty/history**', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{"statusCode":401}' }));
+  await parent.route('**/auth/refresh', (r) => r.abort());
+  await parent.getByRole('link', { name: 'Puberty' }).first().click();
+  await parent.waitForTimeout(2000);
+  const kept = await parent.evaluate(() => Boolean(localStorage.getItem('growth_refresh_token') ?? sessionStorage.getItem('growth_refresh_token')));
+  await parent.unroute('**/puberty/history**');
+  await parent.unroute('**/auth/refresh');
+  await parent.reload();
+  await parent.getByText('Mali Test').first().waitFor();
+  check('an aborted session refresh does not sign the person out', kept && !parent.url().includes('/login'));
 
   // ---------------------------------------------------------------- Password change signs out other devices
   await parent.goto(`${APP}/settings`);

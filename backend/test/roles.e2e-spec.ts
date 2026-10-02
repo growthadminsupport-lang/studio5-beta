@@ -650,9 +650,14 @@ maybe('roles and permissions (e2e)', () => {
         .post('/auth/verify-email')
         .send({ token: resent.body.token })
         .expect(200);
+      // Opening the link again (second tab, mail scanner) still says confirmed.
       await http()
         .post('/auth/verify-email')
         .send({ token: resent.body.token })
+        .expect(200);
+      await http()
+        .post('/auth/verify-email')
+        .send({ token: 'f'.repeat(64) })
         .expect(400);
       await as('admin')
         .patch(`/admin/doctors/${doctorId}`)

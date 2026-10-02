@@ -117,7 +117,11 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${session.accessToken}`;
         return api(original);
       }
-      onSessionLost();
+      // Signed out only if the server rejected the token (refreshSession then cleared it). A
+      // refresh that failed on the network, or was aborted because the page is reloading,
+      // leaves the token in place: WebKit runs this handler during unload, and ending the
+      // session here signed people out on an ordinary reload.
+      if (!getRefreshToken()) onSessionLost();
     }
     return Promise.reject(error);
   },

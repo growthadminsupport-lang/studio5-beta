@@ -321,14 +321,16 @@ export class AuthService {
         'This confirmation link is invalid or has expired. Sign in and ask for a new one.',
       );
     }
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        isVerified: true,
-        emailVerifyTokenHash: null,
-        emailVerifyExpiresAt: null,
-      },
-    });
+    // The link stays valid until it expires, and opening it again just says "confirmed". People
+    // open it twice (a second tab, phone then laptop), mail scanners open it first, and a
+    // single-use token showed them "invalid or expired" for an address that was confirmed.
+    // It can only confirm this one address, so keeping it gives nothing away.
+    if (!user.isVerified) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { isVerified: true },
+      });
+    }
     return { success: true };
   }
 

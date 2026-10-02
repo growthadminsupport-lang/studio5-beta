@@ -27,7 +27,7 @@ it should. These changes are listed for sign-off in `docs/tor-compliance.md` §0
 The software meets **20 of the 24** functional requirements outright. Three deviate on
 purpose, two of them at the client's direction; the fourth (FR-17, speed) waits on a timing
 from the live server. It has run on free tiers only (budget $0), and passes 106 unit tests,
-35 API tests and a 40-check browser walk-through on Chromium, Firefox and WebKit (Safari's
+35 API tests and a 42-check browser walk-through on Chromium, Firefox and WebKit (Safari's
 engine). On 200 held-out test radiographs the bone-age model's average error is 6.63 months.
 
 ---
@@ -255,14 +255,17 @@ a result.
 | API end-to-end through R2's S3 interface | Upload, serve after local loss, delete | 34 / 34 |
 | Model parity | Node vs PyTorch on six radiographs | within 0.013 months |
 | Model accuracy, held out | Deployed pipeline on the 200 RSNA test radiographs | MAE 6.63 months (one view) |
-| Browser walk-through, 40 checks | All four roles end to end, phone screen, dark mode | Chromium, Firefox and WebKit: 40 / 40 each |
+| Browser walk-through, 42 checks | All four roles end to end, phone screen, dark mode | Chromium, Firefox and WebKit: 42 / 42 each |
 | Phone and tablet layout | 27 pages at 360, 390 and 768 px, Chromium and WebKit | no element past the screen edge |
 
 The full record, with the bugs it caught, is `docs/test-record.md`. Bugs found by these tests:
 - the registration phone number was not saved;
 - WebP uploads failed;
 - reloading during a session refresh signed people out in Firefox and Safari's engine;
-- the chart tooltip compared a measurement with the wrong age's range.
+- the chart tooltip compared a measurement with the wrong age's range;
+- a page reload during an aborted session refresh still signed people out in Safari's engine;
+- opening the email confirmation link a second time said it was invalid;
+- hair colour did not apply to hairstyles drawn in black, and on phones the tab bar hid the footer.
 
 Real Google sign-in and email delivery were checked by hand on the live site.
 
