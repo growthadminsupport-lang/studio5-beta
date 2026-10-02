@@ -644,6 +644,34 @@ maybe('roles and permissions (e2e)', () => {
       expect(reg.body.code).toBe('GOOGLE_ACCOUNT');
     });
 
+    it('the same refresh token twice (two tabs) keeps both signed in, until a password change', async () => {
+      const login = await http()
+        .post('/auth/login')
+        .send({ email: 'stranger@e2e.test', password: PASSWORD })
+        .expect(200);
+      const token = login.body.refreshToken as string;
+      const [a, b] = await Promise.all([
+        http().post('/auth/refresh').send({ refreshToken: token }),
+        http().post('/auth/refresh').send({ refreshToken: token }),
+      ]);
+      expect([a.status, b.status]).toEqual([200, 200]);
+
+      await http()
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${a.body.accessToken}`)
+        .send({ currentPassword: PASSWORD, newPassword: 'Changed999!' })
+        .expect(200);
+      // The rotated token's grace ends with the password change.
+      await http()
+        .post('/auth/refresh')
+        .send({ refreshToken: token })
+        .expect(401);
+      await http()
+        .post('/auth/refresh')
+        .send({ refreshToken: b.body.refreshToken })
+        .expect(401);
+    });
+
     it('lets a Google account add a password, once', async () => {
       const g = await prisma.user.create({
         data: {

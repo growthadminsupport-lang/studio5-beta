@@ -3,7 +3,6 @@ import {
   ComposedChart,
   Area,
   Line,
-  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -98,14 +97,22 @@ function verdict(value, row, isBmi) {
   return "within the usual range";
 }
 
-function ChartTooltip({ active, payload, label, spec, isBmi, points, childName, sexWord }) {
+/** The reference row closest to `ageYears`. */
+function rowAt(rows, ageYears) {
+  let best = null;
+  for (const r of rows) if (!best || Math.abs(r.ageYears - ageYears) < Math.abs(best.ageYears - ageYears)) best = r;
+  return best;
+}
+
+function ChartTooltip({ active, payload, spec, isBmi, childName, sexWord }) {
   if (!active || !payload?.length) return null;
-  const row = payload.find((p) => p.payload?.p50 !== undefined)?.payload;
-  const own =
-    payload.find((p) => p.dataKey === "value")?.payload ??
-    points.find((p) => Math.abs(p.ageYears - label) < 1 / 24);
+  // One row holds the age, the reference values for that age, and the child's measurement if
+  // there is one at that age (see `data` below), so nothing here can mix up two ages.
+  const row = payload[0]?.payload;
+  if (!row) return null;
+  const own = row.own !== undefined ? { value: row.own } : null;
   const fmt = (v) => `${Number(v).toFixed(1)}${spec.unit ? ` ${spec.unit}` : ""}`;
-  const age = own?.ageYears ?? label;
+  const age = row.ageYears;
   return (
     <div className="max-w-[240px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-800">
       <p className="font-semibold text-slate-900 dark:text-slate-100">At {ageWords(age)}</p>
@@ -153,6 +160,25 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
   const name = child.nickname || child.fullName;
   const sexWord = child.sex === "MALE" ? "boys this age" : "girls this age";
   const { ticks, format } = ticksFor(window);
+  // The child's measurements go into the same rows as the reference curves, each at its own age
+  // with that month's reference values. A separate series would be matched to the tooltip by
+  // array index, which Recharts does, and compare a 9-year-old with a 1-year-old's range.
+  const monthly = curveRows(curve, measure, 1, window);
+  const half = (window[1] <= 36 ? 1 : 3) / 12 / 2;
+  const data = [
+    // A reference row right next to a measurement would catch the cursor instead of it.
+    ...rows.filter((r) => !points.some((p) => Math.abs(p.ageYears - r.ageYears) < half)),
+    ...points
+      .filter((p) => p.ageYears * 12 >= window[0] && p.ageYears * 12 <= window[1])
+      .map((p) => {
+        const ref = rowAt(monthly, p.ageYears);
+        if (!ref || !rows.length) return null;
+        // The top band is drawn up to the same ceiling as the other rows.
+        const top = isBmi ? { severeBand: rows[0].severe + rows[0].severeBand - ref.severe } : { aboveP97: rows[0].p97 + rows[0].aboveP97 - ref.p97 };
+        return { ...ref, ...top, ageYears: p.ageYears, own: p.value };
+      })
+      .filter(Boolean),
+  ].sort((a, b) => a.ageYears - b.ageYears);
   // Frame the y-axis on the reference range and the child's own values, not on zero: from zero
   // the curves of a 4-month-old sit squeezed in the top fifth of the chart.
   const values = [
@@ -168,7 +194,7 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
           <div className="flex h-full items-center justify-center text-xs text-slate-400">Loading the reference chart…</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <ComposedChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
               <XAxis
                 dataKey="ageYears"
@@ -192,7 +218,7 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
                 label={spec.unit ? { value: spec.unit, angle: -90, position: "insideLeft", fill: chart.tick, fontSize: 11 } : undefined}
               />
               <Tooltip
-                content={<ChartTooltip spec={spec} isBmi={isBmi} points={points} childName={name} sexWord={sexWord} />}
+                content={<ChartTooltip spec={spec} isBmi={isBmi} childName={name} sexWord={sexWord} />}
                 cursor={{ stroke: chart.axis, strokeDasharray: "3 3" }}
               />
 
@@ -213,7 +239,17 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
               )}
 
               {/* The child's own measurements. */}
-              <Scatter data={points} dataKey="value" name={name} fill={chart.own} line={{ stroke: chart.own, strokeWidth: 2.5 }} isAnimationActive={false} />
+              <Line
+                type="linear"
+                dataKey="own"
+                name={name}
+                stroke={chart.own}
+                strokeWidth={2.5}
+                connectNulls
+                dot={{ r: 4.5, fill: chart.own, stroke: chart.own, className: "growth-own-dot" }}
+                activeDot={{ r: 6 }}
+                isAnimationActive={false}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         )}

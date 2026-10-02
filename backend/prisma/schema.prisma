@@ -81,6 +81,10 @@ model Session {
   expiresAt    DateTime
   createdAt    DateTime  @default(now())
   revokedAt    DateTime?
+  /// Set when this token was exchanged for a new pair (rotation), as opposed to revoked by
+  /// logout or a password change. A rotated token is still accepted for a few seconds; see
+  /// AuthService.refresh.
+  rotatedAt    DateTime?
 
   @@index([userId])
   @@map("sessions")
