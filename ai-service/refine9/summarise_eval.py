@@ -52,7 +52,7 @@ def report(path):
     print(table(rows))
     e = d.predicted - d.age
     r2 = 1 - (e ** 2).sum() / ((d.age - d.age.mean()) ** 2).sum()
-    print(f'\nAll images, in the ML team\'s metrics: MSE {(e ** 2).mean():.2f}, R² {r2:.4f}')
+    print(f'\nAll images, in the ML team\'s metrics: MSE {(e ** 2).mean():.2f}, R² {r2:.3f}')
     print(f'Median time per image: {d.ms.median():.0f} ms')
     return d
 

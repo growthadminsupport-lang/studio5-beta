@@ -12,19 +12,21 @@ viewport, with a record kept. This is that record.
 | `npm run verify:model` with the new model card | all checks pass |
 | Browser walk-through, 40 checks | Chromium **40 / 40**, Firefox **40 / 40**, WebKit **40 / 40** in 8 of 10 runs |
 
-**Intermittent WebKit failures, found and fixed the same evening** (PR "Keep the session when
-a refresh is aborted"):
+**Intermittent WebKit failures: two bugs found and fixed the same evening** (PR #11). Neither
+failure was caught with logs, so tying them to these bugs is inferred: the bugs are proven
+(each has a check that fails without its fix), and the WebKit failures stopped after the fixes
+(0 in 10 runs, against 2 in 10 before).
 - **Sign-out on reload.** A request that got a 401 started a session refresh; if the page
   reloaded or navigated meanwhile, the refresh was aborted, and the response handler ended the
-  session anyway. WebKit runs that handler during unload, so the stored token was deleted and
-  the person was signed out. The 2 October fix had covered the other path (start-up), not this
-  one. Now only a server rejection signs out. A new check aborts a refresh on purpose: without
+  session anyway, deleting the stored token. The 2 October fix had covered the other path
+  (start-up), not this one. Likely why only WebKit failed: it appears to run that handler
+  while the page unloads, where the other browsers drop it; not confirmed. Now only a server rejection signs out. A new check aborts a refresh on purpose: without
   the fix it signs the parent out, with it they stay signed in.
 - **"This confirmation link is invalid or has expired" for a confirmed address.** The link
   was single-use and the page sent it twice (React development mode), so whichever request
   came second failed. Real users hit the same with a second tab, phone then laptop, or a mail
   scanner that opens links first. The link now stays valid until it expires, and opening it
-  again says "confirmed".
+  again says "confirmed". This is the step where one of the failing runs stopped.
 
 After both fixes: 42 checks, Chromium 42/42, Firefox 42/42, WebKit 42/42 in 5 consecutive
 runs (and 5 more after the first fix alone). API end-to-end 35/35, unit 106/106.

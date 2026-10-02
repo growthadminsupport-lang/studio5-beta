@@ -312,6 +312,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { emailVerifyTokenHash: hashToken(token) },
     });
+    // An address that is already confirmed says so even from an expired link: "invalid or
+    // expired" there reads as if the confirmation had not counted.
+    if (user?.isVerified) return { success: true };
     if (
       !user ||
       !user.emailVerifyExpiresAt ||
@@ -325,12 +328,10 @@ export class AuthService {
     // open it twice (a second tab, phone then laptop), mail scanners open it first, and a
     // single-use token showed them "invalid or expired" for an address that was confirmed.
     // It can only confirm this one address, so keeping it gives nothing away.
-    if (!user.isVerified) {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { isVerified: true },
-      });
-    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { isVerified: true },
+    });
     return { success: true };
   }
 

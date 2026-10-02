@@ -67,8 +67,10 @@ older than the reference.
 
 | | MAE | MSE | R² |
 | --- | --- | --- | --- |
-| Test set, one view | 6.63 | 73.99 | 0.9600 |
-| Test set, four views | 6.50 | 70.03 | 0.9622 |
+| Test set, one view | 6.63 | 73.99 | 0.960 |
+| Test set, four views | 6.50 | 70.03 | 0.962 |
+
+R² is given to three decimals: with 200 images the fourth is noise.
 
 ## What this means
 
