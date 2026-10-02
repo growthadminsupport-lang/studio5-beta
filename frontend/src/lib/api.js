@@ -78,9 +78,13 @@ export function refreshSession() {
         storeRefreshToken(res.data.refreshToken);
         return res.data;
       })
-      .catch(() => {
-        // Another tab may have rotated the token already; only drop it if it is still ours.
-        if (getRefreshToken() === refreshToken) clearTokens();
+      .catch((err) => {
+        // Forget the token only when the server says it is no longer valid. A request that was
+        // cancelled (the page is navigating away), timed out on a cold start, or hit a network
+        // blip says nothing about the token; clearing it there signed people out on a reload.
+        // And another tab may have rotated it already: only drop it if it is still ours.
+        const rejected = err?.response?.status === 401 || err?.response?.status === 400;
+        if (rejected && getRefreshToken() === refreshToken) clearTokens();
         return null;
       })
       .finally(() => {

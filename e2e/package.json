@@ -1,0 +1,14 @@
+{
+  "name": "growth-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser walk-through of every role's flows (e2e/README.md)",
+  "scripts": {
+    "fixtures": "node fetch-fixtures.mjs && node make-pdf.mjs",
+    "test": "node flows.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.63.0",
+    "sharp": "^0.35.3"
+  }
+}

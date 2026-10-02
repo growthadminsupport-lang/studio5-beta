@@ -358,17 +358,21 @@ export class AuthService {
     return this.config.get<string>('NODE_ENV') === 'production';
   }
 
+  /** Ends every session, including the rotation grace of recently refreshed tokens. */
   private revokeAllSessions(userId: string) {
     return this.prisma.session.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+      where: {
+        userId,
+        OR: [{ revokedAt: null }, { rotatedAt: { not: null } }],
+      },
+      data: { revokedAt: new Date(), rotatedAt: null },
     });
   }
 
   async logout(refreshToken: string) {
     await this.prisma.session.updateMany({
-      where: { refreshToken: hashToken(refreshToken), revokedAt: null },
-      data: { revokedAt: new Date() },
+      where: { refreshToken: hashToken(refreshToken) },
+      data: { revokedAt: new Date(), rotatedAt: null },
     });
     return { success: true };
   }
@@ -380,21 +384,37 @@ export class AuthService {
       include: { user: true },
     });
 
-    if (!session || session.revokedAt || session.expiresAt < new Date()) {
+    if (!session || session.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    await this.prisma.session.update({
-      where: { id: session.id },
-      data: { revokedAt: new Date() },
-    });
+    if (session.revokedAt) {
+      // Refresh tokens rotate, and two tabs, or a reload that interrupts the first refresh,
+      // can present the same token twice. Without a grace period the second one fails and that
+      // tab is signed out. A token that was *rotated* (not revoked by logout or a password
+      // change) is accepted again for a few seconds.
+      const rotatedRecently =
+        session.rotatedAt !== null &&
+        Date.now() - session.rotatedAt.getTime() < ROTATION_GRACE_MS;
+      if (!rotatedRecently) {
+        throw new UnauthorizedException('Invalid or expired refresh token');
+      }
+    } else {
+      const now = new Date();
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: { revokedAt: now, rotatedAt: now },
+      });
+    }
 
     const tokens = await this.issueTokens(session.user);
     return { user: this.sanitizeUser(session.user), ...tokens };
   }
 
   async forgotPassword(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
     // Always return success shape to avoid leaking whether an email is registered.
     if (!user) {
       return { success: true };
@@ -519,6 +539,8 @@ export class AuthService {
 }
 
 const VERIFY_TTL_MS = 48 * 60 * 60 * 1000;
+/** How long a just-rotated refresh token is still accepted (two tabs, an interrupted reload). */
+const ROTATION_GRACE_MS = 30 * 1000;
 
 /** Doctor accounts start pending; an admin approves them. */
 function doctorFields(dto: {

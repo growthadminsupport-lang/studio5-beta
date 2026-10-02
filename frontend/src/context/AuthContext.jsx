@@ -34,7 +34,14 @@ export function AuthProvider({ children }) {
     warmUpBackend();
     setOnSessionLost(endSession);
     if (!getRefreshToken()) return;
+    // If the first try fails but the token is still stored, the failure was the network (a
+    // cold start, a blip), not the token: try once more before showing the login page.
+    const retryOnce = (session) =>
+      session || !getRefreshToken()
+        ? session
+        : new Promise((r) => setTimeout(r, 1500)).then(refreshSession);
     refreshSession()
+      .then(retryOnce)
       .then((session) => setUser(session?.user ?? null))
       .finally(() => setLoading(false));
   }, [endSession]);
