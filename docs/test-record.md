@@ -12,11 +12,22 @@ viewport, with a record kept. This is that record.
 | `npm run verify:model` with the new model card | all checks pass |
 | Browser walk-through, 40 checks | Chromium **40 / 40**, Firefox **40 / 40**, WebKit **40 / 40** in 8 of 10 runs |
 
-**Open, not reproduced:** in 2 of 10 WebKit runs the doctor was signed out when reloading the
-invitation page just after the admin approved them. Eight later runs passed, five of them with
-every `/auth/*` response logged, so the cause is not identified. It looks like the session
-refresh race fixed on 2 October (a second refresh after a rotation), but the 30-second grace
-should cover that. Worth a manual check in Safari on a Mac or iPhone.
+**Intermittent WebKit failures, found and fixed the same evening** (PR "Keep the session when
+a refresh is aborted"):
+- **Sign-out on reload.** A request that got a 401 started a session refresh; if the page
+  reloaded or navigated meanwhile, the refresh was aborted, and the response handler ended the
+  session anyway. WebKit runs that handler during unload, so the stored token was deleted and
+  the person was signed out. The 2 October fix had covered the other path (start-up), not this
+  one. Now only a server rejection signs out. A new check aborts a refresh on purpose: without
+  the fix it signs the parent out, with it they stay signed in.
+- **"This confirmation link is invalid or has expired" for a confirmed address.** The link
+  was single-use and the page sent it twice (React development mode), so whichever request
+  came second failed. Real users hit the same with a second tab, phone then laptop, or a mail
+  scanner that opens links first. The link now stays valid until it expires, and opening it
+  again says "confirmed".
+
+After both fixes: 42 checks, Chromium 42/42, Firefox 42/42, WebKit 42/42 in 5 consecutive
+runs (and 5 more after the first fix alone). API end-to-end 35/35, unit 106/106.
 
 ## 2026-10-02 (afternoon), avatar picker, child card and phone layout
 
