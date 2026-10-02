@@ -62,6 +62,14 @@ older than the reference.
 
 **Time per image** (median, one ARM core): 1.2 s with one view, 4.4 s with four.
 
+**In the ML team's metrics**, for comparison with their validation table
+(`ai-service/refine9/README.md`: MAE 7.425, MSE 97.28, R² 0.9441, four views):
+
+| | MAE | MSE | R² |
+| --- | --- | --- | --- |
+| Test set, one view | 6.63 | 73.99 | 0.9600 |
+| Test set, four views | 6.50 | 70.03 | 0.9622 |
+
 ## What this means
 
 - **The TOR target is met on held-out data.** MAE 6.63 months against a target of 8 to 10.
