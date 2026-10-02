@@ -659,6 +659,15 @@ maybe('roles and permissions (e2e)', () => {
         .post('/auth/verify-email')
         .send({ token: 'f'.repeat(64) })
         .expect(400);
+      // Even after the link expires, a confirmed address is reported as confirmed.
+      await prisma.user.update({
+        where: { id: doctorId },
+        data: { emailVerifyExpiresAt: new Date(Date.now() - 1000) },
+      });
+      await http()
+        .post('/auth/verify-email')
+        .send({ token: resent.body.token })
+        .expect(200);
       await as('admin')
         .patch(`/admin/doctors/${doctorId}`)
         .send({ decision: 'APPROVED' })
