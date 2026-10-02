@@ -28,8 +28,9 @@ up the account it creates:
 **Have ready:** a hand X-ray (a PDF report, JPEG or PNG; the app crops a PDF to the film), and an account with one child
 who already has 4–6 measurements. Creating that history live is slow and dull to watch.
 
-**Know what you will say about accuracy.** refine9 averages 7.43 months of error, and about
-one estimate in five is out by more than a year. Say so; see
+**Know what you will say about accuracy.** On 200 held-out test X-rays refine9 averages 6.63
+months of error, and about one estimate in eight is out by more than a year. It reads young
+children older and older teenagers younger. Say so; see
 [the honest line](#the-honest-line) below.
 
 ---
@@ -114,8 +115,8 @@ Do not hide it, and do not read the number as clinically meaningful. If asked, t
 short: *"the model works and the pipeline is complete — one constant from the ML team turns
 these into real months, and it is the last thing outstanding."*
 
-Same principle applies to the accuracy figures. **MAE 7.43 months against the RSNA
-challenge's ~4.2–4.5** is well behind the published leaders. Say so. TOR §13 asks for
+Same principle applies to the accuracy figures. **MAE 6.63 months on the RSNA test
+set, against the challenge's ~4.2–4.5 on the same images,** is well behind the published leaders. Say so. TOR §13 asks for
 performance to be documented transparently rather than overstated, and a reviewer who spots
 you glossing over it will trust the rest of the demo less.
 

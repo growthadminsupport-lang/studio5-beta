@@ -9,8 +9,8 @@ Status key: 🟢 done · 🟡 partial or deviates · 🔴 not built · ⚪ not o
 
 **Headline:**
 
-- The software meets 21 of 24 functional requirements outright.
-- The other three deviate on purpose: FR-8 (BMI from 2 years) and two client-directed role changes (FR-15 and FR-18).
+- The software meets 20 of 24 functional requirements outright.
+- Three deviate on purpose: FR-8 (BMI from 2 years) and two client-directed role changes (FR-15 and FR-18). FR-17 (speed) waits on a timing from Render.
 - Several requirements now differ from the TOR because the client changed the product, not because we fell short. Each one needs a written sign-off. They are listed in §0 so they can be signed in one go.
 - The remaining gaps are mostly documents and videos, not code.
 
@@ -82,8 +82,8 @@ better but still a deviation, so put it to the client together with §0.
 | --- | --- | --- |
 | FR-15 | Upload a hand-and-wrist X-ray for a selected child | 🟡 **Client-directed (C2):** doctor only. PDF, JPEG, PNG or WebP. The browser renders a PDF, proposes a crop around the film that the doctor can adjust, and downsizes to 2048 px without lossy re-encoding. |
 | FR-16 | Validate format and size, clear feedback on failure | 🟢 10 MB cap. Refused files are deleted, not kept. |
-| FR-17 | Submit to the model and display the result in reasonable time | 🟡 refine9 runs in-process: about 4.5 s per X-ray on one ARM core. **Not yet measured on Render's free CPU.** The upload returns at once and the page polls; `BONE_AGE_TTA=off` is the 4× faster fallback. |
-| FR-18 | Explanatory note: what it means, **its margin of error**, support-not-replace | 🟡 **Client-directed (C3):** the doctor sees the estimate, the real age, the gap and the margin of error (refine9: MAE 7.43 months; 80 % of estimates within 12 months). Families see the doctor's reading with a "discuss with your doctor" note. |
+| FR-17 | Submit to the model and display the result in reasonable time | 🟡 refine9 runs in a worker thread: 1.2 s per X-ray on one ARM core with one view (`BONE_AGE_TTA=off`, what production runs), 4.4 s with four. **Not yet measured on Render's free CPU.** The upload returns at once and the page polls. |
+| FR-18 | Explanatory note: what it means, **its margin of error**, support-not-replace | 🟡 **Client-directed (C3):** the doctor sees the estimate, the real age, the gap and the margin of error measured on the held-out RSNA test set for the mode that produced the result (one view: MAE 6.63 months, 87 % within 12 months), and that it is least accurate under 10 years and from 15 (`docs/model-evaluation.md`). Families see the doctor's reading with a "discuss with your doctor" note. |
 | FR-19 | Associate each prediction with the child profile and growth/screening history | 🟢 Stored against the child with the exam date. The dashboard shows growth, puberty and bone-age status together. |
 
 **AI estimate vs real age.** The gap between the AI bone age and the child's real age is
@@ -107,7 +107,7 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | FR-23 | Plain parent-friendly language, with underlying figures available | 🟢 Figures are shown to whoever is allowed to see them (C3, C4) |
 | FR-24 | A user can only access children linked to their own account | 🟢 Every child route goes through `ChildrenService.access(child, user, capability)`, including X-ray bytes. Covered by 24 e2e tests. |
 
-**Score: 21 🟢 · 3 🟡 · 0 🔴.** Two of the 🟡 are client-directed (§0).
+**Score: 20 🟢 · 4 🟡 · 0 🔴.** Two of the 🟡 (FR-15, FR-18) are client-directed (§0); FR-8 starts BMI at two years; FR-17 waits on a timing from Render.
 
 ---
 
@@ -118,7 +118,7 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | D1 | UX/UI design package: Figma file, exported hi-fi screens, prototype link | 🟡 Figma project on the team Drive; exports in `design/mockups/`. **Add the Figma and prototype links to `docs/deliverables.md`.** |
 | D2 | Web application (front end), deployed + repo | 🟢 `studio5-beta.vercel.app`, repo `growthadminsupport-lang/studio5-beta` |
 | D3 | Backend, API, database: deployed, documented API, schema docs | 🟢 Render `growth-api` + Neon. Swagger at `/docs`, reference in `docs/api.md`, schema in `backend/prisma/schema.prisma`. |
-| D4 | AI model: trained artifact, training + evaluation report with MAE, integrated | 🟡 The ML team's refine9 (EfficientNet-B5) is integrated and released (`model-v2`), with MAE 7.43 months. The Node port is checked against their PyTorch pipeline to within 0.013 months (`ai-service/refine9/README.md`). **No written training/evaluation report yet**, and no independent test set (§3, 6.3). |
+| D4 | AI model: trained artifact, training + evaluation report with MAE, integrated | 🟡 The ML team's refine9 (EfficientNet-B5) is integrated and released (`model-v2`), with MAE 7.43 months on validation. The Node port is checked against their PyTorch pipeline to within 0.013 months (`ai-service/refine9/README.md`). Held-out evaluation of the deployed pipeline on the RSNA test set: MAE 6.63 months (`docs/model-evaluation.md`). **The ML team's written training report is still owed.** |
 | D5 | Doctor interview video | 🟢 `Final Doctor interview ver3.mp4` on the team Drive |
 | D6 | 2D motion graphic narrative video | ⚪ Team status. Briefs in `docs/animation-briefs.md`. The logo motion is in the app, but it is not D6. |
 | D7 | Application promotional video | ✂️ **Dropped by the client (C8)** |
@@ -140,12 +140,12 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | 6.2 | X-rays stored securely, only accessible to the uploading account | 🟢 Readable only by the child's doctor, through a checked route. They are not static files. Kept in a private Cloudflare R2 bucket when configured (DEPLOY.md), so they survive redeploys; without it, on Render's ephemeral disk. |
 | 6.2 | Passwords never plain text, industry-standard hashing | 🟢 bcrypt |
 | 6.2 | Document what data is collected, stored, and deleted on request | 🟢 The privacy notice lists it. Deleting a child or account removes the rows **and** the X-ray and avatar files. |
-| 6.3 | Documented train/test split, **no overlap** | 🔴 **No independent test set.** refine9 trained on the 12,611 RSNA training images. Its MAE comes from the 1,425 validation images, which were also used to choose it from nine runs. The RSNA test set (200 images) is the obvious held-out check. |
-| 6.3 | MAE in months on held-out test set | 🟡 7.43 months and 80.2 % within a year, on validation rather than held-out test images (above). |
-| 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟡 Preprocessing and augmentation are documented in `ai-service/refine9/README.md`. **By sex:** MAE 7.14 months for boys, 7.76 for girls. **By age: not yet reported.** Production runs one view (`BONE_AGE_TTA=off`) whose accuracy is unmeasured; the published figures are four-view. |
+| 6.3 | Documented train/test split, **no overlap** | 🟢 Trained on the 12,611 RSNA training images, chosen on the 1,425 validation images, tested on the 200 RSNA test images, which neither step used (`docs/model-evaluation.md`). The no-overlap claim rests on the ML team's description of their training. |
+| 6.3 | MAE in months on held-out test set | 🟢 **6.63 months**, 87.0 % within a year, with the one view production runs; 6.50 and 86.0 % with four. Measured through the app's own pipeline. |
+| 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟢 Preprocessing and augmentation: `ai-service/refine9/README.md`. Limitations on the test set (`docs/model-evaluation.md`): boys 6.29, girls 6.97; reads older under 10 years (about +5 months) and younger from 15 (about −6); most accurate at 10–15 (MAE 5.6). Not checked on Thai children. |
 | 6.3 | UI itself presents bone age as a screening aid, not only in docs | 🟢 |
 | 6.4 | Video production standards | ⚪ Videos are the team's part |
-| 6.5 | Functional testing before each milestone, test record maintained | 🟢 105 unit tests, 35 API e2e tests, and a 38-check browser walk-through of every role; results per release in `docs/test-record.md` |
+| 6.5 | Functional testing before each milestone, test record maintained | 🟢 106 unit tests, 35 API e2e tests, and a 40-check browser walk-through of every role; results per release in `docs/test-record.md` |
 | 6.5 | Test on ≥2 browsers and ≥1 mobile viewport | 🟢 Chromium, Firefox and WebKit (Safari's engine), plus a 390 px phone viewport: `docs/test-record.md` |
 
 ---
@@ -173,11 +173,7 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 
 **Needs the ML team**
 
-5. Write the training and evaluation report (D4, §6.3). It must cover:
-   - the split
-   - refine9's MAE on the RSNA **test** images, which were not used to choose it
-   - errors by age band (by sex is now reported: 7.14 boys, 7.76 girls)
-   - single-view MAE, since production runs with `BONE_AGE_TTA=off`
+5. Write the training report (D4): the split, the augmentation and the nine runs. ~~Test-set MAE, errors by age band, single-view MAE~~ **Done 2026-10-02** by us on the RSNA test set (`docs/model-evaluation.md`); the team should confirm no test image was used in training.
 6. ~~Supply the real `AGE_MEAN` / `AGE_STD`~~ **Resolved 2026-10-01:** refine9 predicts months directly, so no calibration constants are needed and nothing is labelled provisional.
 
 **Ours, small**
@@ -185,5 +181,5 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 7. ~~Test on Safari and Firefox~~ Done (`docs/test-record.md`); a manual check on a real iPhone is still worthwhile.
 8. ~~Write the parent user manual and the final report~~ Done (D10).
 9. Add the Drive links (Figma, prototype, D5, logo files) to `docs/deliverables.md` (D1, D11).
-10. Time one refine9 prediction on Render after deploying (`inferenceMs` in the logs). If it is too slow, set `BONE_AGE_TTA=off`.
+10. Time one refine9 prediction on Render after deploying (`inferenceMs` in the logs). `BONE_AGE_TTA=off` is set, and the test set shows it costs 0.13 months of MAE.
 11. ~~Move X-ray storage off the ephemeral disk~~ Built: private Cloudflare R2 bucket (free tier). Configure it in Render (DEPLOY.md, "File storage").

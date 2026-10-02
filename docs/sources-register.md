@@ -47,6 +47,7 @@ Archival copies of the original Excel workbooks: `data-knowledge/Chart/*.xls`.
 | Training dataset | RSNA Pediatric Bone Age, ~12,611 train / 1,425 val | 🟢 TOR §3.4; Stanford + Univ. of Colorado |
 | Architecture (in production since 2026-10-01) | refine9: EfficientNet-B5 + sex input, 456 px, 4-view TTA | 🟢 The ML team's `model.py`, `strict=True` load (`ai-service/refine9/`) |
 | MAE / ±12 mo (refine9) | 7.43 mo / 80.2% on 1,425 validation images | 🟢 Recomputed by the ML team, 2026-09-29 |
+| MAE / ±12 mo (refine9, held out) | 6.63 mo / 87.0% one view, 6.50 / 86.0% four views, 200 RSNA test images | 🟢 Measured by us through the app's pipeline, 2026-10-02 (`docs/model-evaluation.md`); test set from [RSNA](https://www.rsna.org/rsnai/ai-image-challenge/rsna-pediatric-bone-age-challenge-2017) |
 | Architecture (`model-v1`, retired) | EfficientNet-B0 + sex input, 1281→128→1 | 🟢 Recovered from the checkpoint, `strict=True` load, 0 missing keys |
 | MAE / MSE / R² / ±12 mo (`model-v1`) | 8.78 mo / 135.91 / 0.9219 / 73.1% | 🟢 Supplied by the ML team, 2026-08-18 |
 | Benchmark: RSNA challenge best | MAD 4.27 mo (top five 4.2–4.5) | 🟢 [Radiology 2018](https://pubs.rsna.org/doi/abs/10.1148/radiol.2018180736) |

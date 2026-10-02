@@ -240,10 +240,10 @@ dashboard.
 | `FRONTEND_URL` | Base for links in emails (reset, invite) |
 | `RESEND_API_KEY`, `MAIL_FROM` | Email through Resend, sent from `hacklgroups.com` |
 | `GOOGLE_CLIENT_ID` | Verifies Google sign-in tokens |
-| `ADMIN_EMAIL` | Promoted to `ADMIN` by the seed, once that email has signed in with Google |
+| `ADMIN_EMAIL` | Promoted to `ADMIN` by the seed on each deploy, once that account's email is confirmed (Google sign-in or the confirmation link) |
 | `EXPORT_SALT` | Key for the anonymised export. Falls back to `JWT_ACCESS_SECRET` |
-| `BONE_AGE_MODEL` | Path of the refine9 ONNX model. Its rotation maps and `refine9.json` (version, MAE 7.43, 80.2% within a year) sit next to it. All are downloaded and checksum-checked at build time from the GitHub release `model-v2`. The old `BONE_AGE_MODEL_PATH`, `_VERSION`, `_MAE_MONTHS`, `_ACCURACY_12M` and `_AGE_*` keys are ignored |
-| `BONE_AGE_TTA` | `on` (default): average 4 views, as the MAE was measured. `off`: one view, 4× faster |
+| `BONE_AGE_MODEL` | Path of the refine9 ONNX model. Its rotation maps and `refine9.json` (version; accuracy on validation and, per mode, on the held-out test set, docs/model-evaluation.md) sit next to it. All are downloaded and checksum-checked at build time from the GitHub release `model-v2`. The old `BONE_AGE_MODEL_PATH`, `_VERSION`, `_MAE_MONTHS`, `_ACCURACY_12M` and `_AGE_*` keys are ignored |
+| `BONE_AGE_TTA` | `off` (production): one view. `on` (the default when unset): average 4 views, 3.8× the CPU for 0.13 months less MAE on the test set |
 | `MALLOC_ARENA_MAX` | `2`, which keeps the API and the model inside 512 MB |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Private Cloudflare R2 bucket for X-rays and profile photos, so they survive deploys. Unset: local disk only |
 

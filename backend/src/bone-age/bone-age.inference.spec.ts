@@ -129,6 +129,32 @@ describe('BoneAgeInferenceService', () => {
     expect(svc.accuracyFor('effnetb5-refine9-rsna-tta').legacy).toBe(false);
   });
 
+  it("reports each result's measured test-set accuracy for the mode that produced it", () => {
+    const svc = new BoneAgeInferenceService(config());
+    const card = {
+      modelVersion: 'effnetb5-refine9-rsna',
+      maeMonths: 7.43,
+      accuracyWithin12Months: 0.802,
+      validationSamples: 1425,
+    };
+    // Loading needs a real model; the card is all accuracyFor reads.
+    (svc as unknown as { card: object }).card = card;
+    expect(svc.accuracyFor('effnetb5-refine9-rsna').maeMonths).toBe(7.43);
+
+    (svc as unknown as { card: object }).card = {
+      ...card,
+      testSet: {
+        single: { maeMonths: 6.63, accuracyWithin12Months: 0.87, samples: 200 },
+        tta: { maeMonths: 6.5, accuracyWithin12Months: 0.86, samples: 200 },
+      },
+    };
+    expect(svc.accuracyFor('effnetb5-refine9-rsna')).toMatchObject({
+      maeMonths: 6.63,
+      accuracyWithin12Months: 0.87,
+    });
+    expect(svc.accuracyFor('effnetb5-refine9-rsna-tta').maeMonths).toBe(6.5);
+  });
+
   describe('validateUpload', () => {
     const svc = () => new BoneAgeInferenceService(modelDir({}));
     const image = (format: 'jpeg' | 'png' | 'webp') =>

@@ -16,7 +16,7 @@ development, and helps them know when to talk to a doctor. It has four parts:
 - **Puberty screening:** a guided questionnaire with an age-appropriate result and a follow-up
   plan.
 - **AI-assisted bone age:** the child's doctor adds a hand X-ray, an EfficientNet-B5 model
-  estimates bone age (mean error 7.4 months on 1,425 validation images), and the doctor
+  estimates bone age (mean error 6.6 months on 200 held-out test images), and the doctor
   shares a reading with the family.
 - **Knowledge resources:** articles maintained by the GrowTH team.
 
@@ -24,10 +24,11 @@ The client changed the product during the project. Instead of one kind of user, 
 serves **parents, caretakers and doctors**, with an **admin portal**. Each role sees only what
 it should. These changes are listed for sign-off in `docs/tor-compliance.md` §0.
 
-The software meets **21 of the 24** functional requirements outright. The other three deviate
-on purpose, two of them at the client's direction. It has run on free tiers only (budget $0),
-and passes 105 unit tests, 35 API tests and a 38-step browser walk-through on Chromium,
-Firefox and WebKit (Safari's engine).
+The software meets **20 of the 24** functional requirements outright. Three deviate on
+purpose, two of them at the client's direction; the fourth (FR-17, speed) waits on a timing
+from the live server. It has run on free tiers only (budget $0), and passes 106 unit tests,
+35 API tests and a 40-check browser walk-through on Chromium, Firefox and WebKit (Safari's
+engine). On 200 held-out test radiographs the bone-age model's average error is 6.63 months.
 
 ---
 
@@ -214,8 +215,22 @@ labelled with bone age in months and sex. It is used under its public licence.
 | Within ±6 months | 48.4 % | **52.6 %** | 20.6 % |
 | MAE boys / girls | 7.57 / 8.77 | **7.14 / 7.76** | 20.12 / 20.92 |
 
+**Held-out test** (us, 2 October 2026; the 200 RSNA test images, which neither training nor
+selection used, run through the app's own pipeline; `docs/model-evaluation.md`):
+
+| Metric | One view (production) | Four views |
+| --- | --- | --- |
+| MAE (months) | **6.63** | 6.50 |
+| Within ±12 months | **87.0 %** | 86.0 % |
+| Within ±6 months | 58.5 % | 56.5 % |
+| MAE boys / girls | 6.29 / 6.97 | 5.98 / 7.03 |
+| Time per X-ray, one ARM core | 1.2 s | 4.4 s |
+
+By age, the model reads older under 10 years (about +5 months on average) and younger from
+15 years (about −6), and is most accurate between 10 and 15 (MAE 5.6).
+
 refine9 (EfficientNet-B5 at 456 px with the sex as a second input) is in production, and
-meets the project's MAE target of 8–10 months. The best published RSNA challenge entries
+meets the project's MAE target of 8–10 months on held-out data. The best published RSNA challenge entries
 reach about 4.3 months, so the app presents the estimate as a screening aid for a doctor, not
 a result.
 
@@ -226,9 +241,8 @@ a result.
 - Details: `ai-service/refine9/README.md`.
 
 **Running cost and limits.**
-- On Render's free CPU the model runs one view instead of four (`BONE_AGE_TTA=off`). The single-view accuracy has not been measured; the figures above are four-view.
-- The validation set was also used to choose the model, so it is not an independent test. The ML team still owes the error on the RSNA test images and by age band.
-- The estimate is shown to the doctor only, with its typical error.
+- On Render's free CPU the model runs one view instead of four (`BONE_AGE_TTA=off`). On the test set this costs 0.13 months of MAE for a quarter of the CPU.
+- The estimate is shown to the doctor only, with the measured error of the mode that produced it and a note on the age bias.
 
 ---
 
@@ -236,11 +250,13 @@ a result.
 
 | Suite | Scope | Result |
 | --- | --- | --- |
-| Unit | Growth maths, puberty and bone-age rules, refine9 preprocessing against OpenCV/torchvision, sign-in | 105 / 105 |
+| Unit | Growth maths, puberty and bone-age rules, refine9 preprocessing against OpenCV/torchvision, sign-in | 106 / 106 |
 | API end-to-end, real Postgres | Every role's permissions over HTTP, invitations, files, accounts, sessions | 35 / 35 |
 | API end-to-end through R2's S3 interface | Upload, serve after local loss, delete | 34 / 34 |
 | Model parity | Node vs PyTorch on six radiographs | within 0.013 months |
-| Browser walk-through, 38 checks | All four roles end to end, phone screen, dark mode | Chromium, Firefox and WebKit: 38 / 38 each |
+| Model accuracy, held out | Deployed pipeline on the 200 RSNA test radiographs | MAE 6.63 months (one view) |
+| Browser walk-through, 40 checks | All four roles end to end, phone screen, dark mode | Chromium, Firefox and WebKit: 40 / 40 each |
+| Phone and tablet layout | 27 pages at 360, 390 and 768 px, Chromium and WebKit | no element past the screen edge |
 
 The full record, with the bugs it caught, is `docs/test-record.md`. Bugs found by these tests:
 - the registration phone number was not saved;
@@ -289,8 +305,8 @@ the project account growth.admin.support@gmail.com.
 ## 12. Limitations and future work
 
 - **Model:**
-  - Report the error on the untouched RSNA test set, by age band.
-  - Measure single-view accuracy, or run four views when more CPU is available.
+  - The ML team's written training report (split, augmentation, the nine runs) is still owed.
+  - Correct the age bias (reads older under 10, younger from 15), for example with a calibration fitted on the validation set.
   - The training population is North American, so validate on Thai children before any clinical use.
 - **Growth reference:** CDC 2000 is used, by team decision. The client should confirm it (TOR §2A.2), or a Thai or WHO reference could be added.
 - **Hosting:** free tiers sleep and have limits (512 MB memory, cold starts of up to a minute). Paid tiers remove the cold start.

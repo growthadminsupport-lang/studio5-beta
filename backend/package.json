@@ -21,6 +21,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts",
     "verify:model": "node scripts/verify-model.mjs",
+    "eval:model": "node scripts/eval-test-set.mjs",
     "reference:build": "node scripts/build-reference-data.mjs",
     "reference:check": "node scripts/build-reference-data.mjs --check"
   },
