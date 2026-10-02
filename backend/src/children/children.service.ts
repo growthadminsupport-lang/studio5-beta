@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Child, ChildRole } from '@prisma/client';
+import { Child, ChildRole, GuardianRelation } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { removeUpload } from '../common/uploads';
 import { CreateChildDto } from './dto/create-child.dto';
@@ -65,12 +65,19 @@ export class ChildrenService {
   }
 
   /** Strip what this role may not see from a child row, and add the caller's role. */
-  private present(child: Child, role: ChildRole, familyName: string | null) {
+  private present(
+    child: Child,
+    role: ChildRole,
+    familyName: string | null,
+    myRelation: GuardianRelation | null = null,
+  ) {
     const { hn, ...rest } = child;
     return {
       ...rest,
       ...(can(role, 'child.readHn') ? { hn } : {}),
       myRole: role,
+      /** How a parent described themselves (mother or father, guardian, relative). */
+      myRelation: role === 'PARENT' ? myRelation : null,
       /** The primary parent's name. Caretakers and doctors group children by it. */
       familyName,
     };
@@ -90,10 +97,11 @@ export class ChildrenService {
   }
 
   async create(userId: string, dto: CreateChildDto) {
-    const { relation, ...childFields } = dto;
+    const { relation, avatar, ...childFields } = dto;
     const child = await this.prisma.child.create({
       data: {
         ...childFields,
+        ...(avatar ? { avatar: { ...avatar } } : {}),
         dateOfBirth: new Date(dto.dateOfBirth),
         guardians: {
           create: { userId, role: 'PARENT', isPrimary: true, relation },
@@ -104,7 +112,7 @@ export class ChildrenService {
       where: { id: userId },
       select: { fullName: true },
     });
-    return this.present(child, 'PARENT', me.fullName);
+    return this.present(child, 'PARENT', me.fullName, relation ?? 'PARENT');
   }
 
   /**
@@ -135,7 +143,7 @@ export class ChildrenService {
     const visible = links.filter((l) => l.role !== 'DOCTOR' || doctorOk);
     const names = await this.primaryParentNames(visible.map((l) => l.childId));
     return visible.map((l) =>
-      this.present(l.child, l.role, names.get(l.childId) ?? null),
+      this.present(l.child, l.role, names.get(l.childId) ?? null, l.relation),
     );
   }
 
@@ -148,7 +156,20 @@ export class ChildrenService {
       throw new NotFoundException('Child not found');
     }
     const names = await this.primaryParentNames([childId]);
-    return this.present(child, role, names.get(childId) ?? null);
+    return this.present(
+      child,
+      role,
+      names.get(childId) ?? null,
+      await this.relationOf(childId, userId),
+    );
+  }
+
+  private async relationOf(childId: string, userId: string) {
+    const link = await this.prisma.childGuardian.findUnique({
+      where: { childId_userId: { childId, userId } },
+      select: { relation: true },
+    });
+    return link?.relation ?? null;
   }
 
   /**
@@ -157,11 +178,12 @@ export class ChildrenService {
    */
   async update(userId: string, childId: string, dto: UpdateChildDto) {
     const access = await this.access(childId, userId, 'child.read');
-    const { dateOfBirth, relation, hn, ...rest } = dto;
+    const { dateOfBirth, relation, hn, avatar, ...rest } = dto;
     const touchesDetails =
       Object.values(rest).some((v) => v !== undefined) ||
       dateOfBirth ||
-      relation;
+      relation ||
+      avatar;
 
     if (touchesDetails && !access.can('child.edit')) {
       throw new ForbiddenException(
@@ -184,12 +206,18 @@ export class ChildrenService {
       where: { id: childId },
       data: {
         ...rest,
+        ...(avatar ? { avatar: { ...avatar } } : {}),
         ...(hn !== undefined ? { hn: hn.trim() || null } : {}),
         ...(dateOfBirth ? { dateOfBirth: new Date(dateOfBirth) } : {}),
       },
     });
     const names = await this.primaryParentNames([childId]);
-    return this.present(child, access.role, names.get(childId) ?? null);
+    return this.present(
+      child,
+      access.role,
+      names.get(childId) ?? null,
+      await this.relationOf(childId, userId),
+    );
   }
 
   /**
