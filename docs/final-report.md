@@ -221,6 +221,8 @@ selection used, run through the app's own pipeline; `docs/model-evaluation.md`):
 | Metric | One view (production) | Four views |
 | --- | --- | --- |
 | MAE (months) | **6.63** | 6.50 |
+| MSE | 73.99 | 70.03 |
+| R² | 0.9600 | 0.9622 |
 | Within ±12 months | **87.0 %** | 86.0 % |
 | Within ±6 months | 58.5 % | 56.5 % |
 | MAE boys / girls | 6.29 / 6.97 | 5.98 / 7.03 |
