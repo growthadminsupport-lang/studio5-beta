@@ -5,6 +5,8 @@ import * as bcrypt from 'bcrypt';
 import { existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import request from 'supertest';
+import { JwtService } from '@nestjs/jwt';
+import sharp from 'sharp';
 import { AppModule } from '../src/app.module';
 
 /**
@@ -74,6 +76,7 @@ maybe('roles and permissions (e2e)', () => {
           email: `${name}@e2e.test`,
           fullName: `${name} person`,
           passwordHash: hash,
+          isVerified: true,
           ...extra,
         },
       });
@@ -287,6 +290,43 @@ maybe('roles and permissions (e2e)', () => {
       expect(res.body.chronologicalAgeMonths).toBe(120);
     });
 
+    it('a WebP X-ray is kept as uploaded and served back as WebP', async () => {
+      const webp = await sharp(HAND).webp({ lossless: true }).toBuffer();
+      const res = await as('doctor')
+        .post('/bone-age/upload')
+        .field('childId', childId)
+        .attach('file', webp, {
+          filename: 'hand.webp',
+          contentType: 'image/webp',
+        })
+        .expect(201);
+      const image = await as('doctor')
+        .get(`/bone-age/${res.body.id}/image`)
+        .buffer(true)
+        .parse((r, cb) => {
+          const chunks: Buffer[] = [];
+          r.on('data', (c: Buffer) => chunks.push(c));
+          r.on('end', () => cb(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+      expect(image.headers['content-type']).toBe('image/webp');
+      expect((image.body as Buffer).equals(webp)).toBe(true);
+      await as('doctor').delete(`/bone-age/${res.body.id}`).expect(200);
+    });
+
+    it('a file that is not an image is refused and not kept', async () => {
+      const before = countUploads();
+      await as('doctor')
+        .post('/bone-age/upload')
+        .field('childId', childId)
+        .attach('file', Buffer.from('<html>not an x-ray</html>'), {
+          filename: 'x.png',
+          contentType: 'image/png',
+        })
+        .expect(400);
+      expect(countUploads()).toBe(before);
+    });
+
     it('the family sees nothing until the doctor has reviewed it', async () => {
       const res = await as('parent')
         .get(`/bone-age/history?childId=${childId}`)
@@ -439,6 +479,201 @@ maybe('roles and permissions (e2e)', () => {
         .post('/auth/refresh')
         .send({ refreshToken: res.body.refreshToken })
         .expect(200);
+    });
+  });
+
+  describe('invitations are for other people', () => {
+    let kidId: string;
+    beforeAll(async () => {
+      const res = await as('parent')
+        .post('/children')
+        .send({
+          fullName: 'Second Child',
+          sex: 'MALE',
+          dateOfBirth: '2020-01-01',
+        })
+        .expect(201);
+      kidId = res.body.id;
+    });
+
+    it('refuses inviting yourself', async () => {
+      const res = await as('parent')
+        .post(`/children/${kidId}/invites`)
+        .send({ role: 'DOCTOR', email: 'PARENT@e2e.test' })
+        .expect(400);
+      expect(res.body.message).toMatch(/cannot invite yourself/);
+    });
+
+    it('refuses inviting someone who already follows the child', async () => {
+      await as('parent')
+        .post(`/children/${kidId}/invites`)
+        .send({ role: 'CARETAKER', email: 'parent@e2e.test' })
+        .expect(400);
+      const doctorInvite = await as('parent')
+        .post(`/children/${kidId}/invites`)
+        .send({ role: 'DOCTOR' })
+        .expect(201);
+      await as('doctor')
+        .post(`/invites/${doctorInvite.body.link.split('/invite/')[1]}/accept`)
+        .expect(200);
+      const res = await as('parent')
+        .post(`/children/${kidId}/invites`)
+        .send({ role: 'DOCTOR', email: 'doctor@e2e.test' })
+        .expect(409);
+      expect(res.body.message).toMatch(/already follows/);
+    });
+
+    it('a second invitation to the same address replaces the first', async () => {
+      const first = await as('parent')
+        .post(`/children/${kidId}/invites`)
+        .send({ role: 'CARETAKER', email: 'newcomer@e2e.test' })
+        .expect(201);
+      await as('parent')
+        .post(`/children/${kidId}/invites`)
+        .send({ role: 'CARETAKER', email: 'newcomer@e2e.test' })
+        .expect(201);
+      const members = await as('parent')
+        .get(`/children/${kidId}/members`)
+        .expect(200);
+      const waiting = members.body.pendingInvites.filter(
+        (i: { email: string }) => i.email === 'newcomer@e2e.test',
+      );
+      expect(waiting).toHaveLength(1);
+      await http()
+        .get(`/invites/${first.body.link.split('/invite/')[1]}`)
+        .expect(200)
+        .expect((r) => expect(r.body.state).toBe('revoked'));
+    });
+  });
+
+  describe('accounts', () => {
+    it('saves the phone number given at registration (FR-1)', async () => {
+      const res = await http()
+        .post('/auth/register')
+        .send({
+          email: 'Phone.Person@e2e.test',
+          password: PASSWORD,
+          fullName: 'Phone Person',
+          phoneNumber: '081 234 5678',
+          acceptedTerms: true,
+        })
+        .expect(201);
+      expect(res.body.user).toMatchObject({
+        email: 'phone.person@e2e.test',
+        phoneNumber: '081 234 5678',
+        isVerified: false,
+        hasPassword: true,
+        hasGoogle: false,
+      });
+    });
+
+    it('refuses disposable email addresses', async () => {
+      const res = await http()
+        .post('/auth/register')
+        .send({
+          email: 'someone@mailinator.com',
+          password: PASSWORD,
+          fullName: 'Throwaway',
+          acceptedTerms: true,
+        })
+        .expect(400);
+      expect(res.body.message).toMatch(/disposable/);
+    });
+
+    it('a doctor is approved only after confirming their email', async () => {
+      const reg = await http()
+        .post('/auth/register')
+        .send({
+          email: 'new.doctor@e2e.test',
+          password: PASSWORD,
+          fullName: 'New Doctor',
+          accountType: 'DOCTOR',
+          licenseNumber: 'MD-777',
+          hospital: 'Khon Kaen Hospital',
+          acceptedTerms: true,
+        })
+        .expect(201);
+      const doctorId = reg.body.user.id as string;
+      const res = await as('admin')
+        .patch(`/admin/doctors/${doctorId}`)
+        .send({ decision: 'APPROVED' })
+        .expect(400);
+      expect(res.body.message).toMatch(/not confirmed their email/);
+
+      const resent = await http()
+        .post('/auth/resend-verification')
+        .set('Authorization', `Bearer ${reg.body.accessToken}`)
+        .expect(200);
+      await http()
+        .post('/auth/verify-email')
+        .send({ token: resent.body.token })
+        .expect(200);
+      await http()
+        .post('/auth/verify-email')
+        .send({ token: resent.body.token })
+        .expect(400);
+      await as('admin')
+        .patch(`/admin/doctors/${doctorId}`)
+        .send({ decision: 'APPROVED' })
+        .expect(200);
+    });
+
+    it('points a Google account to Google, on login and on registration', async () => {
+      await prisma.user.create({
+        data: {
+          email: 'google.only@e2e.test',
+          fullName: 'Google Only',
+          googleId: 'g-sub-1',
+          isVerified: true,
+        },
+      });
+      const login = await http()
+        .post('/auth/login')
+        .send({ email: 'google.only@e2e.test', password: PASSWORD })
+        .expect(401);
+      expect(login.body.code).toBe('GOOGLE_ACCOUNT');
+      const reg = await http()
+        .post('/auth/register')
+        .send({
+          email: 'google.only@e2e.test',
+          password: PASSWORD,
+          fullName: 'Someone',
+          acceptedTerms: true,
+        })
+        .expect(409);
+      expect(reg.body.code).toBe('GOOGLE_ACCOUNT');
+    });
+
+    it('lets a Google account add a password, once', async () => {
+      const g = await prisma.user.create({
+        data: {
+          email: 'google.two@e2e.test',
+          fullName: 'Google Two',
+          googleId: 'g-sub-2',
+          isVerified: true,
+        },
+      });
+      // Sign in as that account by minting a session the way Google sign-in would.
+      const jwt = app.get(JwtService);
+      const access = await jwt.signAsync(
+        { sub: g.id, email: g.email, role: g.role },
+        { secret: process.env.JWT_ACCESS_SECRET, expiresIn: '15m' },
+      );
+      await http()
+        .post('/auth/set-password')
+        .set('Authorization', `Bearer ${access}`)
+        .send({ newPassword: 'Another123!' })
+        .expect(200);
+      await http()
+        .post('/auth/login')
+        .send({ email: 'google.two@e2e.test', password: 'Another123!' })
+        .expect(200)
+        .expect((r) => expect(r.body.user.id).toBe(g.id));
+      await http()
+        .post('/auth/set-password')
+        .set('Authorization', `Bearer ${access}`)
+        .send({ newPassword: 'Third1234!' })
+        .expect(400);
     });
   });
 });

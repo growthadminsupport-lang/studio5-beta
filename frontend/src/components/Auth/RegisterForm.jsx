@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { errorMessage } from "../../lib/api";
 import GoogleButton from "./GoogleButton";
+import { useGoogleFlow } from "./useGoogleFlow";
 import { useTheme } from "../../context/ThemeContext";
 import logoDarkVideo from "../../assets/logo_motion_black_small.mp4";
 import logoLightVideo from "../../assets/logo_motion_white_small.mp4";
@@ -28,7 +29,7 @@ function RegisterForm() {
   // an admin has to approve them before they can see any child's X-rays.
   const [accountType, setAccountType] = useState("USER");
   const [submitting, setSubmitting] = useState(false);
-  const { register, loginWithGoogle } = useAuth();
+  const { register } = useAuth();
   const [params] = useSearchParams();
   const next = params.get("next");
   const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
@@ -75,22 +76,14 @@ function RegisterForm() {
       });
       navigate(destination, { replace: true });
     } catch (err) {
-      setError(
-        err?.response?.status === 409 ? "That email already has an account. Log in instead." : errorMessage(err),
-      );
+      // The server says whether the address is taken by a password or a Google account.
+      setError(errorMessage(err));
       setSubmitting(false);
     }
   };
 
-  const handleGoogleSignUp = async (credential) => {
-    setError("");
-    try {
-      await loginWithGoogle(credential, acceptedTerms);
-      navigate(destination, { replace: true });
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  };
+  // Terms, account type and phone are asked on the welcome page that follows.
+  const { handleCredential: handleGoogleSignUp, dialog: googleDialog } = useGoogleFlow(destination, setError);
 
   return (
     <form onSubmit={handleSubmit} className="auth-form">
@@ -298,20 +291,15 @@ function RegisterForm() {
         {submitting ? "Creating account…" : "Create Account"}
       </button>
 
-      {/* Google sign-up creates a parent/caretaker account; doctors register with the form. */}
-      {accountType === "USER" && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+      {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
         <>
           <div className="auth-divider">
             <span>or</span>
           </div>
-          <GoogleButton
-            onCredential={handleGoogleSignUp}
-            disabled={!acceptedTerms}
-            disabledReason="Tick the box above to sign up with Google."
-            label="Sign up with Google"
-          />
+          <GoogleButton onCredential={handleGoogleSignUp} label="Sign up with Google" />
         </>
       )}
+      {googleDialog}
 
       {/* Login Link */}
       <div className="auth-links">

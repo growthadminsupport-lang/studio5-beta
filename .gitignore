@@ -5,6 +5,7 @@
 *.pt
 *.pth
 *.onnx
+*.i32
 *.h5
 *.ckpt
 *.safetensors
@@ -47,3 +48,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Downloaded at build time from the model release (render.yaml)
+backend/models/

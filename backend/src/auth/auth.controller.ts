@@ -16,6 +16,8 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { SetPasswordDto } from './dto/set-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -114,5 +116,27 @@ export class AuthController {
       dto.currentPassword,
       dto.newPassword,
     );
+  }
+
+  /** Adds a password to a Google-only account, so either way in reaches it. */
+  @HttpCode(HttpStatus.OK)
+  @Post('set-password')
+  setPassword(@CurrentUser() user: AuthUser, @Body() dto: SetPasswordDto) {
+    return this.authService.setPassword(user.userId, dto.newPassword);
+  }
+
+  @Throttle(RESET_PASSWORD_THROTTLE)
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post('verify-email')
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto.token);
+  }
+
+  @Throttle(FORGOT_PASSWORD_THROTTLE)
+  @HttpCode(HttpStatus.OK)
+  @Post('resend-verification')
+  resendVerification(@CurrentUser() user: AuthUser) {
+    return this.authService.resendVerification(user.userId);
   }
 }

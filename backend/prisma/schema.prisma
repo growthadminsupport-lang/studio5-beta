@@ -30,32 +30,36 @@ enum DoctorStatus {
 }
 
 model User {
-  id                  String        @id @default(uuid())
-  email               String        @unique
+  id                   String        @id @default(uuid())
+  email                String        @unique
   /// Null for accounts that only ever signed in with Google. `login` rejects those before
   /// it reaches bcrypt, so a null hash can never be compared against a submitted password.
-  passwordHash        String?
-  fullName            String
-  phoneNumber         String?
-  role                UserRole      @default(USER)
+  passwordHash         String?
+  fullName             String
+  phoneNumber          String?
+  role                 UserRole      @default(USER)
   /// Doctor accounts only. An admin approves them before they can accept an invitation or
   /// upload an X-ray.
-  doctorStatus        DoctorStatus?
-  licenseNumber       String?
-  hospital            String?
+  doctorStatus         DoctorStatus?
+  licenseNumber        String?
+  hospital             String?
   /// Shown to the doctor when an application is rejected.
-  doctorReviewNote    String?
-  avatarUrl           String?
-  isVerified          Boolean       @default(false)
-  termsAcceptedAt     DateTime?
-  resetTokenHash      String?
-  resetTokenExpiresAt DateTime?
+  doctorReviewNote     String?
+  avatarUrl            String?
+  /// The address is proven to belong to this person: Google said so, or the confirmation
+  /// link we emailed was opened.
+  isVerified           Boolean       @default(false)
+  emailVerifyTokenHash String?       @unique
+  emailVerifyExpiresAt DateTime?
+  termsAcceptedAt      DateTime?
+  resetTokenHash       String?
+  resetTokenExpiresAt  DateTime?
   /// Google's stable subject claim. Stored so a user who later changes their Google account
   /// email still resolves to the same account, and so linking is auditable.
-  googleId            String?       @unique
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  deletedAt           DateTime?
+  googleId             String?       @unique
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  deletedAt            DateTime?
 
   children        ChildGuardian[]
   invitesSent     ChildInvite[]    @relation("InvitesSent")
@@ -111,6 +115,9 @@ model Child {
   sex         ChildSex
   dateOfBirth DateTime
   avatarUrl   String?
+  /// The illustrated avatar: { skin, hair, hairColor }. The baby or young-child drawing is
+  /// chosen from the age, so it grows with the child.
+  avatar      Json?
   /// Hospital number. Set by the parent or the child's doctor; doctors find patients by it.
   hn          String?
   createdAt   DateTime  @default(now())

@@ -60,25 +60,40 @@ function SettingsPage() {
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(null);
 
   const isValidNewPassword = (pw) => {
     return pw.length >= 8 && /[a-zA-Z]/.test(pw) && /[0-9]/.test(pw);
   };
 
+  // A Google-only account has no password yet: it adds one instead of changing one, and then
+  // signs in either way to the same account.
+  const addingPassword = user?.hasPassword === false;
   const showNewPwError = newPassword.length > 0 && !isValidNewPassword(newPassword);
-  const isFormValid = currentPassword.trim().length > 0 && isValidNewPassword(newPassword);
+  const isFormValid =
+    (addingPassword || currentPassword.trim().length > 0) && isValidNewPassword(newPassword);
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     if (!isFormValid) return;
     setPasswordError(null);
+    if (addingPassword) {
+      try {
+        const res = await api.post("/auth/set-password", { newPassword });
+        setUser(res.data.user);
+        setPasswordSuccess("Password added. You can now sign in with Google or with your email and password.");
+        setNewPassword("");
+      } catch (err) {
+        setPasswordError(errorMessage(err));
+      }
+      return;
+    }
     try {
       const res = await api.post("/auth/change-password", { currentPassword, newPassword });
       // Changing the password signs out every session; keep this one with the new pair.
       setAccessToken(res.data.accessToken);
       storeRefreshToken(res.data.refreshToken);
-      setPasswordSuccess(true);
+      setPasswordSuccess("Password updated. Other devices have been signed out.");
       setCurrentPassword("");
       setNewPassword("");
     } catch (err) {
@@ -123,17 +138,23 @@ function SettingsPage() {
 
         {/* Change Password Card */}
         <div className="settings-card">
-          <h2>Change password</h2>
+          <h2>{addingPassword ? "Add a password" : "Change password"}</h2>
+          {addingPassword && (
+            <p className="input-hint" style={{ marginBottom: 12 }}>
+              You sign in with Google. Add a password to also sign in with your email address; it stays one account.
+            </p>
+          )}
           {passwordError && <p className="error-message">{passwordError}</p>}
 
           {passwordSuccess && (
             <div className="success-alert">
               <CheckCircle2 size={22} className="success-icon" />
-              <span>Password updated.</span>
+              <span>{passwordSuccess}</span>
             </div>
           )}
 
           <form onSubmit={handleUpdatePassword}>
+            {!addingPassword && (
             <div className="float-field">
               <input
                 id="currentPassword"
@@ -142,11 +163,12 @@ function SettingsPage() {
                 value={currentPassword}
                 onChange={(e) => {
                   setCurrentPassword(e.target.value);
-                  setPasswordSuccess(false);
+                  setPasswordSuccess(null);
                 }}
               />
               <label htmlFor="currentPassword">Current password</label>
             </div>
+            )}
 
             <div className={`float-field ${showNewPwError ? "error" : ""}`}>
               <input
@@ -156,7 +178,7 @@ function SettingsPage() {
                 value={newPassword}
                 onChange={(e) => {
                   setNewPassword(e.target.value);
-                  setPasswordSuccess(false);
+                  setPasswordSuccess(null);
                 }}
               />
               <label htmlFor="newPassword">New password</label>
@@ -177,7 +199,7 @@ function SettingsPage() {
               className="btn-update-password"
               disabled={!isFormValid}
             >
-              Update password
+              {addingPassword ? "Add password" : "Update password"}
             </button>
           </form>
         </div>

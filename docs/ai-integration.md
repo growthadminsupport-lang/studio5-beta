@@ -1,5 +1,11 @@
 # AI Bone Age — Integration Contract
 
+> **Superseded on 2026-10-01 for the model in production.** The backend now runs the ML team's
+> refine9 (EfficientNet-B5, 456 px, MAE 7.43 months), which outputs months directly. How it was
+> converted and checked: [`ai-service/refine9/README.md`](../ai-service/refine9/README.md). This file describes the original
+> EfficientNet-B0 (`model-v1`) and is kept as history.
+
+
 How the EfficientNet-B0 bone age model gets from the ML team's notebook into GrowTH.
 
 Covers TOR **FR-17**, **FR-18**, **FR-19**, **§3.4**, **§6.3**, deliverable **D4**.

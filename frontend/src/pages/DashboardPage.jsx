@@ -21,9 +21,9 @@ import {
 // ============================================================
 
 const MEASURES = {
-  height: { label: 'Height', unit: 'cm', icon: Ruler, valueKey: 'heightCm', chartTitle: 'Height-for-age vs. Reference', percentileKey: 'heightPercentile' },
-  weight: { label: 'Weight', unit: 'kg', icon: Weight, valueKey: 'weightKg', chartTitle: 'Weight-for-age vs. Reference', percentileKey: 'weightPercentile' },
-  bmi: { label: 'BMI', unit: '', icon: Accessibility, valueKey: 'bmi', chartTitle: 'BMI-for-age vs. Reference', percentileKey: 'bmiPercentile' },
+  height: { label: 'Height', unit: 'cm', icon: Ruler, valueKey: 'heightCm', chartTitle: 'Height compared with children the same age', percentileKey: 'heightPercentile' },
+  weight: { label: 'Weight', unit: 'kg', icon: Weight, valueKey: 'weightKg', chartTitle: 'Weight compared with children the same age', percentileKey: 'weightPercentile' },
+  bmi: { label: 'BMI', unit: '', icon: Accessibility, valueKey: 'bmi', chartTitle: 'BMI and weight categories', percentileKey: 'bmiPercentile' },
 };
 
 // Same cards as the Knowledge page (content/articles.js).
@@ -198,7 +198,7 @@ function DashboardPage() {
                       {value !== null ? `${value}${measure.unit}` : '—'}
                     </span>
                     {status && (
-                      <span className={`mt-0.5 block text-[10px] ${status.tone}`}>{status.label}</span>
+                      <span className={`mt-0.5 block text-[10px] ${status.tone}`} title={status.figure}>{status.label}</span>
                     )}
                   </button>
                 );
@@ -209,8 +209,8 @@ function DashboardPage() {
               <h3 className="text-sm font-bold text-[#056559] dark:text-teal-300">{currentMeasure.chartTitle}</h3>
               <p className="mt-0.5 text-xs text-slate-400">
                 {selectedMeasure === 'bmi'
-                  ? 'CDC 2000 BMI-for-age for the child\'s sex, from 2 years.'
-                  : 'CDC 2000 reference for the child\'s sex: 3rd, 50th and 97th percentile.'}
+                  ? 'The colours are the weight categories doctors use, from 2 years.'
+                  : 'The green band is the usual range for the same age and sex; the dotted line is the average.'}
               </p>
             </div>
 

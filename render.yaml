@@ -20,14 +20,19 @@ services:
       npx prisma migrate deploy &&
       npx prisma db seed &&
       npm run build &&
-      mkdir -p models &&
-      curl -fsSL -o models/bone_age.onnx
-      https://github.com/growthadminsupport-lang/studio5-beta/releases/download/model-v1/bone_age.onnx
+      mkdir -p models && cd models &&
+      for f in refine9.onnx refine9.json refine9_rot+5.i32 refine9_rot-5.i32 SHA256SUMS; do
+      curl -fsSL -o "$f" "https://github.com/growthadminsupport-lang/studio5-beta/releases/download/model-v2/$f"; done &&
+      sha256sum -c SHA256SUMS && cd ..
     startCommand: npm run start:prod
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: 22.23.1
+      # glibc otherwise creates a malloc arena per thread and holds freed model buffers in
+      # them; two arenas keep the API plus the bone-age model inside the free 512 MB.
+      - key: MALLOC_ARENA_MAX
+        value: "2"
       - key: PORT
         value: 3001
       - key: NODE_ENV
@@ -69,25 +74,15 @@ services:
       # twice as fast and get everything suspended mid-month. It would also chain two ~1-minute
       # cold starts onto the first request of a demo. Node and Python ONNX Runtime were checked
       # against each other on identical input and agree to the last decimal.
-      - key: BONE_AGE_MODEL_PATH
-        value: models/bone_age.onnx
-      - key: BONE_AGE_MODEL_VERSION
-        value: effnetb0-v1-rsna
-      # Measured on the held-out test set, 2026-08-18.
-      - key: BONE_AGE_MAE_MONTHS
-        value: "8.78"
-      # 73.1% within a year — i.e. about one estimate in four is out by more than 12 months.
-      # Shown next to the MAE so the UI cannot imply a bound the model does not have.
-      - key: BONE_AGE_ACCURACY_12M
-        value: "0.731"
-      # The checkpoint's training target was normalised, and the constants did not come with
-      # the weights. These are inferred: MSE and R2 give Var(y) = MSE/(1-R2), so the test set
-      # SD is ~41.7 months, and the RSNA training mean is ~127.3. Every result computed from
-      # them is flagged "provisional" all the way to the UI. Set BONE_AGE_CALIBRATION=confirmed
-      # only once the ML team supplies the real values.
-      - key: BONE_AGE_AGE_MEAN
-        value: "127.3"
-      - key: BONE_AGE_AGE_STD
-        value: "41.7"
-      - key: BONE_AGE_CALIBRATION
-        value: provisional
+      # refine9 from the ML team (branch Backend+AI): EfficientNet-B5 at 456 px with the sex
+      # input, predicting months directly. The build checks the release files' SHA-256. Its
+      # version and measured accuracy (MAE 7.43 months, 80.2% within a year) come from
+      # models/refine9.json, released with the weights, not from env vars. The old
+      # BONE_AGE_MODEL_PATH / _VERSION / _MAE_MONTHS / _ACCURACY_12M / _AGE_* keys are no
+      # longer read, so values left over in the dashboard are harmless.
+      - key: BONE_AGE_MODEL
+        value: models/refine9.onnx
+      # "off" runs one view instead of four: 4x faster, at the cost of the measured accuracy.
+      # Only for when the free instance's CPU cannot keep up.
+      - key: BONE_AGE_TTA
+        value: "on"

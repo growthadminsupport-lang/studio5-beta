@@ -114,9 +114,11 @@ async function seedDemo() {
   for (const p of people) {
     const user = await prisma.user.upsert({
       where: { email: p.email },
-      update: {},
+      // Demo addresses cannot receive mail, so they are created confirmed.
+      update: { isVerified: true },
       create: {
         ...p,
+        isVerified: true,
         passwordHash: password,
         phoneNumber: '0800000000',
         termsAcceptedAt: new Date(),

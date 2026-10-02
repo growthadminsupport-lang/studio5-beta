@@ -51,9 +51,33 @@ export class InvitesService {
       }),
       this.prisma.user.findUniqueOrThrow({
         where: { id: userId },
-        select: { fullName: true },
+        select: { fullName: true, email: true },
       }),
     ]);
+
+    const email = dto.email?.trim().toLowerCase() || undefined;
+    if (email) {
+      if (email === inviter.email.toLowerCase()) {
+        throw new BadRequestException(
+          'You cannot invite yourself. Enter the email address of the caretaker or doctor you want to add.',
+        );
+      }
+      const member = await this.prisma.childGuardian.findFirst({
+        where: { childId, user: { email } },
+        select: { role: true },
+      });
+      if (member) {
+        throw new ConflictException(
+          `This person already follows ${firstName(child.fullName)} as their ${member.role.toLowerCase()}.`,
+        );
+      }
+      // A new invitation to the same address replaces the one still waiting, so there is
+      // only ever one live link per person.
+      await this.prisma.childInvite.updateMany({
+        where: { childId, email, acceptedAt: null, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
 
     const token = randomBytes(24).toString('base64url');
     const invite = await this.prisma.childInvite.create({
@@ -61,24 +85,23 @@ export class InvitesService {
         childId,
         role: dto.role,
         tokenHash: hashToken(token),
-        email: dto.email?.toLowerCase(),
+        email,
         invitedById: userId,
         expiresAt: new Date(Date.now() + INVITE_TTL_MS),
       },
     });
 
-    const path = `/invite/${token}`;
-    const link = `${this.mail.appUrl}${path}`;
+    const link = `${this.mail.appUrl}/invite/${token}`;
     let emailed = false;
-    if (dto.email) {
-      const roleText = dto.role === 'DOCTOR' ? 'doctor' : 'caretaker';
-      emailed = await this.mail.sendNotice(
-        dto.email,
-        `${inviter.fullName} invited you to GrowTH`,
-        `${inviter.fullName} invited you to follow ${firstName(child.fullName)}'s growth on GrowTH as their ${roleText}. ` +
-          'The invitation works once and expires in 7 days.',
-        path,
-      );
+    if (email) {
+      emailed = await this.mail.sendInvitation({
+        to: email,
+        inviterName: inviter.fullName,
+        childFirstName: firstName(child.fullName),
+        role: dto.role,
+        link,
+        expiresAt: invite.expiresAt,
+      });
     }
 
     return {

@@ -25,7 +25,9 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 // thumbnail is a plain <img>, so a DICOM upload stored a row that displayed as a broken
 // image. Narrowing this to what the UI can actually show keeps the promise the upload screen
 // makes. If the AI team needs DICOM later, add it here *and* to the viewer.
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
+// PDFs are turned into an image in the browser before upload (BoneAgePage), so the server
+// never parses one.
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Controller('bone-age')
 export class BoneAgeController {
@@ -51,7 +53,7 @@ export class BoneAgeController {
         if (ALLOWED_MIME_TYPES.includes(file.mimetype)) return cb(null, true);
         cb(
           new BadRequestException(
-            `Unsupported file type "${file.mimetype}". Upload a JPEG or PNG image.`,
+            `Unsupported file type "${file.mimetype}". Upload a JPEG, PNG or WebP image.`,
           ),
           false,
         );
@@ -66,7 +68,7 @@ export class BoneAgeController {
   ) {
     if (!file) {
       throw new BadRequestException(
-        'Attach an X-ray image to upload (JPEG or PNG, max 10MB).',
+        'Attach an X-ray image to upload (JPEG, PNG or WebP, max 10MB).',
       );
     }
     return this.boneAgeService.upload(

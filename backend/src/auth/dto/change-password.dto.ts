@@ -1,5 +1,8 @@
 import { IsString, Matches } from 'class-validator';
-import { PASSWORD_REGEX, PASSWORD_MESSAGE } from '../../common/validators/password';
+import {
+  PASSWORD_REGEX,
+  PASSWORD_MESSAGE,
+} from '../../common/validators/password';
 
 export class ChangePasswordDto {
   @IsString()

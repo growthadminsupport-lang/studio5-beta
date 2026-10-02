@@ -1,84 +1,123 @@
 /**
- * End-to-end check of the bone-age model against the real weights.
- *
- * Lives here rather than in the Jest suite because Jest builds typed arrays in its own VM
- * context, and onnxruntime rejects them with "a float32 tensor's data must be type of
- * Float32Array". That is a harness artefact — the same code runs fine under plain node — so
- * the check runs under plain node.
+ * End-to-end check of the bone-age model against the real weights, under plain node (Jest's
+ * VM realm breaks onnxruntime's typed-array check).
  *
  *     npm run build && npm run verify:model
+ *     VERIFY_IMAGE=hand.jpg VERIFY_EXPECT_MALE=35.46 npm run verify:model
  *
- * Run it after changing preprocessing, swapping the model, or setting the calibration
- * constants. It is the only thing that exercises decode -> resize -> normalise -> infer ->
- * denormalise as one chain.
+ * VERIFY_EXPECT_MALE is what the ML team's own PyTorch pipeline (val_transform + tta_predict)
+ * returns for that image; the Node chain must agree within 0.1 months
+ * (0.35 for images over 2048 px, which are scaled down first). Get it from
+ * ai-service/refine9 (see README there). Run this after changing preprocessing or the model.
  */
 
 import { existsSync } from 'fs';
+import { copyFile, mkdtemp } from 'fs/promises';
+import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { basename, dirname, join } from 'path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const MODEL = process.env.BONE_AGE_MODEL_PATH ?? join(root, 'models/bone_age.onnx');
+const MODEL = process.env.BONE_AGE_MODEL ?? join(root, 'models/refine9.onnx');
 const IMAGE = process.env.VERIFY_IMAGE ?? join(root, 'test/fixtures/hand.png');
+const EXPECT = process.env.VERIFY_EXPECT_MALE
+  ? Number(process.env.VERIFY_EXPECT_MALE)
+  : null;
 
 if (!existsSync(MODEL)) {
-  console.error(`no model at ${MODEL}\n  gh release download model-v1 --pattern 'bone_age.onnx' --dir models`);
+  console.error(
+    `no model at ${MODEL}\n  gh release download model-v2 --repo growthadminsupport-lang/studio5-beta --dir models`,
+  );
   process.exit(1);
 }
 
-const { BoneAgeInferenceService } = await import(join(root, 'dist/bone-age/bone-age.inference.js'));
-
+const { BoneAgeInferenceService } = await import(
+  join(root, 'dist/bone-age/bone-age.inference.js')
+);
 const env = {
-  BONE_AGE_MODEL_PATH: MODEL,
-  BONE_AGE_MODEL_VERSION: process.env.BONE_AGE_MODEL_VERSION ?? 'effnetb0-v1-rsna',
-  BONE_AGE_MAE_MONTHS: process.env.BONE_AGE_MAE_MONTHS ?? '8.78',
-  BONE_AGE_ACCURACY_12M: process.env.BONE_AGE_ACCURACY_12M ?? '0.731',
-  BONE_AGE_AGE_MEAN: process.env.BONE_AGE_AGE_MEAN,
-  BONE_AGE_AGE_STD: process.env.BONE_AGE_AGE_STD,
-  BONE_AGE_CALIBRATION: process.env.BONE_AGE_CALIBRATION,
+  BONE_AGE_MODEL: MODEL,
+  BONE_AGE_TTA: process.env.BONE_AGE_TTA,
 };
-
 const svc = new BoneAgeInferenceService({ get: (k) => env[k] });
 await svc.onModuleInit();
 
 let failures = 0;
 const check = (label, ok, detail) => {
-  console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? ` — ${detail}` : ''}`);
+  console.log(
+    `  ${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? ` — ${detail}` : ''}`,
+  );
   if (!ok) failures++;
 };
 
-console.log(`\nmodel   : ${MODEL}`);
-console.log(`image   : ${IMAGE}`);
-console.log(`status  : ${JSON.stringify(svc.status)}\n`);
-
+console.log(
+  `\nmodel  : ${MODEL}\nimage  : ${IMAGE}\nstatus : ${JSON.stringify(svc.status)}\n`,
+);
 check('model loads', svc.isReady, svc.status.detail ?? undefined);
 
-const male = await svc.predict(IMAGE, 'MALE');
-const female = await svc.predict(IMAGE, 'FEMALE');
+// The upload path: header check, kept as uploaded, then predicted from that file.
+const dir = await mkdtemp(join(tmpdir(), 'verify-'));
+const copy = join(dir, basename(IMAGE));
+await copyFile(IMAGE, copy);
+const stored = await svc.validateUpload(copy);
+check('upload passes validation', existsSync(stored), stored);
 
-console.log(`\n  MALE   -> ${male.boneAgeMonths} months (${(male.boneAgeMonths / 12).toFixed(1)}y) in ${male.inferenceMs}ms`);
-console.log(`  FEMALE -> ${female.boneAgeMonths} months (${(female.boneAgeMonths / 12).toFixed(1)}y) in ${female.inferenceMs}ms\n`);
+const rss = () => Math.round(process.memoryUsage().rss / 1048576);
+const male = await svc.predict(stored, 'MALE');
+const female = await svc.predict(stored, 'FEMALE');
+console.log(
+  `\n  MALE   -> ${male.boneAgeMonths} months in ${male.inferenceMs} ms`,
+);
+console.log(
+  `  FEMALE -> ${female.boneAgeMonths} months in ${female.inferenceMs} ms`,
+);
+console.log(`  RSS    -> ${rss()} MB\n`);
 
-check('result is a whole number of months', Number.isInteger(male.boneAgeMonths));
-check('result is inside 0-300 months', male.boneAgeMonths > 0 && male.boneAgeMonths <= 300);
-// If the second input were being ignored, these would be identical.
-check('sex input reaches the model', male.boneAgeMonths !== female.boneAgeMonths,
-  `${male.boneAgeMonths} vs ${female.boneAgeMonths}`);
-check('provisional flag matches config', male.provisional === (env.BONE_AGE_CALIBRATION !== 'confirmed'));
+check(
+  'result is inside 0-300 months',
+  male.boneAgeMonths >= 0 && male.boneAgeMonths <= 300,
+);
+// If the sex input were ignored these would be identical.
+check(
+  'sex input reaches the model',
+  male.boneAgeMonths !== female.boneAgeMonths,
+  `${male.boneAgeMonths} vs ${female.boneAgeMonths}`,
+);
+if (EXPECT !== null) {
+  // 0.1 months for float differences, plus up to 0.25 when an image over 2048 px is scaled
+  // down before inference (MAX_SIDE in bone-age.inference.ts).
+  check(
+    'matches the PyTorch pipeline',
+    Math.abs(male.exactMonths - EXPECT) <= 0.35,
+    `${male.exactMonths.toFixed(3)} vs ${EXPECT.toFixed(3)}`,
+  );
+}
 
 let rejected = false;
 try {
-  await svc.predict(join(root, 'package.json'), 'MALE');
+  await svc.validateUpload(join(dir, 'missing.png'));
 } catch {
   rejected = true;
 }
-check('a non-image is rejected', rejected);
+check('an unreadable file is rejected', rejected);
 
-if (svc.status.calibration === 'provisional') {
-  console.log('\n  NOTE: calibration is provisional. AGE_MEAN/AGE_STD were inferred from the');
-  console.log('  reported MSE and R2, not supplied by the ML team, so the months above are');
-  console.log('  indicative only. One labelled sample image would settle it.');
-}
+// Preprocessing runs in a worker thread, so the main thread (every other request, the health
+// check) must stay free while a prediction runs.
+let maxLag = 0;
+let last = Date.now();
+const lag = setInterval(() => {
+  maxLag = Math.max(maxLag, Date.now() - last - 10);
+  last = Date.now();
+}, 10);
+await svc.predict(stored, 'MALE');
+clearInterval(lag);
+check(
+  'main thread stays responsive during a prediction',
+  maxLag < 100,
+  `longest stall ${maxLag} ms`,
+);
+await svc.onModuleDestroy();
 
-console.log(failures ? `\n${failures} check(s) failed\n` : '\nall checks passed\n');
+console.log(
+  failures ? `\n${failures} check(s) failed\n` : '\nall checks passed\n',
+);
 process.exit(failures ? 1 : 0);
