@@ -199,8 +199,8 @@ function GrowthPage() {
                 <p className="text-slate-900 dark:text-slate-100">{guidance.message}</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {[
-                    lastResult.heightPercentile !== null && lastResult.heightPercentile !== undefined && `Height P${Math.round(lastResult.heightPercentile)} (SDS ${lastResult.heightSds})`,
-                    lastResult.weightPercentile !== null && lastResult.weightPercentile !== undefined && `Weight P${Math.round(lastResult.weightPercentile)} (SDS ${lastResult.weightSds})`,
+                    lastResult.heightPercentile !== null && lastResult.heightPercentile !== undefined && `Height: ${describePercentile(lastResult.heightPercentile).label.toLowerCase()} (${describePercentile(lastResult.heightPercentile).figure}, SDS ${lastResult.heightSds})`,
+                    lastResult.weightPercentile !== null && lastResult.weightPercentile !== undefined && `Weight: ${describePercentile(lastResult.weightPercentile).label.toLowerCase()} (${describePercentile(lastResult.weightPercentile).figure}, SDS ${lastResult.weightSds})`,
                     lastResult.bmi && `BMI ${lastResult.bmi}`,
                     guidance.nutritionalStatus,
                   ]
@@ -262,13 +262,13 @@ function GrowthPage() {
                   <span className="text-slate-900 dark:text-slate-100">
                     {record.heightCm ? `${record.heightCm} cm` : '—'}
                     {record.heightPercentile !== null && (
-                      <span className={`ml-1 text-xs ${describePercentile(record.heightPercentile).tone}`}>P{Math.round(record.heightPercentile)}</span>
+                      <span className={`ml-1 text-xs ${describePercentile(record.heightPercentile).tone}`} title={describePercentile(record.heightPercentile).figure}>{describePercentile(record.heightPercentile).short}</span>
                     )}
                   </span>
                   <span className="text-slate-900 dark:text-slate-100">
                     {record.weightKg ? `${record.weightKg} kg` : '—'}
                     {record.weightPercentile !== null && (
-                      <span className={`ml-1 text-xs ${describePercentile(record.weightPercentile).tone}`}>P{Math.round(record.weightPercentile)}</span>
+                      <span className={`ml-1 text-xs ${describePercentile(record.weightPercentile).tone}`} title={describePercentile(record.weightPercentile).figure}>{describePercentile(record.weightPercentile).short}</span>
                     )}
                   </span>
                   {record.bmi && <span className="text-slate-500 dark:text-slate-400">BMI {record.bmi}</span>}

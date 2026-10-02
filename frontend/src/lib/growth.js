@@ -77,12 +77,30 @@ export function useReferenceCurve(childId, measure) {
 }
 
 /**
+ * The ages a chart should show for a child: their own stretch of childhood, not 0-20 years.
+ * Babies get the first three years (in months); older children a few years either side of
+ * their age, widened to include every measurement. Returns [fromMonths, toMonths].
+ */
+export function chartWindow(dateOfBirth, points) {
+  const now = ageInMonths(dateOfBirth, new Date());
+  const ages = [now, ...points.map((p) => p.ageYears * 12)];
+  const lo = Math.min(...ages);
+  const hi = Math.max(...ages);
+  if (hi < 30) return [0, 36];
+  if (hi < 60) return [0, 72];
+  const from = Math.max(0, Math.floor((lo - 24) / 12) * 12);
+  const to = Math.min(240, Math.ceil((hi + 24) / 12) * 12);
+  return to - from < 60 ? [Math.max(0, to - 60), to] : [from, to];
+}
+
+/**
  * Chart rows from the API's monthly curve, one point every `stepMonths`, with the stacked band
  * heights the charts shade. Height, weight and head circumference get three bands (below P3,
  * typical, above P97); BMI gets CDC's five weight-status bands.
  */
-export function curveRows(curve, measure, stepMonths = 3) {
-  const rows = curve.filter((r, i) => i === curve.length - 1 || Math.round(r.ageMonths) % stepMonths === 0);
+export function curveRows(curve, measure, stepMonths = 3, window = null) {
+  const inWindow = window ? curve.filter((r) => r.ageMonths >= window[0] && r.ageMonths <= window[1]) : curve;
+  const rows = inWindow.filter((r, i) => i === inWindow.length - 1 || Math.round(r.ageMonths) % stepMonths === 0);
   if (rows.length === 0) return [];
   if (measure === "bmi") {
     const ceiling = Math.max(...rows.map((r) => r.p120ofP95)) * 1.08;
@@ -90,6 +108,7 @@ export function curveRows(curve, measure, stepMonths = 3) {
       ageYears: r.ageMonths / 12,
       p5: r.p5,
       p50: r.p50,
+      p85: r.p85,
       p95: r.p95,
       severe: r.p120ofP95,
       underweight: r.p5,
@@ -119,12 +138,25 @@ export function childPoints(records, dateOfBirth, key) {
     .sort((a, b) => a.ageYears - b.ageYears);
 }
 
-/** "P47 · typical range", with the tone to colour it, for a percentile from the API. */
+/**
+ * A percentile from the API, in words a parent reads at a glance (`label`), a one-word chip
+ * (`short`), the figure for anyone who wants it (`figure`), and a tone to colour it.
+ * The "usual range" is CDC's 3rd to 97th percentile.
+ */
 export function describePercentile(percentile) {
   if (percentile === null || percentile === undefined) return null;
-  if (percentile >= 99.5) return { label: ">P99 · well above typical", tone: "text-amber-600 dark:text-amber-400" };
-  if (percentile <= 0.5) return { label: "<P1 · well below typical", tone: "text-amber-600 dark:text-amber-400" };
-  if (percentile < 3) return { label: `P${Math.round(percentile)} · below typical`, tone: "text-amber-600 dark:text-amber-400" };
-  if (percentile > 97) return { label: `P${Math.round(percentile)} · above typical`, tone: "text-amber-600 dark:text-amber-400" };
-  return { label: `P${Math.round(percentile)} · typical range`, tone: "text-[#056559] dark:text-teal-300" };
+  const p = Math.round(percentile);
+  const figure = `${ordinal(Math.min(Math.max(p, 1), 99))} percentile`;
+  const warn = "text-amber-600 dark:text-amber-400";
+  if (percentile <= 0.5) return { label: "Well below the usual range", short: "Very low", figure, tone: warn };
+  if (percentile >= 99.5) return { label: "Well above the usual range", short: "Very high", figure, tone: warn };
+  if (percentile < 3) return { label: "Below the usual range", short: "Low", figure, tone: warn };
+  if (percentile > 97) return { label: "Above the usual range", short: "High", figure, tone: warn };
+  return { label: "Within the usual range", short: "Usual", figure, tone: "text-[#056559] dark:text-teal-300" };
+}
+
+function ordinal(n) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }

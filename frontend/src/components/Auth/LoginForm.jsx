@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { errorMessage } from "../../lib/api";
 import GoogleButton from "./GoogleButton";
+import { useGoogleFlow } from "./useGoogleFlow";
 import { useTheme } from "../../context/ThemeContext";
 import logoDarkVideo from "../../assets/logo_motion_black_small.mp4";
 import logoLightVideo from "../../assets/logo_motion_white_small.mp4";
@@ -23,7 +24,7 @@ function LoginForm() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   // Back to where sign-in was asked for (an invitation link, a notification), never off-site.
@@ -38,27 +39,17 @@ function LoginForm() {
       await login(email.trim(), password, remember);
       navigate(destination, { replace: true });
     } catch (err) {
+      // A Google-only account gets the server's pointer to the Google button instead.
       setError(
-        err?.response?.status === 401 ? "Incorrect email or password." : errorMessage(err),
+        err?.response?.status === 401 && err.response.data?.code !== "GOOGLE_ACCOUNT"
+          ? "Incorrect email or password."
+          : errorMessage(err),
       );
       setSubmitting(false);
     }
   };
 
-  const handleGoogle = async (credential) => {
-    setError("");
-    try {
-      await loginWithGoogle(credential, false);
-      navigate(destination, { replace: true });
-    } catch (err) {
-      // A first-time Google user has no account yet; creating one needs the terms accepted.
-      if (err?.response?.status === 400 && /terms/i.test(errorMessage(err))) {
-        setError("No account yet for that Google address. Create one first and accept the terms.");
-      } else {
-        setError(errorMessage(err));
-      }
-    }
-  };
+  const { handleCredential: handleGoogle, dialog: googleDialog } = useGoogleFlow(destination, setError);
 
   return (
     <form onSubmit={handleSubmit} className="auth-form">
@@ -158,6 +149,7 @@ function LoginForm() {
           </Link>
         </span>
       </div>
+      {googleDialog}
     </form>
   );
 }

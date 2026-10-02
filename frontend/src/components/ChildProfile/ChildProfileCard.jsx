@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeftRight, Pencil, Baby, Plus, X, Check, AlertTriangle, Users, Search } from 'lucide-react';
+import { ArrowLeftRight, Pencil, Plus, X, Check, AlertTriangle, Users, Search } from 'lucide-react';
+import ChildAvatar from './ChildAvatar';
+import ChildEditDialog from './ChildEditDialog';
+import PeopleDialog from '../People/PeopleDialog';
 import { useAuth } from '../../context/AuthContext';
 import { errorMessage } from '../../lib/api';
 import { useChildren } from '../../context/ChildrenContext';
@@ -12,25 +15,14 @@ import { getAgeLabel, getAgeShort, getBornLabel, getSexLabel, getRoleLabel } fro
 // every page and keeps you on the page you're on.
 // ============================================================
 
-function ChildAvatar({ size = 56, iconSize = 28 }) {
-  return (
-    <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-[#a7ebd9] dark:bg-teal-500/50"
-      style={{ width: size, height: size }}
-    >
-      <Baby size={iconSize} strokeWidth={1.5} className="text-[#056559] dark:text-teal-300" />
-    </div>
-  );
-}
-
 function ModalShell({ title, onClose, children, footer }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-y-auto rounded-2xl bg-white dark:bg-slate-800 p-5 shadow-xl sm:p-6"
+        className="modal-panel flex max-h-[90vh] w-full max-w-md flex-col overflow-y-auto rounded-2xl bg-white dark:bg-slate-800 p-5 shadow-xl sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -69,7 +61,7 @@ function ChildTile({ kid, active, onClick }) {
           <Check size={12} strokeWidth={3} />
         </span>
       )}
-      <ChildAvatar />
+      <ChildAvatar child={kid} size={56} />
       <div>
         <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{kid.fullName}</p>
         <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -255,7 +247,7 @@ function ManageChildrenModal({ kids, onClose, onRemove }) {
             >
               <X size={13} strokeWidth={2.5} />
             </button>
-            <ChildAvatar />
+            <ChildAvatar child={kid} size={56} />
             <div>
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{kid.fullName}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -333,46 +325,51 @@ export default function ChildProfileCard() {
       window.alert(errorMessage(err, 'Could not remove this child. Please try again.'));
     }
   }
-  const [modal, setModal] = useState(null); // null | 'switch' | 'manage'
+  const [modal, setModal] = useState(null); // null | 'switch' | 'manage' | 'edit' | 'people'
 
   return (
     <>
       {child && (
         <div className="relative mb-6 rounded-2xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 shadow-2xs sm:p-8">
-          {/* Switch + edit share one column so their centers line up */}
-          <div className="absolute right-4 top-4 flex flex-col items-center gap-2 sm:right-6 sm:top-6">
+          {/* Switch, edit and people: one row, each opening a window over this page. */}
+          <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-5 sm:top-5">
             <button
               type="button"
               aria-label="Switch child"
+              title="Switch child"
               onClick={() => setModal('switch')}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-[#056559] dark:hover:bg-slate-700 dark:hover:text-teal-300"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-[#056559] active:scale-95 dark:hover:bg-slate-700 dark:hover:text-teal-300"
             >
               <ArrowLeftRight size={18} />
             </button>
 
-            {canEdit && (
-              <Link
-                to={`/children/${child.id}/edit`}
-                aria-label={child.myRole === 'DOCTOR' ? 'Set hospital number' : 'Edit child profile'}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#056559] dark:bg-teal-400 text-white dark:text-slate-950 shadow-sm transition hover:bg-[#03443c] dark:hover:bg-teal-300"
-              >
-                <Pencil size={14} />
-              </Link>
-            )}
-
             {child.myRole === 'PARENT' && (
-              <Link
-                to="/people"
+              <button
+                type="button"
                 aria-label="People who can see this child"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-[#056559] dark:hover:bg-slate-700 dark:hover:text-teal-300"
+                title="People and invitations"
+                onClick={() => setModal('people')}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-[#056559] active:scale-95 dark:hover:bg-slate-700 dark:hover:text-teal-300"
               >
                 <Users size={18} />
-              </Link>
+              </button>
+            )}
+
+            {canEdit && (
+              <button
+                type="button"
+                aria-label={child.myRole === 'DOCTOR' ? 'Set hospital number' : 'Edit child profile'}
+                title={child.myRole === 'DOCTOR' ? 'Set hospital number' : 'Edit profile'}
+                onClick={() => setModal('edit')}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#056559] text-white shadow-sm transition hover:bg-[#03443c] active:scale-95 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+              >
+                <Pencil size={15} />
+              </button>
             )}
           </div>
 
-          <div className="flex items-center gap-4 pr-12 sm:gap-5">
-            <ChildAvatar size={64} iconSize={34} />
+          <div className="flex items-center gap-4 pr-28 sm:gap-5 sm:pr-32">
+            <ChildAvatar child={child} size={72} />
 
             <div className="min-w-0">
               <h2 className="truncate text-lg font-bold text-slate-900 dark:text-slate-100">{child.fullName}</h2>
@@ -406,6 +403,9 @@ export default function ChildProfileCard() {
           onManage={() => setModal('manage')}
         />
       )}
+
+      <ChildEditDialog child={child} open={modal === 'edit'} onClose={() => setModal(null)} />
+      <PeopleDialog child={child} open={modal === 'people'} onClose={() => setModal(null)} />
 
       {modal === 'manage' && (
         <ManageChildrenModal kids={kids} onClose={() => setModal(null)} onRemove={removeOrLeave} />

@@ -51,8 +51,8 @@ Postgres (`rate_limits`), so it survives restarts. These routes are tighter:
 | --- | --- |
 | `POST /auth/login`, `POST /auth/google` | 10 / minute |
 | `POST /auth/register` | 5 / 10 minutes |
-| `POST /auth/forgot-password` | 3 / 5 minutes |
-| `POST /auth/reset-password` | 10 / minute |
+| `POST /auth/forgot-password`, `POST /auth/resend-verification` | 3 / 5 minutes |
+| `POST /auth/reset-password`, `POST /auth/verify-email` | 10 / minute |
 | `POST /children/:id/invites` | 10 / 10 minutes |
 | `GET /invites/:token` | 30 / minute |
 | `POST /support/contact`, `POST /support/report` | 5 / 10 minutes |
@@ -114,9 +114,12 @@ The server also shapes responses by role. Hiding a field in the UI is not enough
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| POST | `/auth/register` | *Public.* `fullName`, `email`, `password`, `phoneNumber?`, `acceptedTerms: true`, and `accountType?` `USER` (default) or `DOCTOR`. A doctor also sends `licenseNumber` and `hospital` and starts as `PENDING`. |
-| POST | `/auth/login` | *Public.* `email`, `password`. |
-| POST | `/auth/google` | *Public.* `{ credential, acceptedTerms? }`. Creates the account on first use (terms required then), with a verified email. |
+| POST | `/auth/register` | *Public.* `fullName`, `email`, `password`, `phoneNumber?`, `acceptedTerms: true`, and `accountType?` `USER` (default) or `DOCTOR`. A doctor also sends `licenseNumber` and `hospital` and starts as `PENDING`. Emails are stored lowercase. Disposable domains are refused, and in production so are domains with no mail server. The account starts unconfirmed and a confirmation link is emailed (48 hours). `409` with `code: GOOGLE_ACCOUNT` if the address belongs to a Google account, `EMAIL_TAKEN` otherwise. |
+| POST | `/auth/login` | *Public.* `email`, `password`. A Google-only account gets `401` with `code: GOOGLE_ACCOUNT` and a message pointing to Google sign-in. |
+| POST | `/auth/google` | *Public.* Step by step, reusing the same `credential` (valid about an hour): an account linked to this Google identity is signed in. A password account with the same address returns `{ linkRequired, email }`; calling again with `linkAccount: true` links it (same account). If that address was never confirmed, linking also removes its password and sessions (`passwordRemoved: true`). A new address returns `{ signupRequired, email, fullName, picture }`; calling again with `signup: true`, `acceptedTerms: true`, `accountType`, `fullName?`, `phoneNumber`, and for doctors `licenseNumber` and `hospital`, creates the account, already confirmed. |
+| POST | `/auth/set-password` | `newPassword`. Adds a password to a Google-only account, so either way in reaches it. `400` if it already has one. |
+| POST | `/auth/verify-email` | *Public.* `token` from the confirmation email. Single use. |
+| POST | `/auth/resend-verification` | Sends a new confirmation link. Outside production, with no mail provider, the token is returned for testing. |
 | POST | `/auth/refresh` | *Public.* `{ refreshToken }`. Rotates the pair. |
 | POST | `/auth/logout` | *Public.* `{ refreshToken }`. Revokes it. |
 | POST | `/auth/forgot-password` | *Public.* Always `200`, so it does not reveal which emails exist. Sends a reset link through Resend. |
@@ -132,14 +135,14 @@ The server also shapes responses by role. Hiding a field in the UI is not enough
 
 | Method | Path | Capability and notes |
 | --- | --- | --- |
-| GET | `/children` | Every child linked to the caller, each with `myRole` and `familyName`. Doctors may pass `?hn=`, which searches only their own patients. |
-| POST | `/children` | Creates a child with the caller as `PARENT`. `fullName`, `sex`, `dateOfBirth`, `hn?`. |
+| GET | `/children` | Every child linked to the caller, each with `myRole`, `myRelation` (parents: `PARENT` mother or father, `GUARDIAN`, `RELATIVE`), `familyName` and `avatar`. Doctors may pass `?hn=`, which searches only their own patients. |
+| POST | `/children` | Creates a child with the caller as `PARENT`. `fullName`, `sex`, `dateOfBirth`, `relation?`, `hn?`, `avatar?` (`{ skin: fair\|rosy\|tan\|deep, babyHair 1-10, youngHair 1-9, hairColor #rrggbb, babyOutfit 1-6 }`). |
 | GET | `/children/:id` | `child.read` |
 | PATCH | `/children/:id` | `child.edit` for details. `child.setHn` for `hn`, so a doctor may change the HN only. |
 | DELETE | `/children/:id` | `child.delete`. With one parent, deletes the child, every record and the X-ray files. With two parents, removes only the caller's link. |
 | GET | `/children/:id/members` | `members.manage`. Returns `members` and `pendingInvites`. |
 | DELETE | `/children/:id/members/:userId` | A parent removes anyone except a parent. A caretaker or doctor may remove only themselves ("leave"). |
-| POST | `/children/:id/invites` | `members.manage`. `role` `CARETAKER` or `DOCTOR`, `email?`. Returns `{ id, link, expiresAt, email, emailed }`. The link carries a random 24-byte token, stored only as a SHA-256 hash. It is single-use and lasts 7 days. |
+| POST | `/children/:id/invites` | `members.manage`. `role` `CARETAKER` or `DOCTOR`, `email?`. Returns `{ id, link, expiresAt, email, emailed }`. The link carries a random 24-byte token, stored only as a SHA-256 hash. It is single-use and lasts 7 days. Refuses the parent's own address (`400`) and anyone who already follows the child (`409`); a new invitation to the same address replaces the waiting one. |
 | DELETE | `/children/:id/invites/:inviteId` | `members.manage`. Revokes a pending invite. |
 | GET | `/invites/:token` | *Public.* Preview for the invite page: `childFirstName`, `invitedBy`, `role`, `expiresAt`, `state` (`valid`, `expired`, `used`, `revoked`). |
 | POST | `/invites/:token/accept` | Links the caller to the child. Returns `410` if the invite is expired, used or revoked. Returns `403` if a `DOCTOR` invite meets an account that is not an approved doctor, `409` if the caller already has a role on the child, and `400` for the parent's own invite. The claim is transactional, so two people cannot both use one link. Notifies the parents. |

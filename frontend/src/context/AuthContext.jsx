@@ -51,10 +51,15 @@ export function AuthProvider({ children }) {
     return applySession(res.data, remember);
   }
 
-  /** `acceptedTerms` only matters the first time, when the account is created (FR-2). */
-  async function loginWithGoogle(credential, acceptedTerms) {
-    const res = await api.post("/auth/google", { credential, acceptedTerms }, { timeout: COLD_START_TIMEOUT_MS });
-    return applySession(res.data, true);
+  /**
+   * Google sign-in, one step of it. The API answers with a session, or with `signupRequired`
+   * (new address: show the welcome form) or `linkRequired` (an existing password account: ask
+   * before linking). Only a session is applied; the caller handles the other two.
+   */
+  async function googleSignIn(body) {
+    const res = await api.post("/auth/google", body, { timeout: COLD_START_TIMEOUT_MS });
+    if (res.data.accessToken) applySession(res.data, true);
+    return res.data;
   }
 
   /** `form` is the RegisterDto: email, password, fullName, phoneNumber, accountType, licenseNumber, hospital, acceptedTerms. */
@@ -84,7 +89,7 @@ export function AuthProvider({ children }) {
     isDoctor: user?.role === "DOCTOR",
     isApprovedDoctor: user?.role === "DOCTOR" && user?.doctorStatus === "APPROVED",
     login,
-    loginWithGoogle,
+    googleSignIn,
     register,
     logout,
     setUser,
