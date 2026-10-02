@@ -3,6 +3,21 @@
 TOR §6.5: functional testing before each milestone, on at least two browsers and one mobile
 viewport, with a record kept. This is that record.
 
+## 2026-10-02 (evening), held-out model evaluation
+
+| Check | Result |
+| --- | --- |
+| Bone-age model on the 200-image RSNA test set, through the app's pipeline (`npm run eval:model`) | MAE **6.63 months** with one view, 6.50 with four (`docs/model-evaluation.md`) |
+| Backend unit tests (adds: each result reports the accuracy of the mode that produced it) | **106 / 106** |
+| `npm run verify:model` with the new model card | all checks pass |
+| Browser walk-through, 40 checks | Chromium **40 / 40**, Firefox **40 / 40**, WebKit **40 / 40** in 8 of 10 runs |
+
+**Open, not reproduced:** in 2 of 10 WebKit runs the doctor was signed out when reloading the
+invitation page just after the admin approved them. Eight later runs passed, five of them with
+every `/auth/*` response logged, so the cause is not identified. It looks like the session
+refresh race fixed on 2 October (a second refresh after a rotation), but the 30-second grace
+should cover that. Worth a manual check in Safari on a Mac or iPhone.
+
 ## 2026-10-02 (afternoon), avatar picker, child card and phone layout
 
 | Check | Result |

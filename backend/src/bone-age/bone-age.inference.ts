@@ -38,11 +38,22 @@ const FORMATS: Record<string, string> = {
   webp: '.webp',
 };
 
-interface ModelCard {
-  modelVersion: string;
+interface Accuracy {
   maeMonths: number;
   accuracyWithin12Months: number;
+}
+
+interface ModelCard extends Accuracy {
+  modelVersion: string;
+  /** The top-level figures: the ML team's validation set, four-view TTA. */
   validationSamples: number;
+  /**
+   * Measured on a held-out test set through this service's own pipeline, per mode
+   * (docs/model-evaluation.md). Preferred when present: it is what a result really carries.
+   */
+  testSet?: { source?: string } & Partial<
+    Record<'single' | 'tta', Accuracy & { samples: number }>
+  >;
 }
 
 export interface BoneAgeResult {
@@ -85,7 +96,7 @@ export class BoneAgeInferenceService implements OnModuleInit, OnModuleDestroy {
       this.card = JSON.parse(readFileSync(this.cardPath, 'utf8')) as ModelCard;
       await this.startWorker();
       this.logger.log(
-        `Bone-age model loaded from ${this.modelPath}: ${this.modelVersion}, MAE ${this.card.maeMonths} months`,
+        `Bone-age model loaded from ${this.modelPath}: ${this.modelVersion}, MAE ${this.accuracyFor(this.modelVersion).maeMonths} months`,
       );
     } catch (err) {
       this.card = null;
@@ -121,7 +132,10 @@ export class BoneAgeInferenceService implements OnModuleInit, OnModuleDestroy {
     return this.sibling('.json');
   }
 
-  /** Test-time augmentation, as the reported MAE was measured. Off only to save CPU. */
+  /**
+   * Four-view test-time augmentation. Production turns it off: on the held-out test set it is
+   * worth 0.13 months of MAE for 3.8 times the CPU (docs/model-evaluation.md).
+   */
   private get useTta(): boolean {
     return this.config.get<string>('BONE_AGE_TTA') !== 'off';
   }
@@ -150,9 +164,14 @@ export class BoneAgeInferenceService implements OnModuleInit, OnModuleDestroy {
     if (modelVersion?.startsWith('effnetb0')) {
       return { maeMonths: 8.78, accuracyWithin12Months: 0.731, legacy: true };
     }
+    // The mode is read from the record, not today's setting: a result keeps the accuracy of
+    // the run that produced it.
+    const measured =
+      this.card?.testSet?.[modelVersion?.endsWith('-tta') ? 'tta' : 'single'];
+    const source = measured ?? this.card;
     return {
-      maeMonths: this.card?.maeMonths ?? null,
-      accuracyWithin12Months: this.card?.accuracyWithin12Months ?? null,
+      maeMonths: source?.maeMonths ?? null,
+      accuracyWithin12Months: source?.accuracyWithin12Months ?? null,
       legacy: false,
     };
   }
@@ -163,13 +182,14 @@ export class BoneAgeInferenceService implements OnModuleInit, OnModuleDestroy {
   }
 
   get status() {
+    const accuracy = this.card ? this.accuracyFor(this.modelVersion) : null;
     return {
       ready: this.isReady,
       modelVersion: this.card ? this.modelVersion : null,
-      /** Mean absolute error in months on the validation set: the "±" FR-18 shows. */
-      maeMonths: this.card?.maeMonths ?? null,
-      /** Share within a year, shown with the MAE because the mean hides the spread. */
-      accuracyWithin12Months: this.card?.accuracyWithin12Months ?? null,
+      // MAE in months (the "±" FR-18 shows) and the share within a year, for the mode
+      // running now; the share is shown because the mean hides the spread.
+      maeMonths: accuracy?.maeMonths ?? null,
+      accuracyWithin12Months: accuracy?.accuracyWithin12Months ?? null,
       detail: this.loadError,
     };
   }

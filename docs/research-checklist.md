@@ -306,10 +306,15 @@ Rough sizing, assuming errors are normally distributed (they are not exactly —
 current model would show a spurious ≥2-year gap in about **3–4%** of children whose true gap is
 zero. Holding that under 1% needs MAE ≤ ~7.4 months; under 0.5%, ≤ ~6.8 months.
 
+**Measured 2026-10-02** on the 200 held-out RSNA test images (`docs/model-evaluation.md`): MAE
+6.63 months with one view, and 3 of 200 estimates (1.5 %) missed by two years or more. The
+misses are not random: under-10s read older and over-15s younger, so the false gaps cluster in
+those ages.
+
 **Tasks:**
 - [ ] Find and cite the clinical gap threshold — Royal College of Paediatricians of Thailand
       guidance, or a paediatric endocrinology reference. Owner: ___
-- [ ] Put the target to the Client Representative: is a triage aid at MAE ~7.4 months acceptable,
+- [ ] Put the target to the Client Representative: is a triage aid at MAE ~6.6 months acceptable,
       or must it reach published parity (~4.5) before launch? See `client-questions.md`.
 - [ ] Confirm what TOR §6.3 actually requires — reporting the MAE transparently, or meeting a
       stated figure. The TOR is a scan; read §6.3 directly rather than relying on notes.
@@ -317,7 +322,8 @@ zero. Holding that under 1% needs MAE ≤ ~7.4 months; under 0.5%, ≤ ~6.8 mont
 ✅ **Resolved 2026-10-01:** the warning that production accuracy was unmeasured (inferred
 `AGE_MEAN`/`AGE_STD`) no longer applies. refine9 predicts months directly, and the Node port
 matches the ML team's PyTorch pipeline to within 0.013 months (`ai-service/refine9/README.md`).
-What remains is that 7.43 is a validation figure, not a held-out test (TOR §6.3).
+✅ **Resolved 2026-10-02:** held-out figure measured on the RSNA test set, MAE 6.63 months with
+one view (`docs/model-evaluation.md`).
 
 **Owner:** ___ **Due:** ___
 

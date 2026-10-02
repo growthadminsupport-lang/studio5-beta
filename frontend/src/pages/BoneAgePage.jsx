@@ -180,7 +180,12 @@ function DoctorRecord({ record, onSaved, onDelete }) {
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               {record.legacy && 'Estimated by the previous model, whose calibration was never confirmed. '}
               Model error is typically ±{Math.round(record.maeMonths)} months
-              {accuracy ? `, and about 1 estimate in ${Math.round(1 / (1 - accuracy))} is out by more than a year` : ''}. AI suggests:{' '}
+              {accuracy ? `, and about 1 estimate in ${Math.round(1 / (1 - accuracy))} is out by more than a year` : ''}.
+              {/* Measured on the RSNA test set (docs/model-evaluation.md): estimates are pulled
+                  toward the middle of the age range. */}
+              {!record.legacy &&
+                ' It is least accurate under 10 years, where it tends to read high, and from 15 years, where it tends to read low.'}{' '}
+              AI suggests:{' '}
               <span className="font-medium">{REVIEW[record.suggestedReview]?.label ?? '—'}</span> (gap of 2 years or more).
             </p>
             {record.implausibleGap && (

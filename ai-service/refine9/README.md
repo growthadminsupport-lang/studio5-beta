@@ -31,11 +31,11 @@ The ML team's comparison (1,425 validation images, 4-view TTA, 2026-10-02):
 refine10 is the newest run but much worse, so refine9 stays. The model is about 0.6 months less
 accurate for girls than for boys.
 
-**Production runs with `BONE_AGE_TTA=off`** (one view instead of four, 4× faster on Render's
-free CPU). Every figure above was measured with four views; single-view accuracy has not been
-measured, and on the six test radiographs single and four-view predictions differed by 4.2
-months on one image and 0.4–1.9 months on the other five. Ask the ML team for the single-view MAE, or
-switch TTA back on when the server has more CPU.
+**Production runs with `BONE_AGE_TTA=off`** (one view instead of four, 3.8× faster). Every
+figure above was measured with four views on the validation set. On the 200 held-out RSNA
+**test** images, through the app's own pipeline, one view scores MAE **6.63 months** (87.0 %
+within a year) and four views 6.50 (86.0 %), so one view costs 0.13 months. Details, by sex and
+age band: [`docs/model-evaluation.md`](../../docs/model-evaluation.md).
 
 ## The pipeline, exactly as trained
 

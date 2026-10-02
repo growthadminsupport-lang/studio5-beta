@@ -314,7 +314,10 @@ try {
   const ages3 = await doctor.$$eval('p', (ps) => ps.filter((p) => p.previousElementSibling?.textContent === 'AI bone age').map((p) => p.textContent));
   console.log('    AI ages (webp, pdf, jpeg):', ages3.join(' | '));
   check('WebP X-ray uploads and gets the same result as the JPEG', ages3[0] === ages3[2] && !body3.includes('Analysis failed'));
-  check('accuracy shown is refine9 (7 months, 1 in 5) despite stale B0 env vars', body3.includes('±7 months') && body3.includes('1 estimate in 5') && !body3.includes('±9 months'));
+  // Held-out test-set accuracy of the mode that made the result: 1 in 8 off a year with one
+  // view, 1 in 7 with four (docs/model-evaluation.md).
+  check('accuracy shown is refine9 test-set figures with the age caution, despite stale B0 env vars',
+    body3.includes('±7 months') && /1 estimate in [78] /.test(body3) && body3.includes('least accurate under 10 years') && !body3.includes('±9 months'));
   await doctor.locator('select').last().selectOption('NORMAL');
   await doctor.getByPlaceholder('Note for the family').last().fill('Growth plates look as expected. Recheck in a year.');
   await doctor.getByRole('button', { name: 'Save and share with family' }).last().click();

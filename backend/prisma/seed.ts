@@ -76,9 +76,9 @@ async function main() {
 
 /**
  * ADMIN_EMAIL names the account that gets the admin portal. It is only promoted once its email
- * is verified, which today means it signed in with Google at least once. Otherwise anyone could
- * register that address with a password before its owner did, and be made admin on the next
- * deploy. Sign in with Google as that address, then redeploy (or wait for the next one).
+ * is verified: it signed in with Google, or opened the confirmation link sent to that address.
+ * Otherwise anyone could register that address with a password before its owner did, and be
+ * made admin on the next deploy. Confirm the address, then redeploy (or wait for the next one).
  */
 async function promoteAdmin() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -89,7 +89,7 @@ async function promoteAdmin() {
     return;
   }
   if (!user.isVerified) {
-    console.log(`ADMIN_EMAIL ${email}: email not verified. Sign in with Google once, then redeploy.`);
+    console.log(`ADMIN_EMAIL ${email}: email not confirmed. Sign in with Google or open the confirmation email, then redeploy.`);
     return;
   }
   if (user.role !== 'ADMIN') {

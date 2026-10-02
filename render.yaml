@@ -94,7 +94,7 @@ services:
       # longer read, so values left over in the dashboard are harmless.
       - key: BONE_AGE_MODEL
         value: models/refine9.onnx
-      # "off" runs one view instead of four: 4x faster, at the cost of the measured accuracy.
-      # Only for when the free instance's CPU cannot keep up.
+      # One view instead of four: 3.8x less CPU, for 0.13 months of MAE on the held-out RSNA
+      # test set (6.63 vs 6.50, docs/model-evaluation.md). "on" when the server has CPU to spare.
       - key: BONE_AGE_TTA
-        value: "on"
+        value: "off"
