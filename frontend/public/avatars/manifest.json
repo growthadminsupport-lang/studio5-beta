@@ -1,0 +1,20 @@
+{
+  "baby": {
+    "aspect": 0.748,
+    "hair": 10,
+    "outfits": 6,
+    "hairWithAccessories": [
+      1,
+      2,
+      6,
+      10
+    ]
+  },
+  "young": {
+    "aspect": 1.0058,
+    "hair": 9,
+    "hairWithAccessories": [
+      2
+    ]
+  }
+}

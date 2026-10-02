@@ -31,6 +31,9 @@ import ContactPage from "./pages/ContactPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import InvitePage from "./pages/InvitePage";
 import PeoplePage from "./pages/PeoplePage";
+import WelcomePage from "./pages/WelcomePage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ScrollToTop from "./components/Layout/ScrollToTop";
 
 // Admins only, so everyone else never downloads it.
 const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
@@ -56,12 +59,16 @@ function App() {
   const { isLoggedIn, loading } = useAuth() || {};
 
   return (
+    <>
+    <ScrollToTop />
     <Routes>
       {/* Standalone Auth Pages */}
       <Route path="/login" element={isLoggedIn && !loading ? <LoginRoute /> : <LoginPage />} />
       <Route path="/register" element={isLoggedIn && !loading ? <LoginRoute /> : <RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/welcome" element={<WelcomePage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* Public Pages with Navigation Header/Footer */}
       <Route element={<MainLayout />}>
@@ -109,6 +116,7 @@ function App() {
       {/* Catch-all Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
 

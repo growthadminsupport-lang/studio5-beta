@@ -13,6 +13,7 @@ import {
   PASSWORD_REGEX,
   PASSWORD_MESSAGE,
 } from '../../common/validators/password';
+import { PHONE_MESSAGE, PHONE_REGEX } from '../../common/validators/phone';
 
 export class RegisterDto {
   @IsEmail()
@@ -30,7 +31,13 @@ export class RegisterDto {
    * FR-1 lists the phone number among the minimum registration fields, and the team's
    * registration form collects it. Optional here so a Google sign-up, which never sees the
    * form, can still create an account; Profile can add it later.
+   *
+   * It needs a validator to exist at all: the global ValidationPipe runs with `whitelist`, which
+   * silently drops any property without one. Without this the number was never saved.
    */
+  @IsOptional()
+  @IsString()
+  @Matches(PHONE_REGEX, { message: PHONE_MESSAGE })
   phoneNumber?: string;
 
   /**

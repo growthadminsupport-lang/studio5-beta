@@ -5,7 +5,10 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ChildAvatarDto } from './child-avatar.dto';
 import { ChildSex, GuardianRelation } from '@prisma/client';
 
 export class CreateChildDto {
@@ -30,6 +33,11 @@ export class CreateChildDto {
   @IsOptional()
   @IsString()
   avatarUrl?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ChildAvatarDto)
+  avatar?: ChildAvatarDto;
 
   /** Hospital number. Optional; the child's doctor can add it later. */
   @IsOptional()

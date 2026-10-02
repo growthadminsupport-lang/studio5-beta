@@ -93,7 +93,7 @@ function DoctorsTab() {
           <MenuItem value="">All doctors</MenuItem>
         </TextField>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Check the license number with the medical council before approving. An approved doctor can be invited to any child.
+          Check the licence number with the medical council before approving. A doctor can be approved once their email address is confirmed; an approved doctor can then be invited to any child.
         </p>
       </div>
       {(error || actionError) && <Alert severity="error" sx={{ mb: 2 }}>{error || actionError}</Alert>}
@@ -118,6 +118,14 @@ function DoctorsTab() {
                 <TableCell>{d.hospital}</TableCell>
                 <TableCell>
                   {d.email}
+                  <br />
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    sx={{ mt: 0.5 }}
+                    color={d.isVerified ? "success" : "warning"}
+                    label={d.isVerified ? "Email confirmed" : "Email not confirmed"}
+                  />
                   {d.phoneNumber ? <><br />{d.phoneNumber}</> : null}
                 </TableCell>
                 <TableCell>{formatDate(d.createdAt)}</TableCell>
@@ -127,7 +135,13 @@ function DoctorsTab() {
                 </TableCell>
                 <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                   {d.doctorStatus !== "APPROVED" && (
-                    <Button size="small" variant="contained" onClick={() => decide(d, "APPROVED")}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      disabled={!d.isVerified}
+                      title={d.isVerified ? undefined : "Can be approved once the doctor confirms their email address"}
+                      onClick={() => decide(d, "APPROVED")}
+                    >
                       Approve
                     </Button>
                   )}{" "}

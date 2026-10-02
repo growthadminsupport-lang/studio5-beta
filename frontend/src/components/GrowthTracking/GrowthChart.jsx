@@ -10,34 +10,61 @@ import {
   Tooltip,
 } from "recharts";
 import { useChartTheme } from "../../utils/chartTheme";
-import { childPoints, curveRows, useReferenceCurve } from "../../lib/growth";
+import { chartWindow, childPoints, curveRows, useReferenceCurve } from "../../lib/growth";
 
 // The growth charts, shared by the Growth page and the Dashboard. Reference curves are CDC 2000,
 // for this child's sex, from the API; the solid line is the child's own measurements.
+//
+// Written for parents, not clinicians: the shaded band is "the usual range" (CDC's 3rd to 97th
+// percentile, where 94 of 100 children are) and the dotted line is "average" (the 50th). The
+// percentile names stay out of sight; the numbers behind them are in the tooltip.
 
 const SPECS = {
-  height: { title: "Height-for-age", unit: "cm", key: "heightCm" },
-  weight: { title: "Weight-for-age", unit: "kg", key: "weightKg" },
-  headCircumference: { title: "Head circumference-for-age", unit: "cm", key: "headCircumferenceCm" },
-  bmi: { title: "BMI-for-age", unit: "", key: "bmi" },
+  height: { title: "Height", unit: "cm", key: "heightCm", low: "Shorter than usual", high: "Taller than usual" },
+  weight: { title: "Weight", unit: "kg", key: "weightKg", low: "Lighter than usual", high: "Heavier than usual" },
+  headCircumference: { title: "Head size", unit: "cm", key: "headCircumferenceCm", low: "Smaller than usual", high: "Larger than usual" },
+  bmi: { title: "Body mass index (BMI)", unit: "", key: "bmi" },
 };
 
-function yearTicks(rows) {
-  if (rows.length === 0) return [];
-  const max = Math.ceil(rows[rows.length - 1].ageYears);
-  const min = Math.floor(rows[0].ageYears);
-  const step = max - min > 10 ? 5 : max - min > 4 ? 2 : 1;
-  const ticks = [];
-  for (let y = min; y <= max; y += step) ticks.push(y);
-  return ticks;
-}
+const BMI_BANDS = [
+  ["underweight", "#dbe4f5", "Underweight"],
+  ["healthy", "#c8f0dc", "Healthy weight"],
+  ["overweight", "#fbeec2", "Overweight"],
+  ["obesity", "#fde2c8", "Obesity"],
+  ["severeBand", "#f9d3d3", "Severe obesity"],
+];
 
-function ageLabel(years) {
+/** "2 months", "1 year 4 months", "9 years 6 months". */
+function ageWords(years) {
   const months = Math.round(years * 12);
-  if (months < 24) return `${months} mo`;
   const y = Math.floor(months / 12);
   const m = months % 12;
-  return m ? `${y} y ${m} m` : `${y} y`;
+  const part = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  if (y === 0) return part(m, "month");
+  return m ? `${part(y, "year")} ${part(m, "month")}` : part(y, "year");
+}
+
+function ticksFor([from, to]) {
+  const months = to <= 36;
+  const step = months ? 6 : to - from > 120 ? 24 : 12;
+  const ticks = [];
+  for (let m = from; m <= to; m += step) ticks.push(m / 12);
+  return { ticks, format: (v) => (months ? `${Math.round(v * 12)} mo` : `${Math.round(v)} y`) };
+}
+
+/** A y-axis around `values` with round ticks (5, 10, 20…): 40-110 in tens, not 41, 61, 81, 108. */
+function niceAxis(values) {
+  if (!values.length) return null;
+  const lo = Math.min(...values) * 0.95;
+  const hi = Math.max(...values) * 1.04;
+  const raw = (hi - lo) / 5;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+  const from = Math.max(0, Math.floor(lo / step) * step);
+  const to = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = from; v <= to + step / 2; v += step) ticks.push(Math.round(v * 100) / 100);
+  return { domain: [from, to], ticks };
 }
 
 function Legend({ items }) {
@@ -54,8 +81,61 @@ function Legend({ items }) {
 }
 
 const line = (cls) => <span className={`h-0.5 w-4 rounded ${cls}`} />;
-const dashed = (cls) => <span className={`h-0.5 w-4 rounded border-t border-dashed ${cls}`} />;
-const dot = (cls) => <span className={`h-2 w-2 rounded-full ${cls}`} />;
+const dashed = (cls) => <span className={`h-0.5 w-4 rounded border-t-2 border-dotted ${cls}`} />;
+const dot = (cls) => <span className={`h-2.5 w-2.5 rounded-sm ${cls}`} />;
+
+/** Where a value sits, in words, for the tooltip. */
+function verdict(value, row, isBmi) {
+  if (value === undefined || value === null || !row) return null;
+  if (isBmi) {
+    if (value < row.p5) return "underweight";
+    if (value < row.p85) return "a healthy weight";
+    if (value < row.p95) return "overweight";
+    return "in the obesity range";
+  }
+  if (value < row.p3) return "below the usual range";
+  if (value > row.p97) return "above the usual range";
+  return "within the usual range";
+}
+
+function ChartTooltip({ active, payload, label, spec, isBmi, points, childName, sexWord }) {
+  if (!active || !payload?.length) return null;
+  const row = payload.find((p) => p.payload?.p50 !== undefined)?.payload;
+  const own =
+    payload.find((p) => p.dataKey === "value")?.payload ??
+    points.find((p) => Math.abs(p.ageYears - label) < 1 / 24);
+  const fmt = (v) => `${Number(v).toFixed(1)}${spec.unit ? ` ${spec.unit}` : ""}`;
+  const age = own?.ageYears ?? label;
+  return (
+    <div className="max-w-[240px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-800">
+      <p className="font-semibold text-slate-900 dark:text-slate-100">At {ageWords(age)}</p>
+      {own && (
+        <p className="mt-1 text-slate-700 dark:text-slate-200">
+          <span className="font-semibold text-[#056559] dark:text-teal-300">
+            {childName}: {fmt(own.value)}
+          </span>
+          {row && <>, {verdict(own.value, row, isBmi)}</>}
+        </p>
+      )}
+      {row && !isBmi && (
+        <>
+          <p className="mt-1 text-slate-600 dark:text-slate-300">
+            Usual for {sexWord}: {fmt(row.p3)} to {fmt(row.p97)}
+          </p>
+          <p className="text-slate-600 dark:text-slate-300">Average: {fmt(row.p50)}</p>
+        </>
+      )}
+      {row && isBmi && (
+        <>
+          <p className="mt-1 text-slate-600 dark:text-slate-300">
+            Healthy for {sexWord}: {fmt(row.p5)} to {fmt(row.p85)}
+          </p>
+          <p className="text-slate-600 dark:text-slate-300">Overweight from {fmt(row.p85)}, obesity from {fmt(row.p95)}</p>
+        </>
+      )}
+    </div>
+  );
+}
 
 /**
  * @param measure 'height' | 'weight' | 'bmi' | 'headCircumference'
@@ -66,16 +146,26 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
   const chart = useChartTheme();
   const spec = SPECS[measure];
   const curve = useReferenceCurve(child.id, measure);
-  const rows = curveRows(curve, measure);
   const points = childPoints(records, child.dateOfBirth, spec.key);
+  const window = chartWindow(child.dateOfBirth, points);
+  const rows = curveRows(curve, measure, window[1] <= 36 ? 1 : 3, window);
   const isBmi = measure === "bmi";
-  const fmt = (v) => `${Number(v).toFixed(1)}${spec.unit ? ` ${spec.unit}` : ""}`;
+  const name = child.nickname || child.fullName;
+  const sexWord = child.sex === "MALE" ? "boys this age" : "girls this age";
+  const { ticks, format } = ticksFor(window);
+  // Frame the y-axis on the reference range and the child's own values, not on zero: from zero
+  // the curves of a 4-month-old sit squeezed in the top fifth of the chart.
+  const values = [
+    ...rows.flatMap((r) => (isBmi ? [r.p5, r.severe] : [r.p3, r.p97])),
+    ...points.map((p) => p.value),
+  ].filter(Number.isFinite);
+  const y = niceAxis(values);
 
   const body = (
     <>
       <div className="w-full" style={{ height }}>
         {rows.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-xs text-slate-400">Loading reference curves…</div>
+          <div className="flex h-full items-center justify-center text-xs text-slate-400">Loading the reference chart…</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={rows} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -83,9 +173,9 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
               <XAxis
                 dataKey="ageYears"
                 type="number"
-                domain={[rows[0].ageYears, rows[rows.length - 1].ageYears]}
-                ticks={yearTicks(rows)}
-                tickFormatter={(v) => `${v}y`}
+                domain={[window[0] / 12, window[1] / 12]}
+                ticks={ticks}
+                tickFormatter={format}
                 tick={{ fill: chart.tick, fontSize: 11 }}
                 axisLine={{ stroke: chart.axis }}
                 tickLine={false}
@@ -95,47 +185,35 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
                 axisLine={{ stroke: chart.axis }}
                 tickLine={false}
                 width={44}
-                domain={["auto", "auto"]}
-                tickFormatter={(v) => `${Math.round(v)}`}
+                domain={y ? y.domain : ["auto", "auto"]}
+                ticks={y?.ticks}
+                allowDataOverflow
+                tickFormatter={(v) => `${Number.isInteger(v) ? v : v.toFixed(1)}`}
+                label={spec.unit ? { value: spec.unit, angle: -90, position: "insideLeft", fill: chart.tick, fontSize: 11 } : undefined}
               />
               <Tooltip
-                formatter={(value, name) => [fmt(value), name]}
-                labelFormatter={(label) => `Age ${ageLabel(label)}`}
-                contentStyle={chart.tooltipStyle}
+                content={<ChartTooltip spec={spec} isBmi={isBmi} points={points} childName={name} sexWord={sexWord} />}
+                cursor={{ stroke: chart.axis, strokeDasharray: "3 3" }}
               />
 
               {isBmi ? (
                 <>
-                  <Area type="monotone" dataKey="underweight" stackId="bands" stroke="none" fill={chart.band("#dbe4f5")} fillOpacity={chart.opacity(0.7)} tooltipType="none" activeDot={false} isAnimationActive={false} />
-                  <Area type="monotone" dataKey="healthy" stackId="bands" stroke="none" fill={chart.band("#c8f0dc")} fillOpacity={chart.opacity(0.6)} tooltipType="none" activeDot={false} isAnimationActive={false} />
-                  <Area type="monotone" dataKey="overweight" stackId="bands" stroke="none" fill={chart.band("#fbeec2")} fillOpacity={chart.opacity(0.7)} tooltipType="none" activeDot={false} isAnimationActive={false} />
-                  <Area type="monotone" dataKey="obesity" stackId="bands" stroke="none" fill={chart.band("#fde2c8")} fillOpacity={chart.opacity(0.7)} tooltipType="none" activeDot={false} isAnimationActive={false} />
-                  <Area type="monotone" dataKey="severeBand" stackId="bands" stroke="none" fill={chart.band("#f9d3d3")} fillOpacity={chart.opacity(0.6)} tooltipType="none" activeDot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="p5" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="P5 (underweight)" isAnimationActive={false} />
-                  <Line type="monotone" dataKey="p50" stroke={chart.median} strokeWidth={1.5} strokeDasharray="2 3" dot={false} name="P50 (median)" isAnimationActive={false} />
-                  <Line type="monotone" dataKey="p95" stroke="#c2760c" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="P95 (obesity)" isAnimationActive={false} />
-                  <Line type="monotone" dataKey="severe" stroke="#dc2626" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="120% of P95 (severe obesity)" isAnimationActive={false} />
+                  {BMI_BANDS.map(([key, color]) => (
+                    <Area key={key} type="monotone" dataKey={key} stackId="bands" stroke="none" fill={chart.band(color)} fillOpacity={chart.opacity(0.7)} tooltipType="none" activeDot={false} isAnimationActive={false} />
+                  ))}
+                  <Line type="monotone" dataKey="p50" stroke={chart.median} strokeWidth={1.5} strokeDasharray="2 3" dot={false} tooltipType="none" activeDot={false} isAnimationActive={false} />
                 </>
               ) : (
                 <>
                   <Area type="monotone" dataKey="belowP3" stackId="bands" stroke="none" fill={chart.band("#dbe4f5")} fillOpacity={chart.opacity(0.7)} tooltipType="none" activeDot={false} isAnimationActive={false} />
                   <Area type="monotone" dataKey="typicalRange" stackId="bands" stroke="none" fill={chart.band("#c8f0dc")} fillOpacity={chart.opacity(0.6)} tooltipType="none" activeDot={false} isAnimationActive={false} />
                   <Area type="monotone" dataKey="aboveP97" stackId="bands" stroke="none" fill={chart.band("#fde2c8")} fillOpacity={chart.opacity(0.6)} tooltipType="none" activeDot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="p3" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="P3 (low)" isAnimationActive={false} />
-                  <Line type="monotone" dataKey="p50" stroke={chart.median} strokeWidth={1.5} strokeDasharray="2 3" dot={false} name="P50 (median)" isAnimationActive={false} />
-                  <Line type="monotone" dataKey="p97" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="P97 (high)" isAnimationActive={false} />
+                  <Line type="monotone" dataKey="p50" stroke={chart.median} strokeWidth={1.5} strokeDasharray="2 3" dot={false} tooltipType="none" activeDot={false} isAnimationActive={false} />
                 </>
               )}
 
               {/* The child's own measurements. */}
-              <Scatter
-                data={points}
-                dataKey="value"
-                name={child.nickname || child.fullName}
-                fill={chart.own}
-                line={{ stroke: chart.own, strokeWidth: 2.5 }}
-                isAnimationActive={false}
-              />
+              <Scatter data={points} dataKey="value" name={name} fill={chart.own} line={{ stroke: chart.own, strokeWidth: 2.5 }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         )}
@@ -145,39 +223,26 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
         items={
           isBmi
             ? [
-                [line("bg-[#056559] dark:bg-teal-400"), child.nickname || child.fullName],
-                [dashed("border-slate-400 dark:border-slate-500"), "P5 (underweight)"],
-                [dashed("border-[#00685f] dark:border-teal-300"), "P50 (median)"],
-                [dashed("border-[#c2760c] dark:border-amber-500"), "P95 (obesity)"],
-                [dashed("border-red-500"), "120% of P95 (severe obesity)"],
+                [line("bg-[#056559] dark:bg-teal-400"), name],
+                [dashed("border-[#00685f] dark:border-teal-300"), `Average for ${sexWord}`],
+                ...BMI_BANDS.map(([, , label], i) => [
+                  dot(["bg-[#dbe4f5] dark:bg-blue-500/50", "bg-[#c8f0dc] dark:bg-emerald-500/50", "bg-[#fbeec2] dark:bg-yellow-500/50", "bg-[#fde2c8] dark:bg-orange-500/50", "bg-[#f9d3d3] dark:bg-red-500/50"][i]),
+                  label,
+                ]),
               ]
             : [
-                [line("bg-[#056559] dark:bg-teal-400"), child.nickname || child.fullName],
-                [dashed("border-slate-400 dark:border-slate-500"), "P3 (low)"],
-                [dashed("border-[#00685f] dark:border-teal-300"), "P50 (median)"],
-                [dashed("border-slate-400 dark:border-slate-500"), "P97 (high)"],
-              ]
-        }
-      />
-      <Legend
-        items={
-          isBmi
-            ? [
-                [dot("bg-[#dbe4f5] dark:bg-blue-500/50"), "Underweight"],
-                [dot("bg-[#c8f0dc] dark:bg-emerald-500/50"), "Healthy weight"],
-                [dot("bg-[#fbeec2] dark:bg-yellow-500/50"), "Overweight"],
-                [dot("bg-[#fde2c8] dark:bg-orange-500/50"), "Obesity"],
-                [dot("bg-[#f9d3d3] dark:bg-red-500/50"), "Severe obesity"],
-              ]
-            : [
-                [dot("bg-[#dbe4f5] dark:bg-blue-500/50"), "Below P3"],
-                [dot("bg-[#c8f0dc] dark:bg-emerald-500/50"), "Typical range"],
-                [dot("bg-[#fde2c8] dark:bg-orange-500/50"), "Above P97"],
+                [line("bg-[#056559] dark:bg-teal-400"), name],
+                [dot("bg-[#c8f0dc] dark:bg-emerald-500/50"), `Usual range for ${sexWord}`],
+                [dashed("border-[#00685f] dark:border-teal-300"), "Average"],
+                [dot("bg-[#dbe4f5] dark:bg-blue-500/50"), spec.low],
+                [dot("bg-[#fde2c8] dark:bg-orange-500/50"), spec.high],
               ]
         }
       />
       {points.length === 0 && (
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">No {spec.title.split("-")[0].toLowerCase()} measurements yet.</p>
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          No {spec.title.toLowerCase()} measurements yet. Add one and it appears as a dot on this chart.
+        </p>
       )}
     </>
   );
@@ -185,19 +250,18 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
   if (bare) return body;
 
   return (
-    <div className="mb-6 rounded-2xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 shadow-2xs">
+    <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
       <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{spec.title}</h2>
-      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
         {isBmi
-          ? "CDC 2000 reference for the child's sex: dashed lines are the 5th and 50th percentile, the 95th (obesity) and 120% of the 95th (severe obesity)."
-          : "CDC 2000 reference for the child's sex: dashed lines are the 3rd, 50th and 97th percentile."}
+          ? `The colours show the weight categories doctors use for ${sexWord}. ${name}’s measurements are the solid line.`
+          : `The green band is the usual range: 94 of every 100 ${sexWord} fall inside it. The dotted line is the average. ${name}’s measurements are the solid line.`}
       </p>
       <div className="mt-3">{body}</div>
-      {isBmi && (
-        <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">
-          BMI-for-age applies from 2 years. Below that, weight and head circumference are what clinicians use.
-        </p>
-      )}
+      <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
+        Reference: CDC 2000 growth charts{isBmi ? "" : " (usual range = 3rd to 97th percentile)"}.
+        {isBmi && " BMI-for-age applies from 2 years."}
+      </p>
     </div>
   );
 }
