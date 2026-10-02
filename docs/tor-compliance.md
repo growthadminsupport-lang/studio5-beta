@@ -137,12 +137,12 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 | 6.1 | Stack selected **and justified in the system overview document** | 🟡 Stack matches `data-knowledge/Growth-techstack.jpg`. The justification is spread across `diagrams.md` and `ai-integration.md` and needs consolidating into the D10 overview. |
 | 6.2 | Data minimisation | 🟢 Caretakers do not receive HN or results. The admin export has no names, contacts, HN or exact dates. |
 | 6.2 | Privacy notice **prior to registration** | 🟢 Linked from the register form. Rewritten on 2026-10-01 for roles, sharing, processors and the export. |
-| 6.2 | X-rays stored securely, only accessible to the uploading account | 🟢 Readable only by the child's doctor, through a checked route. They are not static files. **⚠️ Stored on Render's ephemeral disk, so a redeploy loses them** (§5). |
+| 6.2 | X-rays stored securely, only accessible to the uploading account | 🟢 Readable only by the child's doctor, through a checked route. They are not static files. Kept in a private Cloudflare R2 bucket when configured (DEPLOY.md), so they survive redeploys; without it, on Render's ephemeral disk. |
 | 6.2 | Passwords never plain text, industry-standard hashing | 🟢 bcrypt |
 | 6.2 | Document what data is collected, stored, and deleted on request | 🟢 The privacy notice lists it. Deleting a child or account removes the rows **and** the X-ray and avatar files. |
 | 6.3 | Documented train/test split, **no overlap** | 🔴 **No independent test set.** refine9 trained on the 12,611 RSNA training images. Its MAE comes from the 1,425 validation images, which were also used to choose it from nine runs. The RSNA test set (200 images) is the obvious held-out check. |
 | 6.3 | MAE in months on held-out test set | 🟡 7.43 months and 80.2 % within a year, on validation rather than held-out test images (above). |
-| 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟡 Preprocessing and augmentation are documented in `ai-service/refine9/README.md` and the team's `train.py`: CLAHE, 456 px, rotation ±15°, jitter, flip, and 4-view TTA. **Limitations by age and sex are not.** |
+| 6.3 | Document augmentation/preprocessing and observed limitations by age or sex | 🟡 Preprocessing and augmentation are documented in `ai-service/refine9/README.md`. **By sex:** MAE 7.14 months for boys, 7.76 for girls. **By age: not yet reported.** Production runs one view (`BONE_AGE_TTA=off`) whose accuracy is unmeasured; the published figures are four-view. |
 | 6.3 | UI itself presents bone age as a screening aid, not only in docs | 🟢 |
 | 6.4 | Video production standards | ⚪ Videos are the team's part |
 | 6.5 | Functional testing before each milestone, test record maintained | 🟢 100 unit tests (including the refine9 preprocessing against cv2/torchvision output), 26 API e2e tests (the role matrix over HTTP, X-ray file handling), and 24 scripted browser flows covering all four roles and PDF, JPEG and WebP uploads. |
@@ -176,7 +176,8 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 5. Write the training and evaluation report (D4, §6.3). It must cover:
    - the split
    - refine9's MAE on the RSNA **test** images, which were not used to choose it
-   - errors by age band and sex
+   - errors by age band (by sex is now reported: 7.14 boys, 7.76 girls)
+   - single-view MAE, since production runs with `BONE_AGE_TTA=off`
 6. ~~Supply the real `AGE_MEAN` / `AGE_STD`~~ **Resolved 2026-10-01:** refine9 predicts months directly, so no calibration constants are needed and nothing is labelled provisional.
 
 **Ours, small**
@@ -185,4 +186,4 @@ usually means a wrong date of birth, a wrong exam date or a bad image.
 8. Write the parent user manual and the final report (D10).
 9. Add the Drive links (Figma, prototype, D5, logo files) to `docs/deliverables.md` (D1, D11).
 10. Time one refine9 prediction on Render after deploying (`inferenceMs` in the logs). If it is too slow, set `BONE_AGE_TTA=off`.
-11. Move X-ray storage off the ephemeral disk before real use. Doctors now keep a history, so a redeploy wiping it matters more. A free option is Cloudflare R2 (10 GB free, no egress fees), which fits the existing Cloudflare account.
+11. ~~Move X-ray storage off the ephemeral disk~~ Built: private Cloudflare R2 bucket (free tier). Configure it in Render (DEPLOY.md, "File storage").

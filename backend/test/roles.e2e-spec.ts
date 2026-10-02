@@ -2,7 +2,8 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, rmSync } from 'fs';
+import { AwsClient } from 'aws4fetch';
 import { join } from 'path';
 import request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
@@ -16,6 +17,7 @@ import { AppModule } from '../src/app.module';
  * (every table is truncated first). Skipped when unset, so `npm test` stays database-free.
  */
 const DB = process.env.E2E_DATABASE_URL;
+const R2_ENDPOINT = process.env.E2E_R2_ENDPOINT;
 const maybe = DB ? describe : describe.skip;
 
 const PASSWORD = 'Test1234!';
@@ -46,6 +48,15 @@ maybe('roles and permissions (e2e)', () => {
 
   beforeAll(async () => {
     process.env.DATABASE_URL = DB;
+    // With an S3-compatible endpoint (e.g. a local moto or MinIO server), uploads also go
+    // through the R2 path in common/uploads.ts.
+    if (R2_ENDPOINT) {
+      process.env.R2_ENDPOINT = R2_ENDPOINT;
+      process.env.R2_ACCOUNT_ID = 'e2e';
+      process.env.R2_ACCESS_KEY_ID = 'test';
+      process.env.R2_SECRET_ACCESS_KEY = 'test';
+      process.env.R2_BUCKET = process.env.E2E_R2_BUCKET ?? 'growth-test';
+    }
     process.env.JWT_ACCESS_SECRET ??= 'e2e-secret';
     process.env.JWT_ACCESS_EXPIRES_IN ??= '15m';
     delete process.env.RESEND_API_KEY;
@@ -311,6 +322,37 @@ maybe('roles and permissions (e2e)', () => {
         .expect(200);
       expect(image.headers['content-type']).toBe('image/webp');
       expect((image.body as Buffer).equals(webp)).toBe(true);
+
+      if (R2_ENDPOINT) {
+        // As after a redeploy: the local copy is gone, the R2 copy still serves the image.
+        const row = await prisma.boneAgePrediction.findUniqueOrThrow({
+          where: { id: res.body.id },
+        });
+        const name = row.imageUrl.split('/').pop()!;
+        rmSync(join(UPLOADS, name));
+        const again = await as('doctor')
+          .get(`/bone-age/${res.body.id}/image`)
+          .buffer(true)
+          .parse((r, cb) => {
+            const chunks: Buffer[] = [];
+            r.on('data', (c: Buffer) => chunks.push(c));
+            r.on('end', () => cb(null, Buffer.concat(chunks)));
+          })
+          .expect(200);
+        expect((again.body as Buffer).equals(webp)).toBe(true);
+        await as('doctor').delete(`/bone-age/${res.body.id}`).expect(200);
+        const r2 = new AwsClient({
+          accessKeyId: 'test',
+          secretAccessKey: 'test',
+          service: 's3',
+          region: 'auto',
+        });
+        const gone = await r2.fetch(
+          `${R2_ENDPOINT}/${process.env.R2_BUCKET}/bone-age/${name}`,
+        );
+        expect(gone.status).toBe(404);
+        return;
+      }
       await as('doctor').delete(`/bone-age/${res.body.id}`).expect(200);
     });
 

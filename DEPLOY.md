@@ -96,3 +96,43 @@ Set `SEED_DEMO=true` locally for one demo account per role (password `Demo1234!`
 
 Leave `RESEND_API_KEY` unset locally: forgot-password then returns the reset token in the
 response instead of emailing it.
+
+## File storage (Cloudflare R2)
+
+X-rays and profile photos must outlive deploys: Render's free disk is wiped each time. The API
+keeps every upload in a private R2 bucket when these four variables are set, and reads it back
+from there. Free tier: 10 GB stored, 1 million writes and 10 million reads a month, no charge
+for downloads. R2 needs a payment method on the Cloudflare account even on the free tier;
+nothing is charged within those limits.
+
+1. Cloudflare dashboard (the account that holds `hacklgroups.com`) → **R2 Object Storage**.
+   Accept the R2 terms if asked.
+2. **Create bucket** → name `growth-uploads`, location **Automatic**, storage class
+   **Standard**. Leave it private: do not enable a public `r2.dev` URL or a custom domain.
+   The API serves images itself, after checking who is asking.
+3. R2 overview → **Account details** (right side) → copy the **Account ID**.
+4. R2 overview → **API Tokens** → **Manage** (or "Manage R2 API Tokens") → **Create Account API
+   token** (or "Create API token"):
+   - Token name `growth-api`
+   - Permissions **Object Read & Write**
+   - Specify bucket(s): **Apply to specific buckets only** → `growth-uploads`
+   - TTL: Forever
+   - **Create**. Copy the **Access Key ID** and **Secret Access Key** now; the secret is
+     shown only once. (Ignore the "Token value"; S3 clients use the key pair.)
+5. Render → `growth-api` → **Environment** → add:
+
+   | Variable | Value |
+   | --- | --- |
+   | `R2_ACCOUNT_ID` | the Account ID from step 3 |
+   | `R2_ACCESS_KEY_ID` | Access Key ID from step 4 |
+   | `R2_SECRET_ACCESS_KEY` | Secret Access Key from step 4 |
+   | `R2_BUCKET` | `growth-uploads` |
+
+   **Save, rebuild, and deploy**.
+6. Check: the deploy log shows `Uploads are kept in R2 bucket "growth-uploads"` when the first
+   upload arrives. Upload an X-ray as a doctor, redeploy, and open it again: it still shows.
+   In Cloudflare the object appears under `bone-age/`.
+
+Files uploaded before R2 was configured are not moved; they were on the old disk and are gone
+after a redeploy (the app shows "no longer available").
+
