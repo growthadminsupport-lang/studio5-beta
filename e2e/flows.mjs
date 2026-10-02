@@ -2,7 +2,7 @@
 // How to run, and what it needs: e2e/README.md.
 import { chromium, firefox, webkit } from 'playwright-core';
 const ENGINE = process.env.BROWSER ?? 'chromium';
-import { mkdirSync } from 'fs';
+import { mkdirSync, readFileSync } from 'fs';
 
 const APP = process.env.E2E_APP ?? 'http://localhost:5199';
 const XRAYS = process.env.E2E_XRAYS ?? new URL('./fixtures', import.meta.url).pathname;
@@ -355,6 +355,113 @@ try {
   await admin.getByText('Growth entries').first().waitFor();
   await shot(admin, '10-admin-usage');
   check('admin usage loads', true);
+
+  // ---------------------------------------------------------------- Admin portal, every tab and action
+  // Tabs are clicked, not opened by URL: relative tab links once sent /admin/doctors to
+  // /admin/doctors/articles and an empty page, which URL-only checks never saw.
+  const TAB_TEXT = { Articles: 'New article', Inbox: 'Status', Usage: 'Growth entries', Export: 'Growth measurements', Doctors: 'Check the licence number' };
+  await admin.goto(`${APP}/admin`);
+  await admin.waitForURL('**/admin/doctors');
+  const badTabs = [];
+  for (const [tab, text] of Object.entries(TAB_TEXT)) {
+    await admin.getByRole('link', { name: tab, exact: true }).click();
+    await admin.waitForURL(`**/admin/${tab.toLowerCase()}`);
+    await admin.getByText(text).first().waitFor({ timeout: 10000 }).catch(() => badTabs.push(`${tab}: no "${text}"`));
+    if (new URL(admin.url()).pathname !== `/admin/${tab.toLowerCase()}`) badTabs.push(`${tab}: at ${admin.url()}`);
+  }
+  check('admin tabs switch by clicking, each at /admin/<tab> with its content', badTabs.length === 0, badTabs.join('; '));
+
+  // Doctors: reject with a reason, find it under Rejected, then approve it from there.
+  const rejEmail = `rej${stamp}@e2e.test`, REJ = `Dr Reject ${stamp}`;
+  const rejReg = await (await fetch(`${API}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: rejEmail, password: 'Test1234!', fullName: REJ, accountType: 'DOCTOR', licenseNumber: 'MD-999', hospital: 'Test Hospital', acceptedTerms: true }) })).json();
+  const rejTok = (await (await fetch(`${API}/auth/resend-verification`, { method: 'POST', headers: { Authorization: `Bearer ${rejReg.accessToken}` } })).json()).token;
+  await fetch(`${API}/auth/verify-email`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: rejTok }) });
+  await admin.reload();
+  await admin.getByRole('row', { name: REJ }).getByRole('button', { name: 'Reject' }).click();
+  const rejDialog = admin.getByRole('dialog');
+  const rejectDisabledEmpty = await rejDialog.getByRole('button', { name: 'Reject' }).isDisabled();
+  await rejDialog.getByLabel('Reason').fill('Licence number not found in the medical council register.');
+  await rejDialog.getByRole('button', { name: 'Reject' }).click();
+  await rejDialog.waitFor({ state: 'detached' });
+  await admin.getByRole('row', { name: REJ }).waitFor({ state: 'detached' });
+  await admin.getByLabel('Show').click();
+  await admin.getByRole('option', { name: 'Rejected' }).click();
+  const rejRow = admin.getByRole('row', { name: REJ });
+  await rejRow.waitFor();
+  const reasonShown = (await rejRow.textContent()).includes('Licence number not found');
+  await rejRow.getByRole('button', { name: 'Approve' }).click();
+  await rejRow.waitFor({ state: 'detached' });
+  await admin.getByLabel('Show').click();
+  await admin.getByRole('option', { name: 'Approved' }).click();
+  await admin.getByRole('row', { name: REJ }).waitFor();
+  check('admin rejects a doctor with a reason (required), sees it under Rejected, can approve later',
+    rejectDisabledEmpty && reasonShown);
+
+  // Articles: create a draft, publish it, see it in Knowledge, unpublish, delete.
+  const ART = `Sleep and growth ${stamp}`, SLUG = `sleep-and-growth-${stamp}`;
+  await admin.getByRole('link', { name: 'Articles', exact: true }).click();
+  await admin.getByRole('button', { name: 'New article' }).click();
+  const artDialog = admin.getByRole('dialog');
+  await artDialog.getByLabel('Title').fill(ART);
+  await artDialog.getByLabel('URL slug (optional)').fill(SLUG);
+  await artDialog.getByLabel('Summary').fill('Why sleep matters for growth hormone.');
+  await artDialog.getByLabel('Content (Markdown)').fill('Growth hormone is released mostly during deep sleep.\n\n## Sources\n- Test source');
+  await artDialog.getByRole('button', { name: 'Save' }).click();
+  await artDialog.waitFor({ state: 'detached' });
+  const artRow = admin.getByRole('row', { name: new RegExp(ART) });
+  const draftShown = (await artRow.textContent()).includes('draft');
+  const knowledgeBefore = await (await fetch(`${API}/articles/${SLUG}`)).status;
+  await artRow.getByRole('button', { name: 'Edit' }).click();
+  await artDialog.getByLabel('Published').check();
+  await artDialog.getByRole('button', { name: 'Save' }).click();
+  await artDialog.waitFor({ state: 'detached' });
+  const publishedShown = (await artRow.textContent()).includes('published');
+  const reader = await newPage();
+  await reader.goto(`${APP}/knowledge/${SLUG}`);
+  await reader.getByText('Growth hormone is released mostly during deep sleep.').waitFor();
+  await reader.close();
+  await artRow.getByRole('button', { name: 'Edit' }).click();
+  await artDialog.getByLabel('Published').uncheck();
+  await artDialog.getByRole('button', { name: 'Save' }).click();
+  await artDialog.waitFor({ state: 'detached' });
+  const knowledgeAfter = await (await fetch(`${API}/articles/${SLUG}`)).status;
+  admin.once('dialog', (d) => d.accept());
+  await artRow.getByRole('button', { name: 'Delete' }).click();
+  await artRow.waitFor({ state: 'detached' });
+  check('admin creates a draft article, publishes it (readable in Knowledge), unpublishes and deletes it',
+    draftShown && knowledgeBefore === 404 && publishedShown && knowledgeAfter === 404);
+
+  // Inbox: mark read, resolve, reopen; the status filter follows.
+  const REPORT = `The chart took a long time to load (${STAMP}).`;
+  await admin.getByRole('link', { name: 'Inbox', exact: true }).click();
+  const card = admin.locator('.MuiPaper-root').filter({ hasText: REPORT });
+  await card.getByRole('button', { name: 'Mark read' }).click();
+  await card.waitFor({ state: 'detached' });
+  const pickStatus = async (name) => {
+    await admin.getByLabel('Status').click();
+    await admin.getByRole('option', { name, exact: true }).click();
+  };
+  await pickStatus('Read');
+  await card.getByRole('button', { name: 'Resolved' }).click();
+  await card.waitFor({ state: 'detached' });
+  await pickStatus('Resolved');
+  await card.getByRole('button', { name: 'Reopen' }).click();
+  await card.waitFor({ state: 'detached' });
+  await pickStatus('New');
+  await card.waitFor();
+  check('admin inbox: mark read, resolve and reopen move the message between filters', true);
+
+  // Export: three anonymised CSVs, with no names, emails or hospital numbers.
+  await admin.getByRole('link', { name: 'Export', exact: true }).click();
+  let exportOk = true;
+  for (const label of ['Growth measurements', 'Puberty screenings', 'Bone age']) {
+    const [dl] = await Promise.all([admin.waitForEvent('download'), admin.getByRole('button', { name: label }).click()]);
+    const csv = readFileSync(await dl.path(), 'utf8');
+    const lines = csv.trim().split('\n');
+    if (lines.length < 2 || /@|Mali Test|HN-77001|Somchai/.test(csv)) exportOk = false;
+  }
+  check('admin exports growth, puberty and bone-age CSVs with data and nothing identifying', exportOk);
 
   // ---------------------------------------------------------------- Parent removes caretaker
   await parent.goto(`${APP}/people`);
