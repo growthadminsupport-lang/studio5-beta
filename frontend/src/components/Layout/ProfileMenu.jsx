@@ -60,12 +60,14 @@ function ProfileMenu() {
             onClick={() => setOpen(false)}
           >
             <Settings size={17} strokeWidth={1.8} />
-            <span>Setting</span>
+            <span>Settings</span>
           </Link>
 
+          {/* Phones only: on wider screens the top bar's Admin link goes to the same page. */}
           {isAdmin && (
             <Link
               to="/admin"
+              className="profile-dropdown-phone-only"
               onClick={() => setOpen(false)}
             >
               <ShieldCheck size={17} strokeWidth={1.8} />

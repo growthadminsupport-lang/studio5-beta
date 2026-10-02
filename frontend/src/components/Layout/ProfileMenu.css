@@ -89,8 +89,16 @@
   margin: 4px;
 }
 
+.profile-dropdown a.profile-dropdown-phone-only {
+  display: none;
+}
+
 /* Mobile Screens Only (< 768px) */
 @media (max-width: 768px) {
+  .profile-dropdown a.profile-dropdown-phone-only {
+    display: flex;
+  }
+
   .profile-avatar {
     width: 32px;
     height: 32px;
