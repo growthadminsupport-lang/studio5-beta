@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Brain, AlertTriangle, CheckCircle2, Send, CalendarClock } from 'lucide-react';
+import { Brain, AlertTriangle, CheckCircle2, Send, CalendarClock, Eye, HelpCircle, Lock, Clock } from 'lucide-react';
 import { api, errorMessage } from '../lib/api';
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
+import { BabyOnTheWay } from '../components/ChildProfile/BirthCards';
+import { isUnborn } from '../utils/childDisplay';
 
 
 
@@ -150,6 +152,17 @@ function FollowUpPlan({ plan }) {
 function PubertyPage() {
   const { activeChild: child } = useChildren();
   if (!child) return <NoChildState />;
+  // A baby on the way: nothing to measure or screen until the birth.
+  if (isUnborn(child.dateOfBirth)) {
+    return (
+      <div className="min-h-screen bg-slate-50/50 py-8 dark:bg-slate-900">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+          <ChildProfileCard />
+          <BabyOnTheWay child={child} />
+        </div>
+      </div>
+    );
+  }
   return <PubertyContent key={child.id} child={child} />;
 }
 
@@ -244,7 +257,7 @@ function PubertyContent({ child }) {
         <div className="mb-6">
           <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">Puberty Screening</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            A guided screening tool, not a clinical diagnosis. Talk to a pediatrician for a formal assessment.
+            A screening aid, not a diagnosis.
           </p>
         </div>
 
@@ -279,38 +292,11 @@ function PubertyContent({ child }) {
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Before you start</h2>
             </div>
 
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              A few questions about the physical changes that mark the start of puberty, checked against the
-              age ranges doctors use for {child.fullName}. Two minutes.
-            </p>
-
-            <ul className="flex flex-col gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <li className="flex gap-2">
-                <span className="text-[#056559] dark:text-teal-300">•</span>
-                <span>
-                  <span className="font-medium text-slate-900 dark:text-slate-100">You never need to examine {child.fullName}.</span>{' '}
-                  Answer from what you have happened to notice. Most of it is everyday stuff — shoe sizes,
-                  body odour, growing out of a uniform.
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#056559] dark:text-teal-300">•</span>
-                <span>
-                  <span className="font-medium text-slate-900 dark:text-slate-100">"Not sure" is a real answer.</span> Saying so
-                  is far more useful than guessing — a guess can send the wrong family to a doctor.
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#056559] dark:text-teal-300">•</span>
-                <span>Approximate ages are fine — "about when did you first notice it".</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#056559] dark:text-teal-300">•</span>
-                <span>
-                  Answers are stored against {child.fullName}&apos;s profile. The result is shared with the parent and the
-                  child&apos;s doctor only.
-                </span>
-              </li>
+            <ul className="flex flex-col gap-2.5 text-sm text-slate-600 dark:text-slate-300">
+              <li className="flex items-center gap-2.5"><Eye size={16} className="shrink-0 text-[#056559] dark:text-teal-300" />Answer only what you have noticed. Never examine {child.nickname || child.fullName.split(' ')[0]}.</li>
+              <li className="flex items-center gap-2.5"><HelpCircle size={16} className="shrink-0 text-[#056559] dark:text-teal-300" />&quot;Not sure&quot; is a good answer.</li>
+              <li className="flex items-center gap-2.5"><Lock size={16} className="shrink-0 text-[#056559] dark:text-teal-300" />Only the parent and the doctor see the result.</li>
+              <li className="flex items-center gap-2.5"><Clock size={16} className="shrink-0 text-[#056559] dark:text-teal-300" />About 2 minutes.</li>
             </ul>
 
             <button
@@ -350,9 +336,6 @@ function PubertyContent({ child }) {
               <div className="mb-1 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Everyday changes</h2>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    Things you would notice normally, without looking for them.
-                  </p>
                 </div>
                 <button
                   type="button"
@@ -365,7 +348,7 @@ function PubertyContent({ child }) {
 
               <SignQuestion
                 label="Have they been growing noticeably faster recently?"
-                description="Suddenly getting taller much faster than in previous years."
+                description="Taller faster than before."
                 value={answers.growthSpurt}
                 onChange={(v) => set('growthSpurt', v)}
               />
@@ -373,7 +356,7 @@ function PubertyContent({ child }) {
               {!isFemale && (
                 <SignQuestion
                   label="Has his voice started to deepen?"
-                  description="Getting lower, or cracking and breaking between high and low."
+                  description="Lower, or cracking."
                   value={answers.voiceDeepening}
                   onChange={(v) => set('voiceDeepening', v)}
                 />
@@ -381,25 +364,25 @@ function PubertyContent({ child }) {
 
               <SignQuestion
                 label="Are they outgrowing clothes or shoes unusually fast?"
-                description="Needing the next shoe size or a new uniform much sooner than before."
+                description="Needing bigger sizes sooner than usual."
                 value={answers.rapidClothingOrShoeSizeChange}
                 onChange={(v) => set('rapidClothingOrShoeSizeChange', v)}
               />
               <SignQuestion
                 label="Has their body odour changed?"
-                description="Adult-type body odour, or needing to wash or use deodorant when they did not before."
+                description="Adult body odour; now needs deodorant."
                 value={answers.bodyOdourChange}
                 onChange={(v) => set('bodyOdourChange', v)}
               />
               <SignQuestion
                 label="Have they developed acne or oily skin?"
-                description="Spots on the face, back or chest, or skin and hair becoming greasier."
+                description="Spots, or oily skin or hair."
                 value={answers.acne}
                 onChange={(v) => set('acne', v)}
               />
               <SignQuestion
                 label="Have there been noticeable changes in mood or behaviour?"
-                description="More irritable, more private, or bigger swings in mood than before."
+                description="More irritable, private or moody."
                 value={answers.behavioralMoodSkinChanges}
                 onChange={(v) => set('behavioralMoodSkinChanges', v)}
               />
@@ -409,16 +392,8 @@ function PubertyContent({ child }) {
             <div className="flex flex-col gap-3 rounded-2xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 shadow-2xs">
               <div>
                 <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Signs of physical development</h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  These are the changes a doctor uses to judge how far puberty has actually progressed, so
-                  they are the most useful part of this screening — but they are also private.
-                </p>
-                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="font-medium text-slate-900 dark:text-slate-100">
-                    You should never examine your child to answer these.
-                  </span>{' '}
-                  Answer only what you happen to have noticed, and choose &quot;Not sure&quot; for anything
-                  else.
+                <p className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <Eye size={14} className="shrink-0" /> Never examine your child. If you have not noticed, choose &quot;Not sure&quot;.
                 </p>
               </div>
 
@@ -426,7 +401,7 @@ function PubertyContent({ child }) {
                 <>
                   <SignQuestion
                     label="Has breast development begun?"
-                    description="Usually the first change — often noticeable through clothing before anything else. You do not need to look for it."
+                    description="Usually the first sign; often seen through clothing."
                     value={answers.breastDevelopment}
                     onChange={(v) => set('breastDevelopment', v)}
                     ageValue={answers.breastDevelopmentAgeYears}
@@ -434,7 +409,7 @@ function PubertyContent({ child }) {
                   />
                   <SignQuestion
                     label="Have her periods started?"
-                    description="The first period. This usually happens about two years after breast development begins."
+                    description="Usually about 2 years after breasts begin."
                     value={answers.menstruation}
                     onChange={(v) => set('menstruation', v)}
                     ageValue={answers.menstruationAgeYears}
@@ -444,7 +419,7 @@ function PubertyContent({ child }) {
               ) : (
                 <SignQuestion
                   label="Have you noticed the start of physical development?"
-                  description="In boys this usually begins with the testicles growing larger, before any other change. Most parents never see this and answer 'Not sure' — that is expected."
+                  description="Testicles getting larger, usually the first sign. Most parents answer 'Not sure'."
                   value={answers.testicularOrGenitalEnlargement}
                   onChange={(v) => set('testicularOrGenitalEnlargement', v)}
                   ageValue={answers.testicularOrGenitalEnlargementAgeYears}
@@ -454,7 +429,7 @@ function PubertyContent({ child }) {
 
               <SignQuestion
                 label={isFemale ? 'Has underarm or body hair appeared?' : 'Has facial, underarm or body hair appeared?'}
-                description="The first hairs are usually fine and straight, becoming coarser over time."
+                description="Fine at first, coarser later."
                 value={answers.pubicOrBodyHairGrowth}
                 onChange={(v) => set('pubicOrBodyHairGrowth', v)}
                 ageValue={answers.pubicOrBodyHairGrowthAgeYears}
@@ -464,26 +439,24 @@ function PubertyContent({ child }) {
 
             {/* General */}
             <div className="flex flex-col gap-3 rounded-2xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 shadow-2xs">
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">General</h2>
-
-              <div>
-                <input
-                  type="text"
-                  placeholder="Who answered these questions? (optional)"
-                  value={answers.answeredBy ?? ''}
-                  onChange={(e) => set('answeredBy', e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-[#056559] dark:focus:border-teal-400"
-                />
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  If someone who sees the child more often helped, note it here so the answers can be read in
-                  context.
-                </p>
-              </div>
+              <details className="group">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  More details <span className="font-normal text-slate-400">(optional)</span>
+                  <span className="ml-1 inline-block transition group-open:rotate-90">›</span>
+                </summary>
+                <div className="mt-3 flex flex-col gap-3">
+              <input
+                type="text"
+                placeholder="Who answered?"
+                value={answers.answeredBy ?? ''}
+                onChange={(e) => set('answeredBy', e.target.value)}
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-[#056559] dark:focus:border-teal-400"
+              />
 
               <input
                 type="number"
                 min="0"
-                placeholder="At approx. what age did parents or siblings begin puberty? (optional)"
+                placeholder="Age parents or siblings started puberty"
                 value={answers.familyPubertyOnsetAgeYears ?? ''}
                 onChange={(e) =>
                   set('familyPubertyOnsetAgeYears', e.target.value ? Number(e.target.value) : undefined)
@@ -492,7 +465,7 @@ function PubertyContent({ child }) {
               />
 
               <textarea
-                placeholder="Other health conditions, medications, or relevant history (optional)"
+                placeholder="Health conditions or medicines"
                 rows={2}
                 value={answers.otherHealthNotes ?? ''}
                 onChange={(e) => set('otherHealthNotes', e.target.value)}
@@ -500,12 +473,14 @@ function PubertyContent({ child }) {
               />
 
               <textarea
-                placeholder="Additional notes (optional)"
+                placeholder="Notes"
                 rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-[#056559] dark:focus:border-teal-400"
               />
+                </div>
+              </details>
 
               <button
                 type="button"

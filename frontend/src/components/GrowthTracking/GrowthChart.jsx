@@ -277,7 +277,7 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
       />
       {points.length === 0 && (
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          No {spec.title.toLowerCase()} measurements yet. Add one and it appears as a dot on this chart.
+          No {spec.title.toLowerCase()} yet.
         </p>
       )}
     </>
@@ -287,17 +287,9 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
 
   return (
     <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
+      {/* The legend says what each colour and line is; the reference is in the manual. */}
       <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{spec.title}</h2>
-      <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-        {isBmi
-          ? `The colours show the weight categories doctors use for ${sexWord}. ${name}’s measurements are the solid line.`
-          : `The green band is the usual range: 94 of every 100 ${sexWord} fall inside it. The dotted line is the average. ${name}’s measurements are the solid line.`}
-      </p>
       <div className="mt-3">{body}</div>
-      <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
-        Reference: CDC 2000 growth charts{isBmi ? "" : " (usual range = 3rd to 97th percentile)"}.
-        {isBmi && " BMI-for-age applies from 2 years."}
-      </p>
     </div>
   );
 }

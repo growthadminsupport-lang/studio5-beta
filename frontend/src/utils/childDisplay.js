@@ -19,10 +19,21 @@ export function getAge(dateOfBirth, today = new Date()) {
   return { years: Math.floor(months / 12), months: months % 12, totalMonths: months };
 }
 
+// A baby added before birth: the date of birth is the due date, still ahead.
+export function isUnborn(dateOfBirth, today = new Date()) {
+  const dob = parseDate(dateOfBirth);
+  if (!dob) return false;
+  const day = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return dob > day;
+}
+
+const longDate = (d) => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // "18 Years, 4 Months" / "7 Months"
 export function getAgeLabel(dateOfBirth) {
+  if (isUnborn(dateOfBirth)) return 'Not born yet';
   const age = getAge(dateOfBirth);
   if (!age) return '';
   const years = plural(age.years, 'Year');
@@ -32,6 +43,7 @@ export function getAgeLabel(dateOfBirth) {
 
 // "18 years old" / "7 months old"
 export function getAgeShort(dateOfBirth) {
+  if (isUnborn(dateOfBirth)) return 'Not born yet';
   const age = getAge(dateOfBirth);
   if (!age) return '';
   return age.years === 0 ? `${plural(age.months, 'month')} old` : `${plural(age.years, 'year')} old`;
@@ -41,7 +53,7 @@ export function getAgeShort(dateOfBirth) {
 export function getBornLabel(dateOfBirth) {
   const dob = parseDate(dateOfBirth);
   if (!dob) return '';
-  return `Born ${dob.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+  return isUnborn(dateOfBirth) ? `Due ${longDate(dob)}` : `Born ${longDate(dob)}`;
 }
 
 // 'FEMALE' -> 'Girl', 'MALE' -> 'Boy'

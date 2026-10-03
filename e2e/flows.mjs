@@ -93,10 +93,14 @@ try {
   await fake.close();
   await parent.goto(`${APP}/dashboard`);
 
+  // A new parent is guided: add the child first.
+  await parent.getByText('Getting started').waitFor();
+  check('a new parent sees the getting-started guide (add your child, first measurement)',
+    await parent.getByText('Add your child, or your baby before birth').isVisible() && await parent.getByText('Add the first height and weight').isVisible());
   await parent.getByRole('link', { name: 'Add your own child' }).click();
   await parent.getByText('You are this child’s').waitFor();
-  check('relationship is explained (mother or father / guardian / relative, and what managing means)',
-    (await parent.getByLabel('Mother or father').isChecked()) && (await parent.textContent('body')).includes('invite or remove a caretaker'));
+  check('relationship choices are offered (mother or father / guardian / relative), mother or father by default',
+    (await parent.getByLabel('Mother or father').isChecked()) && (await parent.getByLabel('Legal guardian').isVisible()));
   await parent.locator('input[type=text]').first().fill('Mali Test');
   await parent.locator('input[type=date]').fill('2016-03-15');
   await parent.getByRole('button', { name: 'Girl' }).click();
@@ -172,7 +176,7 @@ try {
   // Born 2026-06-01 with nothing measured: always inside some check-up window (AAP schedule),
   // so the dashboard says it is due and the parent has a reminder that opens Growth.
   // Suggestions load after the page: wait for the card rather than sampling it.
-  const dueCard = await parent.getByText(/check-up is due/).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+  const dueCard = await parent.getByText(/check-up due/).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
   await parent.goto(`${APP}/notifications`);
   const reminder = parent.getByText(/Baby's [0-9½]+-(month|year) check-up/).first();
   await reminder.waitFor();
@@ -219,6 +223,21 @@ try {
   await parent.getByText('Head 40.2 cm').waitFor();
   check('a baby\'s dashboard shows height, weight and head (no BMI), and head size can be edited in the history',
     /HEIGHT|Height/.test(babyTiles) && /Head/i.test(babyTiles) && !/BMI/.test(babyTiles) && !babyBmiShown, babyTiles);
+  // A baby on the way: added with a due date; no charts or measuring until the birth.
+  const due = new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10);
+  await parent.goto(`${APP}/children/new`);
+  await parent.locator('input[type=text]').first().fill('Bump Test');
+  await parent.getByLabel('Not born yet').check();
+  await parent.locator('input[type=date]').fill(due);
+  await parent.getByRole('button', { name: 'Save and continue' }).click();
+  await parent.waitForURL('**/dashboard');
+  await parent.getByText(/Bump is on the way · Due/).waitFor();
+  const noChart = (await parent.getByText('Growth Trajectory').count()) === 0;
+  await parent.goto(`${APP}/growth`);
+  await parent.getByText(/Bump is on the way/).waitFor();
+  const noForm = (await parent.getByPlaceholder('Height (cm)').count()) === 0;
+  check('a baby not born yet can be added with a due date: "on the way", no charts or measuring', noChart && noForm);
+
   await parent.goto(`${APP}/dashboard`);
   // Back to the first child for the rest of the flow.
   await parent.getByRole('button', { name: 'Switch child' }).click();
@@ -230,7 +249,7 @@ try {
   await parent.getByPlaceholder('Weight (kg)').first().fill('26');
   await parent.locator('form input[type=date]').fill('2025-09-15');
   await parent.getByRole('button', { name: 'Add measurement' }).click();
-  await parent.getByText('typical range for the child').waitFor({ timeout: 15000 });
+  await parent.getByText(/(Within|Outside) the usual range\./).first().waitFor({ timeout: 15000 });
   await parent.getByPlaceholder('Height (cm)').first().fill('134');
   await parent.getByPlaceholder('Weight (kg)').first().fill('31');
   await parent.locator('form input[type=date]').fill('2026-09-15');
@@ -286,6 +305,7 @@ try {
   await caretaker.waitForURL('**/dashboard');
   await caretaker.getByText('You: Caretaker').waitFor();
   check('caretaker accepts and sees the child, no HN', !(await caretaker.textContent('body')).includes('HN-77001'));
+  check('the caretaker\'s guide is about measuring', await caretaker.getByText('Growth: enter height and weight').isVisible() && !(await caretaker.getByText('Add your child, or your baby before birth').count()));
   check('caretaker cannot edit the child (only the parent and doctor can)',
     (await caretaker.getByRole('button', { name: /Edit child profile|Set hospital number/ }).count()) === 0);
 
@@ -338,6 +358,12 @@ try {
   await doctor.waitForURL('**/dashboard');
   await doctor.getByText('You: Doctor').waitFor();
   check('approved doctor accepts and sees HN', (await doctor.textContent('body')).includes('HN-77001'));
+  check('the doctor\'s guide covers finding the patient and the AI steps',
+    await doctor.getByText('AI Prediction: upload the hand X-ray').isVisible() && await doctor.getByText(/search by HN/).isVisible());
+  await doctor.getByRole('button', { name: 'Got it' }).click();
+  await doctor.reload();
+  await doctor.getByText('You: Doctor').waitFor();
+  check('"Got it" hides the guide for good', (await doctor.getByText('Getting started').count()) === 0);
 
   // Invited by email to a second child, the doctor accepts from the dashboard, no link needed.
   const pTok = await apiToken(parentEmail);
@@ -392,7 +418,7 @@ try {
   // Held-out test-set accuracy of the mode that made the result: 1 in 8 off a year with one
   // view, 1 in 7 with four (docs/model-evaluation.md).
   check('accuracy shown is refine9 test-set figures with the age caution, despite stale B0 env vars',
-    body3.includes('±7 months') && /1 estimate in [78] /.test(body3) && body3.includes('least accurate under 10 years') && !body3.includes('±9 months'));
+    body3.includes('±7 months') && body3.includes('less reliable under 10') && !body3.includes('±9 months'));
   await doctor.locator('select').last().selectOption('NORMAL');
   await doctor.getByPlaceholder('Note for the family').last().fill('Growth plates look as expected. Recheck in a year.');
   await doctor.getByRole('button', { name: 'Save and share with family' }).last().click();

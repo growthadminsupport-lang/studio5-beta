@@ -133,6 +133,19 @@ export class GrowthService {
     const child = await this.prisma.child.findUniqueOrThrow({
       where: { id: childId },
     });
+    // Between the birth and today (a day of slack for time zones). A baby registered before
+    // birth has no measurements until it is born.
+    const day = 86_400_000;
+    if (measuredAt.getTime() > Date.now() + day) {
+      throw new BadRequestException('The date cannot be in the future.');
+    }
+    if (measuredAt.getTime() < child.dateOfBirth.getTime() - day) {
+      throw new BadRequestException(
+        child.dateOfBirth.getTime() > Date.now()
+          ? 'Not born yet: add measurements after the birth.'
+          : 'The date is before the date of birth.',
+      );
+    }
     const ageMonths = this.reference.ageInMonths(child.dateOfBirth, measuredAt);
     const bmi = computeBmi(heightCm, weightKg);
 
@@ -213,8 +226,8 @@ export class GrowthService {
       statusKey === 'SEVERE_OBESITY';
 
     const message = flagged
-      ? "This measurement falls notably outside the typical range for the child's age and sex. This is a screening signal, not a diagnosis — consider discussing it with a pediatrician."
-      : "This measurement is within the typical range for the child's age and sex.";
+      ? 'Outside the usual range. Worth asking your doctor.'
+      : 'Within the usual range.';
 
     return {
       message,

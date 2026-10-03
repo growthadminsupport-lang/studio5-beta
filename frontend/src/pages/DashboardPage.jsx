@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
 import InvitationsForYou from '../components/People/InvitationsForYou';
+import GettingStarted from '../components/Layout/GettingStarted';
+import { BabyOnTheWay, BirthDatePrompt } from '../components/ChildProfile/BirthCards';
+import { isUnborn } from '../utils/childDisplay';
 import GrowthChart from '../components/GrowthTracking/GrowthChart';
 import { api } from '../lib/api';
 import { describePercentile, hasBmi, useGrowthRecords } from '../lib/growth';
@@ -28,6 +31,8 @@ const MEASURES = {
   bmi: { label: 'BMI', unit: '', icon: Accessibility, valueKey: 'bmi', chartTitle: 'BMI and weight categories', percentileKey: 'bmiPercentile' },
   headCircumference: { label: 'Head', unit: 'cm', icon: CircleUserRound, valueKey: 'headCircumferenceCm', chartTitle: 'Head size compared with children the same age', percentileKey: 'headCircumferencePercentile' },
 };
+
+const shortDate = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 // Same cards as the Knowledge page (content/articles.js).
 const DASHBOARD_SLUGS = ['navigating-growth-spurts', 'nutrition-for-pre-teens', 'understanding-puberty'];
@@ -87,7 +92,6 @@ function DashboardPage() {
   // Same set as the Growth page: BMI from 2 years, head size before (lib/growth.js).
   const shownKeys = child && hasBmi(child.dateOfBirth) ? ['height', 'weight', 'bmi'] : ['height', 'weight', 'headCircumference'];
   const measureKey = shownKeys.includes(selectedMeasure) ? selectedMeasure : 'height';
-  const currentMeasure = MEASURES[measureKey];
   const { records } = useGrowthRecords(child?.id);
   const latestRecord = records[0] ?? null;
   const guidance = latestRecord?.guidance ?? null;
@@ -120,6 +124,7 @@ function DashboardPage() {
   // No child on the account yet — nothing else on the dashboard makes
   // sense without one, so this replaces the whole page body.
   if (!child) return <NoChildState />;
+  const unborn = isUnborn(child.dateOfBirth);
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-900 py-5 sm:py-8">
@@ -130,7 +135,9 @@ function DashboardPage() {
         ==================================================== */}
 
         <InvitationsForYou className="mb-6 max-w-none" />
+        <GettingStarted className="mb-6" hasRecords={records.length > 0} />
         <ChildProfileCard />
+        {unborn ? <BabyOnTheWay child={child} /> : <BirthDatePrompt child={child} hasRecords={records.length > 0} />}
 
         {/* ====================================================
             Worth a look — only renders once growth stats actually
@@ -160,6 +167,8 @@ function DashboardPage() {
             Growth Trajectory + Puberty
         ==================================================== */}
 
+        {/* A baby on the way has nothing to chart or screen yet. */}
+        {!unborn && (<>
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
 
           {/* Growth Trajectory */}
@@ -220,14 +229,6 @@ function DashboardPage() {
               })}
             </div>
 
-            <div>
-              <h3 className="text-sm font-bold text-[#056559] dark:text-teal-300">{currentMeasure.chartTitle}</h3>
-              <p className="mt-0.5 text-xs text-slate-400">
-                {measureKey === 'bmi'
-                  ? 'The colours are the weight categories doctors use, from 2 years.'
-                  : 'The green band is the usual range for the same age and sex; the dotted line is the average.'}
-              </p>
-            </div>
 
             <div className="mt-3">
               <GrowthChart child={child} measure={measureKey} records={records} bare height={260} />
@@ -279,14 +280,12 @@ function DashboardPage() {
                 ? boneAge.status === 'PENDING'
                   ? 'The last X-ray is still being analysed.'
                   : boneAge.review
-                    ? `Last X-ray ${new Date(boneAge.examDate).toLocaleDateString()}: reviewed.`
-                    : `Last X-ray ${new Date(boneAge.examDate).toLocaleDateString()}: waiting for your reading.`
-                : 'Upload a left-hand X-ray for an AI-assisted bone age estimate.'
+                    ? `Reviewed · ${shortDate(boneAge.examDate)}`
+                    : `Waiting for your reading · ${shortDate(boneAge.examDate)}`
+                : 'Upload a left-hand X-ray.'
               : boneAge
-                ? `Doctor's reading (${new Date(boneAge.examDate).toLocaleDateString()}): ${
-                    { NORMAL: 'normal for age', ADVANCED: 'advanced for age', DELAYED: 'delayed for age' }[boneAge.review]
-                  }.`
-                : "No result yet. The child's doctor adds the hand X-ray and records what it shows."}
+                ? `${{ NORMAL: 'Normal for age', ADVANCED: 'Advanced for age', DELAYED: 'Delayed for age' }[boneAge.review]} · ${shortDate(boneAge.examDate)}`
+                : 'No result yet.'}
           </p>
 
           <Link
@@ -303,6 +302,7 @@ function DashboardPage() {
             )}
           </Link>
         </div>
+        </>)}
 
         {/* ====================================================
             Parenting Resources — same dataset and card look as
