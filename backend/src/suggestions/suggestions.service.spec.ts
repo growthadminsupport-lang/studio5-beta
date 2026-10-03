@@ -27,6 +27,8 @@ function build(opts: {
     monthsAgo: number;
   } | null;
   role?: ChildRole;
+  /** When the latest measurement was taken; null = none. Default: today, so no check-up is due. */
+  measuredMonthsAgo?: number | null;
 }) {
   const child = {
     id: 'c1',
@@ -39,13 +41,14 @@ function build(opts: {
     child: { findUniqueOrThrow: async () => child },
     growthRecord: {
       findFirst: async () =>
-        opts.bmi
-          ? {
-              bmi: opts.bmi.value,
-              bmiPercentile: opts.bmi.percentile,
-              bmiPctOfP95: opts.bmi.pctOfP95,
-            }
-          : null,
+        opts.measuredMonthsAgo === null
+          ? null
+          : {
+              measuredAt: monthsAgo(opts.measuredMonthsAgo ?? 0),
+              bmi: opts.bmi?.value ?? null,
+              bmiPercentile: opts.bmi?.percentile ?? null,
+              bmiPctOfP95: opts.bmi?.pctOfP95 ?? null,
+            },
     },
     pubertyScreening: {
       findMany: async () =>
@@ -264,5 +267,26 @@ describe('SuggestionsService', () => {
     for (const s of all) {
       expect(s.body).not.toMatch(/\b(diagnos|disorder|abnormal|disease)/i);
     }
+  });
+
+  describe('well-child check-up', () => {
+    it('is due when the check-up age has passed and nothing was measured since', async () => {
+      // 10 years 2 months old, last measured 4 months ago: the 10-year check-up is due.
+      const out = await build({
+        ageYears: 10 + 2 / 12,
+        measuredMonthsAgo: 4,
+      }).forChild('u1', 'c1');
+      const checkup = out.find((s) => s.kind === 'CHECKUP_DUE');
+      expect(checkup?.title).toBe('The 10-year check-up is due');
+      expect(checkup?.actionHref).toBe('/children/c1/growth');
+    });
+
+    it('stays quiet once a measurement from the check-up is in', async () => {
+      const out = await build({
+        ageYears: 10 + 2 / 12,
+        measuredMonthsAgo: 1,
+      }).forChild('u1', 'c1');
+      expect(out.map((s) => s.kind)).not.toContain('CHECKUP_DUE');
+    });
   });
 });

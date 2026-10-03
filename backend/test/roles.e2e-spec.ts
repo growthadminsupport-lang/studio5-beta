@@ -58,6 +58,7 @@ maybe('roles and permissions (e2e)', () => {
       process.env.R2_BUCKET = process.env.E2E_R2_BUCKET ?? 'growth-test';
     }
     process.env.JWT_ACCESS_SECRET ??= 'e2e-secret';
+    process.env.REMINDERS_SECRET = 'e2e-reminders';
     process.env.JWT_ACCESS_EXPIRES_IN ??= '15m';
     delete process.env.RESEND_API_KEY;
 
@@ -520,6 +521,91 @@ maybe('roles and permissions (e2e)', () => {
       await http()
         .post('/auth/refresh')
         .send({ refreshToken: res.body.refreshToken })
+        .expect(200);
+    });
+  });
+
+  describe('check-up reminders', () => {
+    const daysAgo = (n: number) =>
+      new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+    const reminders = async (who: string) =>
+      (await as(who).get('/notifications').expect(200)).body.filter(
+        (n: { type: string }) => n.type === 'MEASUREMENT_REMINDER',
+      ) as { id: string; title: string; childId: string }[];
+
+    it('reminds the parent once per check-up, and a dismissed one stays gone', async () => {
+      // Two months and a few days old, nothing measured: the 2-month check-up is due.
+      const kid = await as('parent')
+        .post('/children')
+        .send({ fullName: 'Nok Due', sex: 'FEMALE', dateOfBirth: daysAgo(66) })
+        .expect(201);
+      // Four months old, measured last week: nothing to remind.
+      const measured = await as('parent')
+        .post('/children')
+        .send({
+          fullName: 'Pim Measured',
+          sex: 'FEMALE',
+          dateOfBirth: daysAgo(125),
+        })
+        .expect(201);
+      await as('parent')
+        .post('/growth')
+        .send({
+          childId: measured.body.id,
+          measuredAt: daysAgo(7),
+          heightCm: 62,
+          weightKg: 6.2,
+        })
+        .expect(201);
+
+      const first = await reminders('parent');
+      const forKid = first.filter((n) => n.childId === kid.body.id);
+      expect(forKid).toHaveLength(1);
+      expect(forKid[0].title).toBe("Nok's 2-month check-up");
+      expect(first.some((n) => n.childId === measured.body.id)).toBe(false);
+      expect(await reminders('parent')).toHaveLength(first.length);
+
+      await as('parent').delete(`/notifications/${forKid[0].id}`).expect(200);
+      expect(
+        (await reminders('parent')).some((n) => n.childId === kid.body.id),
+      ).toBe(false);
+
+      // The daily run finds nothing new for it either.
+      const run = await http()
+        .post('/reminders/run')
+        .set('x-reminders-secret', 'e2e-reminders')
+        .expect(200);
+      expect(run.body).toMatchObject({ emailed: 0 });
+      expect(
+        (await reminders('parent')).some((n) => n.childId === kid.body.id),
+      ).toBe(false);
+
+      await as('parent').delete(`/children/${kid.body.id}`).expect(200);
+      await as('parent').delete(`/children/${measured.body.id}`).expect(200);
+    });
+
+    it('never reminds a caretaker or a doctor', async () => {
+      expect(await reminders('caretaker')).toHaveLength(0);
+      expect(await reminders('doctor')).toHaveLength(0);
+    });
+
+    it('the daily run needs the shared secret', async () => {
+      await http().post('/reminders/run').expect(401);
+      await http()
+        .post('/reminders/run')
+        .set('x-reminders-secret', 'wrong')
+        .expect(401);
+    });
+
+    it('a parent can turn check-up emails off', async () => {
+      const res = await as('parent')
+        .patch('/users/me')
+        .send({ checkupReminderEmails: false })
+        .expect(200);
+      expect(res.body.checkupReminderEmails).toBe(false);
+      await as('parent')
+        .patch('/users/me')
+        .send({ checkupReminderEmails: true })
         .expect(200);
     });
   });

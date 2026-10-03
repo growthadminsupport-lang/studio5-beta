@@ -248,6 +248,7 @@ You are notified when a new reading is ready. Please discuss it with your doctor
 
 The **bell** at the top shows a number when there is something new, for example:
 
+- your child's routine **check-up** is due (see below);
 - a caretaker filled in a puberty questionnaire;
 - a bone-age reading is ready;
 - someone accepted your invitation.
@@ -256,6 +257,14 @@ The **bell** at the top shows a number when there is something new, for example:
 
 Choose a notification to open the right page for the right child. Choose the **×** to dismiss it.
 Important notices are also sent by email.
+
+**Check-up reminders.** GrowTH follows the check-up schedule of the American Academy of
+Pediatrics: at 1, 2, 4, 6, 9, 12, 15 and 18 months, at 2 and 2½ years, then every year. When
+your child reaches one of these ages and nothing has been measured since, you get one reminder
+in GrowTH and one by email, and the dashboard shows "The … check-up is due". Book the check-up
+with your child's doctor or clinic, then add the height and weight measured there; the reminder
+then goes away. Each check-up is reminded only once. To stop the emails, untick **Check-up
+reminders** in Settings; the reminder inside GrowTH stays.
 
 ---
 

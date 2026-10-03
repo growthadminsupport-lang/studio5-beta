@@ -20,6 +20,7 @@ export function publicUser(user: User) {
     /** Which ways in this account has, so Settings can offer "add a password". */
     hasPassword: user.passwordHash !== null,
     hasGoogle: user.googleId !== null,
+    checkupReminderEmails: user.checkupReminderEmails,
     createdAt: user.createdAt,
   };
 }

@@ -3,6 +3,18 @@
 TOR §6.5: functional testing before each milestone, on at least two browsers and one mobile
 viewport, with a record kept. This is that record.
 
+## 2026-10-03 (evening), check-up reminders
+
+| Check | Result |
+| --- | --- |
+| Unit: the AAP schedule, labels, month-end dates, the check-up window, what counts as measured; dashboard suggestion due / not due; the daily email run (a reminder already shown in the app is still emailed, once; opted-out and unconfirmed addresses skipped; a failed send retried next run) | **117 / 117** |
+| API end-to-end: one reminder per check-up to the parent, none when measured, a dismissed one is not recreated (nor by the daily run), none for caretakers or doctors, the daily run needs the secret, email opt-out saved | **40 / 40** |
+| Browser walk-through, 49 checks (adds: a baby with nothing measured shows "check-up is due" on the dashboard, and the reminder opens that child's Growth page) | Chromium **49 / 49**, Firefox **49 / 49**, WebKit **49 / 49** (one earlier WebKit run stopped when the browser itself crashed opening the register page; the next two runs passed) |
+
+Found before release: the first version emailed only reminders created by the daily run, so a
+parent who had opened GrowTH that day (creating the in-app reminder) never got the email. The
+log now records when each reminder was emailed, and the run sends any not yet emailed.
+
 ## 2026-10-03 (later), more avatar choices
 
 The baby drawing now offers every set in the artist's file: eye colour (4), eyebrows (6),

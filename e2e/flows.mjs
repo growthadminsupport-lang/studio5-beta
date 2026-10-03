@@ -182,6 +182,18 @@ try {
   await shot(parent, '00b-baby-dashboard');
   const babyChart = await parent.locator('.recharts-cartesian-axis-tick-value').allTextContents();
   check('a baby gets the baby avatar and a 0–36 month chart', babySrcs.some((x) => x?.includes('baby/skin-')) && babyChart.includes('36 mo'), babyChart.slice(0, 8).join(','));
+  // Born 2026-06-01 with nothing measured: always inside some check-up window (AAP schedule),
+  // so the dashboard says it is due and the parent has a reminder that opens Growth.
+  // Suggestions load after the page: wait for the card rather than sampling it.
+  const dueCard = await parent.getByText(/check-up is due/).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+  await parent.goto(`${APP}/notifications`);
+  const reminder = parent.getByText(/Baby's [0-9½]+-(month|year) check-up/).first();
+  await reminder.waitFor();
+  await reminder.click();
+  await parent.waitForURL('**/growth');
+  const onBaby = await parent.getByText('Baby Test').first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+  check('a check-up that is due shows on the dashboard and as a reminder that opens the child\'s Growth page', dueCard && onBaby, `card ${dueCard}, growth for baby ${onBaby}`);
+  await parent.goto(`${APP}/dashboard`);
   // Back to the first child for the rest of the flow.
   await parent.getByRole('button', { name: 'Switch child' }).click();
   await parent.getByRole('button', { name: /Mali Test/ }).click();

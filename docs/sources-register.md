@@ -38,6 +38,7 @@ Archival copies of the original Excel workbooks: `data-knowledge/Chart/*.xls`.
 | BMI-for-age starts at | 24 months | 🟢 Bright Futures/AAP periodicity schedule, 4th ed. (2026-08-23) |
 | Head circumference measured | birth → 24 months | 🟢 same |
 | Weight-for-length measured | birth → 18 months | 🟢 same |
+| Check-up reminder ages | 1, 2, 4, 6, 9, 12, 15, 18, 24, 30 months, then yearly to 18 y | 🟢 [HealthyChildren.org (AAP), "AAP Schedule of Well-Child Care Visits"](https://www.healthychildren.org/English/family-life/health-management/Pages/Well-Child-Care-A-Check-Up-for-Success.aspx), from the Bright Futures periodicity schedule; `backend/src/common/well-child.ts` (2026-10-03). The first-week visit is left out; the schedule runs to 21 y, GrowTH to 18. |
 | Well-child visit schedule | 3–5 d, 1, 2, 4, 6, 9, 12, 15, 18, 24, 30 mo, then yearly to 21 y | 🟢 same, cross-checked against [HealthyChildren.org](https://www.healthychildren.org/English/family-life/health-management/Pages/Well-Child-Care-A-Check-Up-for-Success.aspx) |
 
 ### AI model
