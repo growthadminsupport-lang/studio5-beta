@@ -5,15 +5,10 @@ import { useAuth } from "../../context/AuthContext";
 import { errorMessage } from "../../lib/api";
 import GoogleButton from "./GoogleButton";
 import { useGoogleFlow } from "./useGoogleFlow";
-import { useTheme } from "../../context/ThemeContext";
-import logoDarkVideo from "../../assets/logo_motion_black_small.mp4";
-import logoLightVideo from "../../assets/logo_motion_white_small.mp4";
-import posterDark from "../../assets/poster_dark.webp";
-import posterLight from "../../assets/poster_light.webp";
+import LogoMotion from "../LogoMotion";
 import "./Auth.css";
 
 function RegisterForm() {
-  const { theme } = useTheme();
 
   const [form, setForm] = useState({
     name: "",
@@ -87,18 +82,7 @@ function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="auth-form">
-      <video
-        key={theme}
-        src={theme === "dark" ? logoDarkVideo : logoLightVideo}
-        poster={theme === "dark" ? posterDark : posterLight}
-        preload="auto"
-        autoPlay
-        loop
-        muted
-        playsInline
-        aria-label="GrowTH logo"
-        className="auth-logo"
-      />
+      <LogoMotion className="auth-logo" />
 
       <h1 className="font-semibold text-3xl">Create your account</h1>
 

@@ -1,10 +1,7 @@
 import { Link } from "react-router-dom";
 import { TrendingUp, Sparkles } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import logoDarkVideo from "../assets/logo_motion_black_small.mp4";
-import logoLightVideo from "../assets/logo_motion_white_small.mp4";
-import posterDark from "../assets/poster_dark.webp";
-import posterLight from "../assets/poster_light.webp";
+import LogoMotion from "../components/LogoMotion";
 import { useTheme } from "../context/ThemeContext";
 import { BUILTIN_ARTICLES } from "../content/articles";
 
@@ -36,18 +33,7 @@ export default function HomePage() {
       <section className="max-w-3xl mx-auto px-6 pt-8 pb-10 text-center flex flex-col items-center">
         <div className="flex flex-col items-center justify-center mb-3">
           <div className="w-32 h-32 md:w-44 md:h-44 mb-1 flex items-center justify-center">
-            <video
-              key={theme}
-              src={theme === "dark" ? logoDarkVideo : logoLightVideo}
-              poster={theme === "dark" ? posterDark : posterLight}
-              preload="auto"
-              autoPlay
-              loop
-              muted
-              playsInline
-              className={`w-full h-full object-contain scale-125 md:scale-130 -translate-y-2 ${theme === "dark" ? "mix-blend-lighten" : "mix-blend-darken"}`}
-              aria-label="GrowTH Logo"
-            />
+            <LogoMotion className={`w-full h-full object-contain scale-125 md:scale-130 -translate-y-2 ${theme === "dark" ? "mix-blend-lighten" : "mix-blend-darken"}`} />
           </div>
         </div>
 
@@ -56,8 +42,7 @@ export default function HomePage() {
         </h1>
         
         <p className="max-w-xl text-slate-600 dark:text-slate-400 text-sm md:text-base mb-6 leading-relaxed">
-          GrowTH is the intelligent companion for parents, providing actionable insights
-          and calm tracking for your child's developmental journey.
+          Simple, calm growth tracking for your child.
         </p>
 
         <div className="flex items-center gap-3">
@@ -85,7 +70,7 @@ export default function HomePage() {
             Comprehensive Dashboard
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 max-w-xl mx-auto mx-auto">
-            Monitor growth metrics with professional precision on any device.
+            On phone, tablet or desktop.
           </p>
 
           <div className="bg-[#f0f5f4] dark:bg-slate-800/40 p-2 sm:p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 shadow-xl shadow-slate-300/40 dark:shadow-black/40">
@@ -212,9 +197,7 @@ export default function HomePage() {
               For Parents Who Care
             </h2>
             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-8">
-              Designed specifically for proactive parents, GrowTH translates complex developmental data 
-              into simple, actionable insights. We believe in providing clarity over clutter, 
-              so you can focus on what matters most — your child's well-being.
+              Clear charts and simple next steps, so you can focus on your child.
             </p>
             
             <div className="grid sm:grid-cols-2 gap-4">
@@ -224,7 +207,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-1">Track Progress</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Log milestones and physical growth with ease.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Height, weight and check-ups.</p>
                 </div>
               </div>
             
@@ -234,7 +217,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-1">AI-Assisted</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Bone age and biological growth prediction.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Bone age from a hand X-ray, read by your doctor.</p>
                 </div>
               </div>
             </div>
@@ -245,14 +228,11 @@ export default function HomePage() {
 
       {/* ----------------- Nurturing Knowledge Section ----------------- */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 text-left">
-        <div className="flex justify-between items-end gap-4 mb-8">
+        <div className="flex justify-between items-baseline gap-4 mb-6">
           <div className="min-w-0">
-            <h2 className="text-2xl md:text-3xl font-bold text-[#004640] dark:text-teal-300 mb-1">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#004640] dark:text-teal-300">
               Nurturing Knowledge
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
-              Expert articles to guide you through every stage.
-            </p>
           </div>
           <Link
             to="/knowledge"
