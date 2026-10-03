@@ -313,6 +313,24 @@ try {
   await doctor.getByText('You: Doctor').waitFor();
   check('approved doctor accepts and sees HN', (await doctor.textContent('body')).includes('HN-77001'));
 
+  // Invited by email to a second child, the doctor accepts from the dashboard, no link needed.
+  const pTok = await apiToken(parentEmail);
+  const parentKids = await (await fetch(`${API}/children`, { headers: { Authorization: `Bearer ${pTok}` } })).json();
+  const baby = parentKids.find((k) => k.fullName === 'Baby Test');
+  await fetch(`${API}/children/${baby.id}/invites`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pTok}` },
+    body: JSON.stringify({ role: 'DOCTOR', email: doctorEmail }) });
+  await doctor.goto(`${APP}/dashboard`);
+  await doctor.getByText('Invitations for you').waitFor();
+  const inviteRow = doctor.locator('li').filter({ hasText: 'Baby' });
+  await inviteRow.getByRole('button', { name: 'Accept' }).click();
+  await inviteRow.waitFor({ state: 'detached' });
+  await doctor.getByRole('button', { name: 'Switch child' }).click();
+  const hasBaby = await doctor.getByRole('button', { name: /Baby Test/ }).isVisible();
+  // Accepting selects the new child; the rest of the flow is about Mali.
+  await doctor.getByRole('button', { name: /Mali Test/ }).click();
+  await doctor.waitForTimeout(400);
+  check('an invitation sent to the doctor\'s email can be accepted from the dashboard, without the link', hasBaby);
+
   await doctor.goto(`${APP}/bone-age`);
   // A plain X-ray image: whole frame, sent untouched.
   await doctor.locator('input[type=file]').setInputFiles(`${XRAYS}/x3.jpg`);

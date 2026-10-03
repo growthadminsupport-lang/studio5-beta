@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
+import InvitationsForYou from '../components/People/InvitationsForYou';
 import GrowthChart from '../components/GrowthTracking/GrowthChart';
 import { api } from '../lib/api';
 import { describePercentile, useGrowthRecords } from '../lib/growth';
@@ -123,6 +124,7 @@ function DashboardPage() {
             Child Profile
         ==================================================== */}
 
+        <InvitationsForYou className="mb-6 max-w-none" />
         <ChildProfileCard />
 
         {/* ====================================================

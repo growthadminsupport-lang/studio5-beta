@@ -167,7 +167,72 @@ export class InvitesService {
   }
 
   async accept(userId: string, token: string) {
-    const invite = await this.findByToken(token);
+    return this.acceptInvite(userId, await this.findByToken(token));
+  }
+
+  /**
+   * Live invitations sent to this account's email address. Without this, an invitation could
+   * only be reached through its link: a doctor who opened it while still awaiting approval,
+   * or never got the email, had no way back to the child. Confirmed addresses only, so
+   * registering someone else's address does not reveal their invitations.
+   */
+  async mine(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { email: true, isVerified: true },
+    });
+    if (!user.isVerified) return [];
+    const invites = await this.prisma.childInvite.findMany({
+      where: {
+        email: user.email.toLowerCase(),
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+        child: { deletedAt: null },
+      },
+      include: {
+        child: { select: { fullName: true } },
+        invitedBy: { select: { fullName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return invites.map((i) => ({
+      id: i.id,
+      childFirstName: firstName(i.child.fullName),
+      invitedBy: i.invitedBy.fullName,
+      role: i.role,
+      expiresAt: i.expiresAt,
+    }));
+  }
+
+  /** Accept one of `mine` without its link: same checks as the link, plus the address match. */
+  async acceptMine(userId: string, inviteId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { email: true, isVerified: true },
+    });
+    const invite = await this.prisma.childInvite.findUnique({
+      where: { id: inviteId },
+      include: {
+        child: { select: { fullName: true, deletedAt: true } },
+        invitedBy: { select: { fullName: true } },
+      },
+    });
+    if (
+      !user.isVerified ||
+      !invite ||
+      invite.child.deletedAt ||
+      invite.email !== user.email.toLowerCase()
+    ) {
+      throw new NotFoundException('This invitation does not exist');
+    }
+    return this.acceptInvite(userId, invite);
+  }
+
+  private async acceptInvite(
+    userId: string,
+    invite: Awaited<ReturnType<InvitesService['findByToken']>>,
+  ) {
     const state = this.state(invite);
     if (state !== 'valid') {
       throw new GoneException(

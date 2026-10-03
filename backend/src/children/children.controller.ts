@@ -96,6 +96,18 @@ export class ChildrenController {
 export class InvitesController {
   constructor(private invitesService: InvitesService) {}
 
+  /** Invitations sent to my (confirmed) email address, to accept without the link. */
+  @Get('mine')
+  mine(@CurrentUser() user: AuthUser) {
+    return this.invitesService.mine(user.userId);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('mine/:id/accept')
+  acceptMine(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.invitesService.acceptMine(user.userId, id);
+  }
+
   /** Public: the invitation page shows who invited you before you sign in. */
   @Public()
   @Throttle({ default: { limit: 30, ttl: 60_000 } })

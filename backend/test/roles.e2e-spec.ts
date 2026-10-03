@@ -525,6 +525,89 @@ maybe('roles and permissions (e2e)', () => {
     });
   });
 
+  describe('invitations for me', () => {
+    it('lists invitations sent to my address, and I can accept one without the link', async () => {
+      const kid = await as('parent')
+        .post('/children')
+        .send({
+          fullName: 'Fon Invite',
+          sex: 'FEMALE',
+          dateOfBirth: '2021-03-01',
+        })
+        .expect(201);
+      await as('parent')
+        .post(`/children/${kid.body.id}/invites`)
+        .send({ role: 'CARETAKER', email: 'Stranger@e2e.test' })
+        .expect(201);
+
+      const mine = (await as('stranger').get('/invites/mine').expect(200))
+        .body as {
+        id: string;
+        childFirstName: string;
+        role: string;
+      }[];
+      const invite = mine.find((i) => i.childFirstName === 'Fon');
+      expect(invite).toMatchObject({
+        role: 'CARETAKER',
+        invitedBy: 'parent person',
+      });
+      // Not someone else's to see or take.
+      const others = (await as('caretaker').get('/invites/mine').expect(200))
+        .body as { id: string }[];
+      expect(others.some((i) => i.id === invite!.id)).toBe(false);
+      await as('caretaker')
+        .post(`/invites/mine/${invite!.id}/accept`)
+        .expect(404);
+
+      await as('stranger')
+        .post(`/invites/mine/${invite!.id}/accept`)
+        .expect(200);
+      await as('stranger').get(`/children/${kid.body.id}`).expect(200);
+      expect(
+        (
+          (await as('stranger').get('/invites/mine').expect(200)).body as {
+            id: string;
+          }[]
+        ).some((i) => i.id === invite!.id),
+      ).toBe(false);
+      await as('stranger')
+        .post(`/invites/mine/${invite!.id}/accept`)
+        .expect(410);
+
+      await as('parent').delete(`/children/${kid.body.id}`).expect(200);
+    });
+
+    it('shows nothing to an address that is not confirmed', async () => {
+      await prisma.user.update({
+        where: { email: 'stranger@e2e.test' },
+        data: { isVerified: false },
+      });
+      const kid = await as('parent')
+        .post('/children')
+        .send({
+          fullName: 'Ice Unconfirmed',
+          sex: 'MALE',
+          dateOfBirth: '2021-03-01',
+        })
+        .expect(201);
+      const sent = await as('parent')
+        .post(`/children/${kid.body.id}/invites`)
+        .send({ role: 'CARETAKER', email: 'stranger@e2e.test' })
+        .expect(201);
+      expect(
+        (await as('stranger').get('/invites/mine').expect(200)).body,
+      ).toEqual([]);
+      await as('stranger')
+        .post(`/invites/mine/${sent.body.id}/accept`)
+        .expect(404);
+      await prisma.user.update({
+        where: { email: 'stranger@e2e.test' },
+        data: { isVerified: true },
+      });
+      await as('parent').delete(`/children/${kid.body.id}`).expect(200);
+    });
+  });
+
   describe('check-up reminders', () => {
     const daysAgo = (n: number) =>
       new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
