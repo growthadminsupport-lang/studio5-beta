@@ -6,6 +6,7 @@ import { avatarVersion } from '../../lib/avatar';
 import ChildEditDialog from './ChildEditDialog';
 import PeopleDialog from '../People/PeopleDialog';
 import InvitationsForYou from '../People/InvitationsForYou';
+import GettingStarted from '../Layout/GettingStarted';
 import { useAuth } from '../../context/AuthContext';
 import { errorMessage } from '../../lib/api';
 import { useChildren } from '../../context/ChildrenContext';
@@ -290,6 +291,7 @@ export function NoChildState() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50/50 dark:bg-slate-900 px-4 py-16 text-center">
       <InvitationsForYou className="mb-2" />
+      <GettingStarted className="mb-2 w-full max-w-xl" />
       {pendingDoctor ? (
         <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
           {user?.doctorStatus === 'REJECTED'
@@ -299,8 +301,8 @@ export function NoChildState() {
       ) : (
         <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
           {isDoctor
-            ? "No patients yet. A parent invites you from their child's People page, by QR code or email."
-            : 'Add a child to start tracking growth. Caretakers: open the invitation link the parent sent you.'}
+            ? "No patients yet. Parents invite you by link, QR code or email."
+            : "Looking after someone else's child? Open the invitation the parent sent you."}
         </p>
       )}
       <Link

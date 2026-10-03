@@ -64,7 +64,9 @@ and follow the link we send (it works once, for one hour).
 
 ## 2. Add your child
 
-After your first sign-in, choose **Add your own child**.
+After your first sign-in, a **Getting started** box on the dashboard shows the next steps for
+your role (parent, caretaker or doctor). Choose **Got it** to hide it. Then choose **Add your own
+child**.
 
 1. **Avatar.** Every child gets a drawn character instead of a photo, for their privacy.
    Babies and toddlers up to 3 years get a baby drawing; it changes to the young-child drawing
@@ -73,7 +75,9 @@ After your first sign-in, choose **Add your own child**.
     - for the baby drawing, also the **Face** (eye colour, eyebrows, eyelashes and mouth) and
       **Clothes** (outfit and shoes).
 2. **Full name**, and a **nickname** if you like (the charts use it).
-3. **Date of birth.**
+3. **Date of birth.** Baby not born yet? Tick **Not born yet** and enter the due date. The
+   profile shows "on the way" until the birth; then set the real birth date (GrowTH asks) and add
+   the first measurement.
 4. **Sex: Girl or Boy.** This matters: growth charts and bone age are different for girls and
    boys, so it decides which reference GrowTH compares your child with.
 5. **Hospital number (HN)**, if you know it. It helps your child's doctor find them. It is

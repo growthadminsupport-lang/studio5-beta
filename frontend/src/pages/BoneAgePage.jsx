@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { UploadCloud, Trash2, AlertTriangle, Info, X, Stethoscope, ShieldCheck } from 'lucide-react';
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
+import { BabyOnTheWay } from '../components/ChildProfile/BirthCards';
+import { isUnborn } from '../utils/childDisplay';
 import { api, errorMessage, dateOnly } from '../lib/api';
 import { ACCEPT } from '../lib/xray';
 import XrayPrepareDialog from '../components/BoneAge/XrayPrepareDialog';
@@ -111,7 +113,6 @@ function XrayThumb({ id }) {
 // ============================================================
 
 function DoctorRecord({ record, onSaved, onDelete }) {
-  const accuracy = record.accuracyWithin12Months;
   const [review, setReview] = useState(record.review ?? record.suggestedReview ?? '');
   const [note, setNote] = useState(record.doctorNote ?? '');
   const [examDate, setExamDate] = useState(dateOnly(record.examDate));
@@ -177,16 +178,12 @@ function DoctorRecord({ record, onSaved, onDelete }) {
                 <p className="font-semibold text-slate-900 dark:text-slate-100">{months(record.gapMonths)}</p>
               </div>
             </div>
+            {/* The margin of error FR-18 asks for, in one line. Measured on the RSNA test set
+                (docs/model-evaluation.md): estimates are pulled toward the middle of the age range. */}
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              {record.legacy && 'Estimated by the previous model, whose calibration was never confirmed. '}
-              Model error is typically ±{Math.round(record.maeMonths)} months
-              {accuracy ? `, and about 1 estimate in ${Math.round(1 / (1 - accuracy))} is out by more than a year` : ''}.
-              {/* Measured on the RSNA test set (docs/model-evaluation.md): estimates are pulled
-                  toward the middle of the age range. */}
-              {!record.legacy &&
-                ' It is least accurate under 10 years, where it tends to read high, and from 15 years, where it tends to read low.'}{' '}
-              AI suggests:{' '}
-              <span className="font-medium">{REVIEW[record.suggestedReview]?.label ?? '—'}</span> (gap of 2 years or more).
+              AI suggests <span className="font-medium text-slate-700 dark:text-slate-200">{REVIEW[record.suggestedReview]?.label ?? '—'}</span>
+              {' · '}usually within ±{Math.round(record.maeMonths)} months
+              {record.legacy ? ' · older model, not calibrated' : ' · less reliable under 10 and over 15 years'}
             </p>
             {record.implausibleGap && (
               <p className="mt-2 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
@@ -353,9 +350,6 @@ function DoctorView({ child }) {
             className="rounded-xl border border-slate-200 bg-transparent px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-[#056559] dark:border-slate-700 dark:text-slate-100"
           />
         </label>
-        <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-          The child&apos;s age is taken on this date, the same way as growth measurements, so the gap compares like with like.
-        </p>
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -458,6 +452,17 @@ function FamilyView({ child }) {
 function BoneAgePage() {
   const { activeChild: child } = useChildren();
   if (!child) return <NoChildState />;
+  // A baby on the way: nothing to measure or screen until the birth.
+  if (isUnborn(child.dateOfBirth)) {
+    return (
+      <div className="min-h-screen bg-slate-50/50 py-8 dark:bg-slate-900">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+          <ChildProfileCard />
+          <BabyOnTheWay child={child} />
+        </div>
+      </div>
+    );
+  }
   const isDoctor = child.myRole === 'DOCTOR';
 
   return (

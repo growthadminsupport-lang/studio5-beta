@@ -163,12 +163,7 @@ function SettingsPage() {
               onChange={(e) => setReminderEmails(e.target.checked)}
             />
             <span>
-              Email me when my child&apos;s routine check-up is due
-              <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
-                GrowTH follows the American Academy of Pediatrics check-up schedule: at 1, 2, 4, 6, 9, 12, 15 and 18
-                months, at 2 and 2½ years, then every year. You always see the reminder in GrowTH; this only turns
-                the email off.
-              </span>
+              Email me when a check-up is due
             </span>
           </label>
           {reminderError && <p className="error-message">{reminderError}</p>}

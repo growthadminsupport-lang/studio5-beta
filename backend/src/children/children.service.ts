@@ -26,6 +26,19 @@ const CAPABILITY_MESSAGES: Partial<Record<Capability, string>> = {
   'boneAge.full': "Only the child's doctor can see the full bone-age record",
 };
 
+/**
+ * A baby can be added before birth with its due date, up to about ten months ahead (the
+ * profile turns into a born child on that date; the parent corrects it to the real birth date).
+ */
+const MAX_DUE_DAYS_AHEAD = 300;
+
+function assertDateOfBirth(iso: string) {
+  const days = (new Date(iso).getTime() - Date.now()) / 86_400_000;
+  if (days > MAX_DUE_DAYS_AHEAD) {
+    throw new BadRequestException('A due date can be at most 10 months ahead.');
+  }
+}
+
 @Injectable()
 export class ChildrenService {
   constructor(private prisma: PrismaService) {}
@@ -97,6 +110,7 @@ export class ChildrenService {
   }
 
   async create(userId: string, dto: CreateChildDto) {
+    assertDateOfBirth(dto.dateOfBirth);
     const { relation, avatar, ...childFields } = dto;
     const child = await this.prisma.child.create({
       data: {
@@ -179,6 +193,7 @@ export class ChildrenService {
   async update(userId: string, childId: string, dto: UpdateChildDto) {
     const access = await this.access(childId, userId, 'child.read');
     const { dateOfBirth, relation, hn, avatar, ...rest } = dto;
+    if (dateOfBirth) assertDateOfBirth(dateOfBirth);
     const touchesDetails =
       Object.values(rest).some((v) => v !== undefined) ||
       dateOfBirth ||

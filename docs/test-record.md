@@ -3,6 +3,20 @@
 TOR §6.5: functional testing before each milestone, on at least two browsers and one mobile
 viewport, with a record kept. This is that record.
 
+## 2026-10-04, shorter texts, getting-started guide, baby not born yet
+
+| Check | Result |
+| --- | --- |
+| API end-to-end (adds: a baby added with its due date cannot be measured until born; a due date over 10 months ahead and a future-dated measurement are refused) | **43 / 43** |
+| Browser walk-through, 58 checks (adds: the guide for a new parent, a caretaker and a doctor; "Got it" hides it for good; a baby not born yet shows "on the way" with no charts or measuring) | Chromium, Firefox, WebKit: **58 / 58** each |
+| Phone, tablet, desktop (390, 768, 1280 px): dashboard with the guide, puberty start, baby on the way | no overflow |
+
+Texts cut to a line or an icon: chart captions and reference notes, the dashboard bone-age line,
+the child form hints, the bone-age accuracy note and exam-date note, the puberty introduction and
+question hints, the growth result message, the check-up reminder and the Settings option. The
+API also now checks a measurement's date against the date of birth and today (it was only checked
+in the browser).
+
 ## 2026-10-03 (night), growth page and dashboard agree
 
 | Check | Result |

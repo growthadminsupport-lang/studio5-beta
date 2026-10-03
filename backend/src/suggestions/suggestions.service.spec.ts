@@ -277,7 +277,7 @@ describe('SuggestionsService', () => {
         measuredMonthsAgo: 4,
       }).forChild('u1', 'c1');
       const checkup = out.find((s) => s.kind === 'CHECKUP_DUE');
-      expect(checkup?.title).toBe('The 10-year check-up is due');
+      expect(checkup?.title).toBe('10-year check-up due');
       expect(checkup?.actionHref).toBe('/children/c1/growth');
     });
 

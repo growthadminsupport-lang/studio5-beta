@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { MailService, checkupAgeText } from '../mail/mail.service';
+import { MailService } from '../mail/mail.service';
 import { checkupLabel, checkupWindow, measuredFor } from '../common/well-child';
 
 /** A reminder this old is not emailed any more (e.g. when emails were only just set up). */
@@ -76,7 +76,7 @@ export class RemindersService {
               childId: child.id,
               type: 'MEASUREMENT_REMINDER',
               title: `${childName}'s ${current.label} check-up`,
-              body: `A routine check-up is recommended at ${checkupAgeText(current.label)} (American Academy of Pediatrics schedule). Book it with your child's doctor or clinic, then add the height and weight measured there.`,
+              body: 'Book it with your doctor or clinic, then add the height and weight.',
             },
           }),
         ]);

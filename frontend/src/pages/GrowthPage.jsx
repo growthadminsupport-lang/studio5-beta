@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
+import { BabyOnTheWay, BirthDatePrompt } from '../components/ChildProfile/BirthCards';
+import { isUnborn } from '../utils/childDisplay';
 import GrowthChart from '../components/GrowthTracking/GrowthChart';
 import { Pencil, Trash2, Check, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { api, errorMessage } from '../lib/api';
@@ -75,6 +77,17 @@ function GrowthPage() {
   const [editHead, setEditHead] = useState('');
 
   if (!child) return <NoChildState />;
+  // A baby on the way: nothing to measure or screen until the birth.
+  if (isUnborn(child.dateOfBirth)) {
+    return (
+      <div className="min-h-screen bg-slate-50/50 py-8 dark:bg-slate-900">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+          <ChildProfileCard />
+          <BabyOnTheWay child={child} />
+        </div>
+      </div>
+    );
+  }
 
   const ageMonthsOnEntry = ageInMonths(child.dateOfBirth, measuredAt || todayIso());
   const askHead = ageMonthsOnEntry <= HEAD_CIRCUMFERENCE_MAX_MONTHS;
@@ -159,6 +172,7 @@ function GrowthPage() {
 
         <ChildProfileCard />
 
+        <BirthDatePrompt child={child} hasRecords={records.length > 0} />
         <h1 className="mb-6 text-xl font-bold text-[#056559] dark:text-teal-300">Growth Tracking</h1>
 
         {/* ====================================================
@@ -208,8 +222,8 @@ function GrowthPage() {
                 <p className="text-slate-900 dark:text-slate-100">{guidance.message}</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {[
-                    lastResult.heightPercentile !== null && lastResult.heightPercentile !== undefined && `Height: ${describePercentile(lastResult.heightPercentile).label.toLowerCase()} (${describePercentile(lastResult.heightPercentile).figure}, SDS ${lastResult.heightSds})`,
-                    lastResult.weightPercentile !== null && lastResult.weightPercentile !== undefined && `Weight: ${describePercentile(lastResult.weightPercentile).label.toLowerCase()} (${describePercentile(lastResult.weightPercentile).figure}, SDS ${lastResult.weightSds})`,
+                    lastResult.heightPercentile !== null && lastResult.heightPercentile !== undefined && `Height: ${describePercentile(lastResult.heightPercentile).label.toLowerCase()}`,
+                    lastResult.weightPercentile !== null && lastResult.weightPercentile !== undefined && `Weight: ${describePercentile(lastResult.weightPercentile).label.toLowerCase()}`,
                     lastResult.bmi && hasBmi(child.dateOfBirth, lastResult.measuredAt) && `BMI ${lastResult.bmi}`,
                     guidance.nutritionalStatus,
                   ]

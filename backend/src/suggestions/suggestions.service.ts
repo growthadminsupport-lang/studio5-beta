@@ -1,6 +1,5 @@
 import { ageInMonths } from '../common/age';
 import { checkupWindow, measuredFor } from '../common/well-child';
-import { checkupAgeText } from '../mail/mail.service';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildrenService } from '../children/children.service';
@@ -251,11 +250,8 @@ export class SuggestionsService {
       out.unshift({
         kind: 'CHECKUP_DUE',
         severity: 'info',
-        title: `The ${checkup.label} check-up is due`,
-        body:
-          `A routine check-up is recommended at ${checkupAgeText(checkup.label)} ` +
-          '(American Academy of Pediatrics schedule). Height and weight are measured there; ' +
-          'add them here so the chart stays up to date.',
+        title: `${checkup.label[0].toUpperCase()}${checkup.label.slice(1)} check-up due`,
+        body: 'After the visit, add the height and weight.',
         actionLabel: 'Add measurement',
         actionHref: `/children/${childId}/growth`,
       });

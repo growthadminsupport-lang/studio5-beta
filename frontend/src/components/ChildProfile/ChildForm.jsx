@@ -5,6 +5,12 @@ import { errorMessage } from "../../lib/api";
 import { AVATAR_SETS, BABY_OUTFITS, EYE_COLORS, HAIR_COLORS, MOUTH_LABELS, SKIN_TONES, avatarVersion, hairCount, withDefaults } from "../../lib/avatar";
 import { AvatarFigure, AvatarZoom } from "./ChildAvatar";
 
+function dueMaxIso() {
+  const d = new Date(Date.now() + 300 * 86_400_000);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function todayIso() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -107,12 +113,6 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
       <div className="flex items-end justify-center rounded-xl bg-gradient-to-b from-[#eaf6f3] to-white py-3 dark:from-teal-500/10 dark:to-slate-800">
         <AvatarFigure version={version} sex={sex} avatar={a} height={170} />
       </div>
-      <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
-        {version === "baby"
-          ? "Baby and toddler drawing, until 3 years. It changes to the young-child drawing as your child grows."
-          : "Young-child drawing, from 3 years."}
-      </p>
-
       <div role="tablist" className="mt-4 flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900/60">
         {tabs.map((t) => (
           <button
@@ -241,6 +241,8 @@ export default function ChildForm({ child, onDone, submitLabel }) {
   const [fullName, setFullName] = useState(child?.fullName ?? "");
   const [nickname, setNickname] = useState(child?.nickname ?? "");
   const [dateOfBirth, setDateOfBirth] = useState(child?.dateOfBirth ?? "");
+  // A baby on the way: the date is the due date (up to 10 months ahead, as the API allows).
+  const [notBorn, setNotBorn] = useState(Boolean(child?.dateOfBirth && child.dateOfBirth > todayIso()));
   const [sex, setSex] = useState(child?.sex ?? "FEMALE");
   const [relation, setRelation] = useState(child?.myRelation ?? "PARENT");
   const [changingRelation, setChangingRelation] = useState(false);
@@ -257,7 +259,9 @@ export default function ChildForm({ child, onDone, submitLabel }) {
       body = { hn: hn.trim() };
     } else {
       if (!fullName.trim()) return setError("Please enter your child’s full name.");
-      if (!dateOfBirth || dateOfBirth > todayIso()) return setError("Please enter a date of birth that isn’t in the future.");
+      if (!dateOfBirth) return setError(notBorn ? "Please enter the due date." : "Please enter the date of birth.");
+      if (!notBorn && dateOfBirth > todayIso()) return setError("The date of birth can’t be in the future. Not born yet? Tick the box.");
+      if (notBorn && dateOfBirth <= todayIso()) return setError("A due date is in the future. Already born? Untick the box.");
       body = {
         fullName: fullName.trim(),
         nickname: nickname.trim() || null,
@@ -292,7 +296,7 @@ export default function ChildForm({ child, onDone, submitLabel }) {
     return (
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
         {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
-        <Field label="Hospital number (HN)" hint="You find patients by this number. The family can see it; caretakers cannot.">
+        <Field label="Hospital number (HN)">
           <input type="text" value={hn} onChange={(e) => setHn(e.target.value)} className={field} />
         </Field>
         {submitButton}
@@ -312,11 +316,23 @@ export default function ChildForm({ child, onDone, submitLabel }) {
       <Field label="Nickname (optional)">
         <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} className={field} />
       </Field>
-      <Field label="Date of birth">
-        <input type="date" required max={todayIso()} value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className={field} />
+      <label className="-mb-2 flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+        <input type="checkbox" checked={notBorn} onChange={(e) => setNotBorn(e.target.checked)} className="h-4 w-4 accent-[#056559]" />
+        Not born yet
+      </label>
+      <Field label={notBorn ? "Due date" : "Date of birth"}>
+        <input
+          type="date"
+          required
+          min={notBorn ? todayIso() : undefined}
+          max={notBorn ? dueMaxIso() : todayIso()}
+          value={dateOfBirth}
+          onChange={(e) => setDateOfBirth(e.target.value)}
+          className={field}
+        />
       </Field>
 
-      <Field group label="Sex" hint="Growth charts and bone age differ for girls and boys, so this sets which references are used.">
+      <Field group label="Sex">
         <div className="grid grid-cols-2 overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-700">
           {[
             ["FEMALE", "Girl"],
@@ -339,7 +355,7 @@ export default function ChildForm({ child, onDone, submitLabel }) {
         </div>
       </Field>
 
-      <Field label="Hospital number (HN), optional" hint="Helps the child’s doctor find them. Caretakers do not see it.">
+      <Field label="Hospital number (HN), optional">
         <input type="text" value={hn} onChange={(e) => setHn(e.target.value)} className={field} />
       </Field>
 
@@ -374,11 +390,6 @@ export default function ChildForm({ child, onDone, submitLabel }) {
               Change
             </button>
           )}
-          <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600 dark:bg-slate-900/50 dark:text-slate-300">
-            {isEdit ? "As the person who manages this profile, you" : "You will manage this profile. You"} can edit it, invite or
-            remove a caretaker and the child’s doctor, and delete it. A caretaker (for example a nanny or a teacher) and the
-            doctor join only by your invitation, and can do less.
-          </p>
         </fieldset>
       )}
 

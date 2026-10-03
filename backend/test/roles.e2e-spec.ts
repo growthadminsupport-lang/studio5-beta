@@ -525,6 +525,45 @@ maybe('roles and permissions (e2e)', () => {
     });
   });
 
+  describe('a baby not born yet', () => {
+    const inDays = (n: number) =>
+      new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
+    it('can be added with its due date, and is measured only after the birth', async () => {
+      const kid = await as('parent')
+        .post('/children')
+        .send({
+          fullName: 'Bump Expected',
+          sex: 'FEMALE',
+          dateOfBirth: inDays(60),
+        })
+        .expect(201);
+      const res = await as('parent')
+        .post('/growth')
+        .send({ childId: kid.body.id, heightCm: 50 })
+        .expect(400);
+      expect(res.body.message).toMatch(/Not born yet/);
+      await as('parent')
+        .post('/children')
+        .send({ fullName: 'Too Early', sex: 'MALE', dateOfBirth: inDays(400) })
+        .expect(400);
+      // After the birth, the date of birth is corrected and measuring starts.
+      await as('parent')
+        .patch(`/children/${kid.body.id}`)
+        .send({ dateOfBirth: inDays(-3) })
+        .expect(200);
+      await as('parent')
+        .post('/growth')
+        .send({ childId: kid.body.id, heightCm: 50, weightKg: 3.3 })
+        .expect(201);
+      await as('parent')
+        .post('/growth')
+        .send({ childId: kid.body.id, heightCm: 51, measuredAt: inDays(5) })
+        .expect(400);
+      await as('parent').delete(`/children/${kid.body.id}`).expect(200);
+    });
+  });
+
   describe('invitations for me', () => {
     it('lists invitations sent to my address, and I can accept one without the link', async () => {
       const kid = await as('parent')
