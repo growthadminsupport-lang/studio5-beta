@@ -119,18 +119,9 @@ try {
   await parent.getByRole('dialog').getByRole('tab', { name: 'Hair' }).click();
   await parent.getByRole('dialog').getByRole('button', { name: 'Hairstyle 3' }).click();
   await parent.getByRole('dialog').getByRole('button', { name: 'Red' }).click();
-  // The child is 10, so the young drawing shows; the baby one can be set up too, with the
-  // face and shoe sets only the baby drawing has.
-  const youngNow = await dlg.getByRole('button', { name: /Child, 3\+\s*\(now\)/ }).getAttribute('aria-pressed');
-  await dlg.getByRole('button', { name: /Baby, 0–3/ }).click();
-  await dlg.getByRole('tab', { name: 'Face' }).click();
-  await dlg.getByRole('button', { name: 'Blue eyes' }).click();
-  await dlg.getByRole('button', { name: 'Eyebrows 5' }).click();
-  await dlg.getByRole('button', { name: 'Eyelashes 1' }).click();
-  await dlg.getByRole('button', { name: 'Mouth: Big grin' }).click();
-  await dlg.getByRole('tab', { name: 'Clothes' }).click();
-  await dlg.getByRole('button', { name: 'Shoes 2' }).click();
-  const babyLayers = await dlg.locator('img').evaluateAll((imgs) => imgs.map((i) => i.getAttribute('src')));
+  // The drawing follows the child's age by itself: a 10-year-old gets the young child, with no
+  // switch and no baby-only tabs (Face, Clothes).
+  const youngOnly = (await dlg.getByRole('tab', { name: 'Face' }).count()) === 0 && (await dlg.getByRole('button', { name: /Baby, 0–3/ }).count()) === 0;
   await shot(parent, '00-edit-child-avatar');
   await parent.getByRole('dialog').getByRole('button', { name: 'Save changes' }).click();
   await parent.getByRole('dialog').waitFor({ state: 'detached' });
@@ -139,11 +130,7 @@ try {
   const srcs = await parent.$$eval('img', (imgs) => imgs.map((i) => i.getAttribute('src')));
   check('edit child opens as a window; avatar skin, hairstyle and colour are saved',
     stayed && srcs.some((x) => x?.includes('young/girl-deep')) && srcs.some((x) => x?.includes('young/hair-3')));
-  const kids = await (await fetch(`${API}/children`, { headers: { Authorization: `Bearer ${await apiToken(parentEmail)}` } })).json();
-  const saved = kids.find((k) => k.fullName === 'Mali Test')?.avatar ?? {};
-  check('both drawings can be set up: baby eye colour, brows, lashes, mouth and shoes are previewed and saved',
-    youngNow === 'true' && ['eyes-4', 'brows-5', 'lashes-1', 'mouth-4', 'shoes-2'].every((l) => babyLayers.some((x) => x?.includes(`baby/${l}.webp`))) &&
-    saved.babyEyes === 4 && saved.babyBrows === 5 && saved.babyLashes === 1 && saved.babyMouth === 4 && saved.babyShoes === 2, JSON.stringify(saved));
+  check('a 10-year-old gets the young drawing with no switch and no baby-only tabs', youngOnly);
 
   await parent.getByRole('button', { name: 'People who can see this child' }).click();
   await parent.getByRole('dialog').getByText('People who follow Mali Test').waitFor();
@@ -193,6 +180,45 @@ try {
   await parent.waitForURL('**/growth');
   const onBaby = await parent.getByText('Baby Test').first().waitFor({ timeout: 15000 }).then(() => true, () => false);
   check('a check-up that is due shows on the dashboard and as a reminder that opens the child\'s Growth page', dueCard && onBaby, `card ${dueCard}, growth for baby ${onBaby}`);
+  await parent.goto(`${APP}/dashboard`);
+
+  // The baby gets the baby drawing with face and shoe choices, saved.
+  await parent.getByRole('button', { name: 'Edit child profile' }).click();
+  const bdlg = parent.getByRole('dialog');
+  await bdlg.getByRole('tab', { name: 'Face' }).click();
+  await bdlg.getByRole('button', { name: 'Blue eyes' }).click();
+  await bdlg.getByRole('button', { name: 'Eyebrows 5' }).click();
+  await bdlg.getByRole('button', { name: 'Eyelashes 1' }).click();
+  await bdlg.getByRole('button', { name: 'Mouth: Big grin' }).click();
+  await bdlg.getByRole('tab', { name: 'Clothes' }).click();
+  await bdlg.getByRole('button', { name: 'Shoes 2' }).click();
+  const babyLayers = await bdlg.locator('img').evaluateAll((imgs) => imgs.map((i) => i.getAttribute('src')));
+  await bdlg.getByRole('button', { name: 'Save changes' }).click();
+  await bdlg.waitFor({ state: 'detached' });
+  const pTok0 = await apiToken(parentEmail);
+  const kids0 = await (await fetch(`${API}/children`, { headers: { Authorization: `Bearer ${pTok0}` } })).json();
+  const babyKid = kids0.find((k) => k.fullName === 'Baby Test');
+  const saved = babyKid?.avatar ?? {};
+  check('the baby drawing\'s eye colour, brows, lashes, mouth and shoes are previewed and saved',
+    ['eyes-4', 'brows-5', 'lashes-1', 'mouth-4', 'shoes-2'].every((l) => babyLayers.some((x) => x?.includes(`baby/${l}.webp`))) &&
+    saved.babyEyes === 4 && saved.babyBrows === 5 && saved.babyLashes === 1 && saved.babyMouth === 4 && saved.babyShoes === 2, JSON.stringify(saved));
+
+  // Dashboard and Growth page agree: a baby has height, weight and head size (no BMI before 2),
+  // and head size can be corrected in the history.
+  await fetch(`${API}/growth`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pTok0}` },
+    body: JSON.stringify({ childId: babyKid.id, measuredAt: '2026-09-01', heightCm: 60, weightKg: 5.8, headCircumferenceCm: 39.5 }) });
+  await parent.reload();
+  await parent.getByRole('button', { name: /^Head/ }).first().waitFor();
+  const babyTiles = (await parent.locator('.grid.grid-cols-3 button').allTextContents()).join(' ');
+  await parent.goto(`${APP}/growth`);
+  await parent.getByText('Head 39.5 cm').waitFor();
+  const babyBmiShown = (await parent.textContent('body')).includes('BMI 16');
+  await parent.getByRole('button', { name: 'Edit', exact: true }).first().click();
+  await parent.getByLabel('Head circumference (cm)').fill('40.2');
+  await parent.getByRole('button', { name: 'Save', exact: true }).first().click();
+  await parent.getByText('Head 40.2 cm').waitFor();
+  check('a baby\'s dashboard shows height, weight and head (no BMI), and head size can be edited in the history',
+    /HEIGHT|Height/.test(babyTiles) && /Head/i.test(babyTiles) && !/BMI/.test(babyTiles) && !babyBmiShown, babyTiles);
   await parent.goto(`${APP}/dashboard`);
   // Back to the first child for the rest of the flow.
   await parent.getByRole('button', { name: 'Switch child' }).click();

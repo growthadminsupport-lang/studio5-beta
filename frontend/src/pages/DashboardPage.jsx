@@ -5,7 +5,7 @@ import ChildProfileCard, { NoChildState } from '../components/ChildProfile/Child
 import InvitationsForYou from '../components/People/InvitationsForYou';
 import GrowthChart from '../components/GrowthTracking/GrowthChart';
 import { api } from '../lib/api';
-import { describePercentile, useGrowthRecords } from '../lib/growth';
+import { describePercentile, hasBmi, useGrowthRecords } from '../lib/growth';
 import { BUILTIN_ARTICLES } from '../content/articles';
 import {
   Ruler,
@@ -14,6 +14,7 @@ import {
   Sparkles,
   Plus,
   AlertTriangle,
+  CircleUserRound,
 } from 'lucide-react';
 
 
@@ -25,6 +26,7 @@ const MEASURES = {
   height: { label: 'Height', unit: 'cm', icon: Ruler, valueKey: 'heightCm', chartTitle: 'Height compared with children the same age', percentileKey: 'heightPercentile' },
   weight: { label: 'Weight', unit: 'kg', icon: Weight, valueKey: 'weightKg', chartTitle: 'Weight compared with children the same age', percentileKey: 'weightPercentile' },
   bmi: { label: 'BMI', unit: '', icon: Accessibility, valueKey: 'bmi', chartTitle: 'BMI and weight categories', percentileKey: 'bmiPercentile' },
+  headCircumference: { label: 'Head', unit: 'cm', icon: CircleUserRound, valueKey: 'headCircumferenceCm', chartTitle: 'Head size compared with children the same age', percentileKey: 'headCircumferencePercentile' },
 };
 
 // Same cards as the Knowledge page (content/articles.js).
@@ -82,7 +84,10 @@ function NextSteps({ items }) {
 function DashboardPage() {
   const [selectedMeasure, setSelectedMeasure] = useState('height');
   const { activeChild: child } = useChildren();
-  const currentMeasure = MEASURES[selectedMeasure];
+  // Same set as the Growth page: BMI from 2 years, head size before (lib/growth.js).
+  const shownKeys = child && hasBmi(child.dateOfBirth) ? ['height', 'weight', 'bmi'] : ['height', 'weight', 'headCircumference'];
+  const measureKey = shownKeys.includes(selectedMeasure) ? selectedMeasure : 'height';
+  const currentMeasure = MEASURES[measureKey];
   const { records } = useGrowthRecords(child?.id);
   const latestRecord = records[0] ?? null;
   const guidance = latestRecord?.guidance ?? null;
@@ -175,9 +180,9 @@ function DashboardPage() {
             {/* Measure tiles double as tabs. Values and percentile status
                 show "—" until this child has a logged measurement. */}
             <div className="mb-5 grid grid-cols-3 gap-2">
-              {Object.entries(MEASURES).map(([key, measure]) => {
+              {shownKeys.map((key) => [key, MEASURES[key]]).map(([key, measure]) => {
                 const Icon = measure.icon;
-                const active = selectedMeasure === key;
+                const active = measureKey === key;
                 const value = latestRecord?.[measure.valueKey] ?? null;
                 const status = describePercentile(latestRecord?.[measure.percentileKey]);
 
@@ -218,14 +223,14 @@ function DashboardPage() {
             <div>
               <h3 className="text-sm font-bold text-[#056559] dark:text-teal-300">{currentMeasure.chartTitle}</h3>
               <p className="mt-0.5 text-xs text-slate-400">
-                {selectedMeasure === 'bmi'
+                {measureKey === 'bmi'
                   ? 'The colours are the weight categories doctors use, from 2 years.'
                   : 'The green band is the usual range for the same age and sex; the dotted line is the average.'}
               </p>
             </div>
 
             <div className="mt-3">
-              <GrowthChart child={child} measure={selectedMeasure} records={records} bare height={260} />
+              <GrowthChart child={child} measure={measureKey} records={records} bare height={260} />
             </div>
           </div>
 
