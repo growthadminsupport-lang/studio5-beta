@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, Navigate, useParams, useSearchParams } from "react-router-dom";
-import ChildFormPage from "./pages/ChildFormPage";
 import { useChildren } from "./context/ChildrenContext";
 
 // Auth & Context
@@ -12,31 +11,83 @@ import MainLayout from "./components/Layout/MainLayout";
 
 // Pages
 import HomePage from "./pages/HomePage";
-import AboutPage from "./pages/AboutPage";
 import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import DashboardPage from "./pages/DashboardPage";
-import GrowthPage from "./pages/GrowthPage";
-import PubertyPage from "./pages/PubertyPage";
-import BoneAgePage from "./pages/BoneAgePage";
-import KnowledgePage from "./pages/KnowledgePage";
-import ArticlePage from "./pages/ArticlePage";
-import ProfilePage from "./pages/ProfilePage";
-import NotificationsPage from "./pages/NotificationsPage";
-import SettingsPage from "./pages/SettingsPage";
-import PrivacyNoticePage from "./pages/PrivacyNoticePage";
-import TermsOfUsePage from "./pages/TermsOfUsePage";
-import ContactPage from "./pages/ContactPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import InvitePage from "./pages/InvitePage";
-import PeoplePage from "./pages/PeoplePage";
-import WelcomePage from "./pages/WelcomePage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ScrollToTop from "./components/Layout/ScrollToTop";
 
-// Admins only, so everyone else never downloads it.
+// Home and login load with the app; every other page is fetched when first opened, so a
+// phone on a mobile connection downloads one page, not all of them (the single bundle was
+// 386 kB gzipped). The admin portal is fetched only by admins.
+const page = {
+  ChildFormPage: () => import("./pages/ChildFormPage"),
+  AboutPage: () => import("./pages/AboutPage"),
+  RegisterPage: () => import("./pages/RegisterPage"),
+  ForgotPasswordPage: () => import("./pages/ForgotPasswordPage"),
+  DashboardPage: () => import("./pages/DashboardPage"),
+  GrowthPage: () => import("./pages/GrowthPage"),
+  PubertyPage: () => import("./pages/PubertyPage"),
+  BoneAgePage: () => import("./pages/BoneAgePage"),
+  KnowledgePage: () => import("./pages/KnowledgePage"),
+  ArticlePage: () => import("./pages/ArticlePage"),
+  ProfilePage: () => import("./pages/ProfilePage"),
+  NotificationsPage: () => import("./pages/NotificationsPage"),
+  SettingsPage: () => import("./pages/SettingsPage"),
+  PrivacyNoticePage: () => import("./pages/PrivacyNoticePage"),
+  TermsOfUsePage: () => import("./pages/TermsOfUsePage"),
+  ContactPage: () => import("./pages/ContactPage"),
+  ResetPasswordPage: () => import("./pages/ResetPasswordPage"),
+  InvitePage: () => import("./pages/InvitePage"),
+  PeoplePage: () => import("./pages/PeoplePage"),
+  WelcomePage: () => import("./pages/WelcomePage"),
+  VerifyEmailPage: () => import("./pages/VerifyEmailPage"),
+};
+const lazyPage = Object.fromEntries(Object.entries(page).map(([k, load]) => [k, lazy(load)]));
+const {
+  ChildFormPage,
+  AboutPage,
+  RegisterPage,
+  ForgotPasswordPage,
+  DashboardPage,
+  GrowthPage,
+  PubertyPage,
+  BoneAgePage,
+  KnowledgePage,
+  ArticlePage,
+  ProfilePage,
+  NotificationsPage,
+  SettingsPage,
+  PrivacyNoticePage,
+  TermsOfUsePage,
+  ContactPage,
+  ResetPasswordPage,
+  InvitePage,
+  PeoplePage,
+  WelcomePage,
+  VerifyEmailPage,
+} = lazyPage;
 const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
+
+/** After sign-in, fetch the pages people open next while the browser is idle. */
+function usePrefetchAppPages(enabled) {
+  useEffect(() => {
+    if (!enabled) return;
+    const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 1500));
+    const cancel = window.cancelIdleCallback ?? clearTimeout;
+    const id = idle(() => {
+      for (const name of ["DashboardPage", "GrowthPage", "PubertyPage", "BoneAgePage", "KnowledgePage", "ProfilePage", "SettingsPage"]) {
+        page[name]().catch(() => {});
+      }
+    });
+    return () => cancel(id);
+  }, [enabled]);
+}
+
+function FullPageSpinner() {
+  return (
+    <div className="flex min-h-screen items-center justify-center dark:bg-slate-900" role="status" aria-label="Loading">
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#056559] dark:border-slate-700 dark:border-t-teal-400" />
+    </div>
+  );
+}
 
 // Links into one child's page, as used by suggestions, notifications and emails:
 // /children/:id/growth selects that child, then shows /growth.
@@ -57,10 +108,13 @@ function LoginRoute() {
 
 function App() {
   const { isLoggedIn, loading } = useAuth() || {};
+  usePrefetchAppPages(isLoggedIn);
 
   return (
     <>
     <ScrollToTop />
+    {/* Pages inside MainLayout suspend inside it (navbar stays); this catches the standalone ones. */}
+    <Suspense fallback={<FullPageSpinner />}>
     <Routes>
       {/* Standalone Auth Pages */}
       <Route path="/login" element={isLoggedIn && !loading ? <LoginRoute /> : <LoginPage />} />
@@ -104,11 +158,7 @@ function App() {
         <Route element={<MainLayout />}>
           <Route
             path="/admin/*"
-            element={
-              <Suspense fallback={null}>
-                <AdminPage />
-              </Suspense>
-            }
+            element={<AdminPage />}
           />
         </Route>
       </Route>
@@ -116,6 +166,7 @@ function App() {
       {/* Catch-all Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
     </>
   );
 }
