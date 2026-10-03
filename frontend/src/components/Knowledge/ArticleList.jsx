@@ -88,6 +88,12 @@ function ArticleList() {
   );
   const browsing = category === "all" && !q;
   const exploreMore = articles.filter((article) => article.slug !== featuredSlug);
+  // Phones: Bone Age first, then the other topic cards ("Support Healthy Growth" has its own
+  // card in the sidebar). Built here because the articles come from the API.
+  const phoneList = [
+    featured,
+    ...exploreMore.filter((article) => article.slug !== "support-healthy-growth"),
+  ].filter(Boolean);
 
 
   return (
@@ -187,7 +193,8 @@ function ArticleList() {
 
       <div className="kn-heading-row">
         <h2 className="knowledge-heading">
-          Parenting Resources
+          <span className="kn-h-desktop">Parenting Resources</span>
+          <span className="kn-h-mobile">Nurturing Knowledge</span>
         </h2>
         <input
           type="search"
@@ -363,6 +370,65 @@ function ArticleList() {
                 </p>
 
               )}
+
+          </div>
+
+
+          {/* =================================================
+             PHONE LIST (phones only; hidden on larger screens)
+             ================================================= */}
+
+          <div className="kn-mobile-list">
+
+            {(browsing ? phoneList : filtered).map(
+              (article) => (
+
+                <Link
+                  key={article.id}
+                  to={`/knowledge/${article.slug}`}
+                  state={{ from: "/knowledge" }}
+                  className="kn-mcard"
+                >
+
+                  <div
+                    className={`kn-mcard-art art-${article.tag.replace(
+                      /\s/g,
+                      "-"
+                    )}`}
+                  >
+                    <img src={article.image} alt="" className="kn-explore-image" />
+                  </div>
+
+                  <div className="kn-mcard-body">
+
+                    <div>
+                      {article.slug === featuredSlug && (
+                        <span className="kn-mcard-tag">
+                          {article.tag}
+                        </span>
+                      )}
+
+                      <h3>{article.title}</h3>
+                      <p>{article.blurb}</p>
+                    </div>
+
+                    <span className="kn-mcard-btn">
+                      Read More
+                      <span className="arrow-icon">→</span>
+                    </span>
+
+                  </div>
+
+                </Link>
+
+              )
+            )}
+
+            {!browsing && filtered.length === 0 && (
+              <p className="kn-empty">
+                No articles in this category yet.
+              </p>
+            )}
 
           </div>
 

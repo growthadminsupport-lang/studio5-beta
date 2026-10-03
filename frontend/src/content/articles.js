@@ -27,7 +27,7 @@ export const BUILTIN_ARTICLES = [
   { id: "b1", slug: "navigating-growth-spurts", label: "Article", tag: "growth", title: "Growth Spurts", blurb: "When and how your body speeds up.", category: "growth" },
   { id: "b2", slug: "nutrition-for-pre-teens", label: "Guide", tag: "nutrition", title: "Nutrition", blurb: "Key nutrients for strong bones and healthy growth.", category: "nutrition" },
   { id: "b3", slug: "understanding-puberty", label: "Explainer", tag: "puberty", title: "Puberty", blurb: "What to expect and how to prepare.", category: "puberty" },
-  { id: "b4", slug: "understanding-bone-age", label: "Explainer", tag: "bone age", title: "Understanding Bone Age", blurb: "How skeletal maturity is read from a hand X-ray.", category: "bone age" },
+  { id: "b4", slug: "understanding-bone-age", label: "Explainer", tag: "bone age", title: "Understanding Bone Age", blurb: "Find out how doctors estimate skeletal maturity from a hand X-ray.", category: "bone age" },
   { id: "b5", slug: "support-healthy-growth", label: "Guide", tag: "healthy habits", title: "Support Healthy Growth", blurb: "Everyday habits that make a big difference.", category: "healthy habits" },
 ].map((a) => ({ ...a, image: EXPLORE_IMAGES[a.category], builtin: true }));
 
