@@ -121,7 +121,7 @@ export class AdminService {
           : 'Your doctor account was not approved',
       body:
         dto.decision === 'APPROVED'
-          ? 'You can now accept invitations from parents and add bone-age records.'
+          ? 'You can now accept invitations from parents and add bone-age records. Invitations sent to your email address are waiting on your dashboard.'
           : `Reason: ${dto.note?.trim()}. Contact support if you think this is a mistake.`,
       path: '/dashboard',
       email: true,

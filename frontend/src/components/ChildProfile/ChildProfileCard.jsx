@@ -5,6 +5,7 @@ import ChildAvatar from './ChildAvatar';
 import { avatarVersion } from '../../lib/avatar';
 import ChildEditDialog from './ChildEditDialog';
 import PeopleDialog from '../People/PeopleDialog';
+import InvitationsForYou from '../People/InvitationsForYou';
 import { useAuth } from '../../context/AuthContext';
 import { errorMessage } from '../../lib/api';
 import { useChildren } from '../../context/ChildrenContext';
@@ -288,6 +289,7 @@ export function NoChildState() {
   const pendingDoctor = isDoctor && user?.doctorStatus !== 'APPROVED';
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50/50 dark:bg-slate-900 px-4 py-16 text-center">
+      <InvitationsForYou className="mb-2" />
       {pendingDoctor ? (
         <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
           {user?.doctorStatus === 'REJECTED'

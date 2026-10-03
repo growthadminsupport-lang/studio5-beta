@@ -322,7 +322,9 @@ window (**Manage**).
    hospital or clinic. Confirm your email address. A GrowTH administrator checks your licence
    and approves your account; you are notified when that happens.
 2. **Accept the parent's invitation** (link, QR code or email). The child appears on your
-   dashboard. To find a patient quickly, use the search in the switch window: it finds your
+   dashboard. If the parent invited your email address, the invitation also waits on your
+   dashboard under **Invitations for you**: choose **Accept**. This works once your account is
+   approved, even if you opened the link earlier or did not get the email. To find a patient quickly, use the search in the switch window: it finds your
    own patients by **hospital number (HN)** or name.
 3. **Add a hand X-ray**: go to **AI Prediction**, set the **exam date** (the child's age is
    taken on that date), and drop or choose the file. A **PDF report, JPEG, PNG or WebP** is
