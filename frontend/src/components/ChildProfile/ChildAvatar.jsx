@@ -28,7 +28,16 @@ export function AvatarFigure({ version, sex, avatar, height }) {
   const a = withDefaults(avatar, sex);
   const layers =
     version === "baby"
-      ? [`baby/skin-${a.skin}`, `baby/outfit-${a.babyOutfit}`, "baby/shoes", "baby/face"]
+      ? [
+          `baby/skin-${a.skin}`,
+          `baby/outfit-${a.babyOutfit}`,
+          `baby/shoes-${a.babyShoes}`,
+          "baby/eye-white",
+          `baby/mouth-${a.babyMouth}`,
+          `baby/eyes-${a.babyEyes}`,
+          `baby/lashes-${a.babyLashes}`,
+          `baby/brows-${a.babyBrows}`,
+        ]
       : [`young/${sex === "MALE" ? "boy" : "girl"}-${a.skin}`];
   return (
     <div className="relative" style={{ height, width: height * SETS[version].aspect }}>
@@ -36,6 +45,22 @@ export function AvatarFigure({ version, sex, avatar, height }) {
         <img key={l} src={src(l)} alt="" className="absolute inset-0 h-full w-full" draggable={false} />
       ))}
       <Hair version={version} index={version === "baby" ? a.babyHair : a.youngHair} color={a.hairColor} />
+    </div>
+  );
+}
+
+/**
+ * A close-up of the figure: `span` is the share of its height shown, centred on `x`/`y`
+ * (fractions of the figure). The editor uses it so a face option fills its tile.
+ */
+export function AvatarZoom({ version, sex, avatar, size, x = 0.5, y = 0.345, span = 0.34 }) {
+  const height = size / span;
+  const width = height * SETS[version].aspect;
+  return (
+    <div className="relative shrink-0 overflow-hidden" style={{ width: size, height: size }} aria-hidden="true">
+      <div className="absolute" style={{ top: size / 2 - y * height, left: size / 2 - x * width }}>
+        <AvatarFigure version={version} sex={sex} avatar={avatar} height={height} />
+      </div>
     </div>
   );
 }

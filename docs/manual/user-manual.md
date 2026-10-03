@@ -66,9 +66,15 @@ and follow the link we send (it works once, for one hour).
 
 After your first sign-in, choose **Add your own child**.
 
-1. **Avatar.** Every child gets a drawn character instead of a photo, for their privacy. Pick
-   the skin tone, hairstyle and hair colour (and clothes for babies). Babies and toddlers up
-   to 3 years get a baby drawing; it changes to the young-child drawing as your child grows.
+1. **Avatar.** Every child gets a drawn character instead of a photo, for their privacy.
+   Babies and toddlers up to 3 years get a baby drawing; it changes to the young-child drawing
+   as your child grows. Choose:
+    - **Skin** tone, and **Hair** colour and style, for both drawings;
+    - for the baby drawing, the **Face** (eye colour, eyebrows, eyelashes and mouth) and
+      **Clothes** (outfit and shoes).
+
+   The switch above the picture (**Baby, 0–3** / **Child, 3+**) shows the other drawing, so you
+   can set both up now; "(now)" marks the one your child has today.
 2. **Full name**, and a **nickname** if you like (the charts use it).
 3. **Date of birth.**
 4. **Sex: Girl or Boy.** This matters: growth charts and bone age are different for girls and
@@ -90,6 +96,8 @@ choose **Change** to pick a different one.
 ![Edit child](img/04-edit-child.png)
 
 ![Choose a hairstyle](img/05-avatar-hair.png)
+
+![The baby drawing's face: eye colour, eyebrows, eyelashes and mouth](img/05b-avatar-face.png)
 
 **More than one child?** Add each one the same way. Switch between them with the **switch** button (two arrows) on
 the child's card; every page then shows the child you picked.

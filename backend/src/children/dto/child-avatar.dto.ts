@@ -35,4 +35,38 @@ export class ChildAvatarDto {
   @Min(1)
   @Max(6)
   babyOutfit?: number;
+
+  // Baby drawing only: the face and shoe sets in the artist's file (design/avatars/build.py).
+
+  /** Mouth: 1 open, 2 smile, 3 wide open, 4 big grin. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  babyMouth?: number;
+
+  /** Eye colour: 1 brown, 2 green, 3 amber, 4 blue. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  babyEyes?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(6)
+  babyLashes?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(6)
+  babyBrows?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  babyShoes?: number;
 }

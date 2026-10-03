@@ -524,6 +524,38 @@ maybe('roles and permissions (e2e)', () => {
     });
   });
 
+  describe('avatar', () => {
+    it('keeps every avatar choice, and refuses one out of range', async () => {
+      const avatar = {
+        skin: 'tan',
+        babyHair: 4,
+        youngHair: 2,
+        hairColor: '#6b4226',
+        babyOutfit: 3,
+        babyMouth: 4,
+        babyEyes: 1,
+        babyLashes: 6,
+        babyBrows: 2,
+        babyShoes: 1,
+      };
+      const res = await as('parent')
+        .post('/children')
+        .send({
+          fullName: 'Avatar Child',
+          sex: 'FEMALE',
+          dateOfBirth: '2025-06-01',
+          avatar,
+        })
+        .expect(201);
+      expect(res.body.avatar).toEqual(avatar);
+      await as('parent')
+        .patch(`/children/${res.body.id}`)
+        .send({ avatar: { ...avatar, babyMouth: 9 } })
+        .expect(400);
+      await as('parent').delete(`/children/${res.body.id}`).expect(200);
+    });
+  });
+
   describe('invitations are for other people', () => {
     let kidId: string;
     beforeAll(async () => {

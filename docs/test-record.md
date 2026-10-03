@@ -3,6 +3,18 @@
 TOR §6.5: functional testing before each milestone, on at least two browsers and one mobile
 viewport, with a record kept. This is that record.
 
+## 2026-10-03 (later), more avatar choices
+
+The baby drawing now offers every set in the artist's file: eye colour (4), eyebrows (6),
+eyelashes (6), mouth (4) and shoes (5), next to skin, hair and outfit. A Baby / Child switch
+previews the other drawing, so both can be set up whatever the child's age.
+
+| Check | Result |
+| --- | --- |
+| Browser walk-through, 48 checks (adds: set up the baby drawing on a 10-year-old; the chosen eye colour, brows, lashes, mouth and shoes appear in the preview and are saved) | Chromium, Firefox, WebKit: **48 / 48** each |
+| API end-to-end (adds: every avatar field is kept, an out-of-range one is refused) | **36 / 36** |
+| Existing avatars | Unchanged: the defaults are the layers the artist left visible |
+
 ## 2026-10-03, admin portal walk-through and Knowledge phone layout
 
 | Check | Result |

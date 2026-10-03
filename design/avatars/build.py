@@ -2,7 +2,8 @@
 Build the child avatar layers the app stacks in the browser (frontend/public/avatars/).
 
 Sources are the team's art on the GrowTH Drive, downloaded to SRC (not committed, ~60 MB):
-  SRC/profile/อวาตาร์เด็กจิ๋ว.psd   baby / small child, full body (4 skins, 10 hair, 6 outfits)
+  SRC/profile/อวาตาร์เด็กจิ๋ว.psd   baby / small child, full body (4 skins, 10 hair, 6 outfits,
+                                      4 mouths, 4 eye colours, 6 lashes, 6 brows, 5 shoes)
   SRC/custom/avatar_jpeg.jpg          young child bust, bald base
   SRC/custom/avatar_design1.png       young child, face variant 1 (girl)
   SRC/custom/avatar_design2.png       young child, face variant 2 (boy)
@@ -87,6 +88,19 @@ def tintable(im):
     return to(shade_img), to(acc_img), bool(accessory.sum() > 50)
 
 
+# Face sets in the baby PSD: app key -> layer group. Mouth: open, smile, wide open, big grin.
+FACE_SETS = {'mouth': 'ปาก', 'eyes': 'ตาดำสีต่างๆ', 'lashes': 'ทรงขนตาต่างๆ', 'brows': 'ทรงคิ้ว'}
+
+
+def dedupe(images):
+    """The PSD repeats some options (two layers named "5"); keep each drawing once."""
+    out = []
+    for im in images:
+        if not any(np.array_equal(np.asarray(im), np.asarray(o)) for o in out):
+            out.append(im)
+    return out
+
+
 def union_box(images, pad=12):
     # By alpha only: colour values under fully transparent pixels must not widen the frame.
     alphas = [im.getchannel('A').point(lambda v: 255 if v > 20 else 0) for im in images]
@@ -103,32 +117,39 @@ def baby(manifest):
     g = {l.name: l for l in psd}
     body = g['ตัว ตา ผิว']
     skins = [l for l in body if l.name.startswith('ผิว')]  # fair, rosy, tan, deep
-    face_parts = [l for l in body if not l.name.startswith('ผิว')]
-    # Face: the layers the artist left visible (mouth, eye whites, pupils, lashes, brows).
-    face = Image.new('RGBA', psd.size)
-    for part in face_parts:
-        if part.is_group():
-            chosen = [c for c in part if c.visible][:1]
-        else:
-            chosen = [part]
-        for c in chosen:
-            face.alpha_composite(render(psd, c))
+    parts = {l.name: l for l in body if not l.name.startswith('ผิว')}
+    # Face: eye whites are fixed; each other set is exported option by option so the app can
+    # mix them (FACE_SETS order = the PSD's order, bottom to top).
+    eye_white = render(psd, parts['ตาขาว'])
+    face_sets = {key: [render(psd, l) for l in parts[group]] for key, group in FACE_SETS.items()}
     hairs = list(g['เซ็ตผม'])
     outfits = list(g['เซ็ตชุด'])
-    shoes = [l for l in g['รองเท้า'] if l.visible][:1] or list(g['รองเท้า'])[-1:]
+    shoes = list(g['รองเท้า'])
 
     rendered = {
         'skins': [render(psd, l) for l in skins],
         'hair': [render(psd, l) for l in hairs],
         'outfits': [render(psd, l) for l in outfits],
-        'shoes': render(psd, shoes[0]),
+        'shoes': [render(psd, l) for l in shoes],
     }
     box = union_box(rendered['skins'] + rendered['hair'] + rendered['outfits'])
     H = 360
     for name, im in zip(SKINS, rendered['skins']):
         save(im, OUT / 'baby' / f'skin-{name}.webp', box, H)
-    save(face, OUT / 'baby' / 'face.webp', box, H)
-    save(rendered['shoes'], OUT / 'baby' / 'shoes.webp', box, H)
+    save(eye_white, OUT / 'baby' / 'eye-white.webp', box, H)
+    counts = {}
+    for key, ims in face_sets.items():
+        ims = dedupe(ims)
+        counts[key] = len(ims)
+        for i, im in enumerate(ims, 1):
+            save(im, OUT / 'baby' / f'{key}-{i}.webp', box, H)
+    shoes_ims = dedupe(rendered['shoes'])
+    counts['shoes'] = len(shoes_ims)
+    for i, im in enumerate(shoes_ims, 1):
+        save(im, OUT / 'baby' / f'shoes-{i}.webp', box, H)
+        # One shoe, not the pair: the pair stands far apart and came out tiny in the picker.
+        left = im.crop((0, 0, im.width // 2, im.height))
+        save(left, OUT / 'baby' / f'shoes-{i}-thumb.webp', union_box([left], pad=6), 96)
     for i, im in enumerate(rendered['outfits'], 1):
         save(im, OUT / 'baby' / f'outfit-{i}.webp', box, H)
         # The clothes picker shows each outfit on its own, cropped to it, so it fills the tile.
@@ -145,6 +166,7 @@ def baby(manifest):
         'hair': len(hairs),
         'outfits': len(outfits),
         'hairWithAccessories': acc,
+        **counts,
     }
 
 

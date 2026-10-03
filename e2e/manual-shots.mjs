@@ -51,8 +51,14 @@ await shot(p, '03-dashboard');
 await p.getByRole('button', { name: 'Edit child profile' }).click();
 await p.getByRole('dialog').waitFor(); await p.waitForTimeout(600);
 await p.getByRole('dialog').screenshot({ path: `${OUT}/04-edit-child.png` });
-await p.getByRole('dialog').getByRole('tab', { name: 'Hairstyle' }).click(); await p.waitForTimeout(500);
+await p.getByRole('dialog').getByRole('tab', { name: 'Hair' }).click(); await p.waitForTimeout(500);
 await p.getByRole('dialog').screenshot({ path: `${OUT}/05-avatar-hair.png` });
+await p.getByRole('dialog').getByRole('button', { name: /Baby, 0–3/ }).click();
+await p.getByRole('dialog').getByRole('tab', { name: 'Face' }).click(); await p.waitForTimeout(500);
+// Tall enough for the whole editor, which is taller than the default window.
+await p.setViewportSize({ width: 1280, height: 1500 }); await p.waitForTimeout(400);
+await p.getByRole('dialog').locator('.rounded-2xl').first().screenshot({ path: `${OUT}/05b-avatar-face.png` });
+await p.setViewportSize({ width: 1280, height: 860 });
 await p.keyboard.press('Escape'); await p.waitForTimeout(400);
 
 await p.goto(`${APP}/growth`); await p.waitForTimeout(1800);

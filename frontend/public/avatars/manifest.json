@@ -8,7 +8,12 @@
       2,
       6,
       10
-    ]
+    ],
+    "mouth": 4,
+    "eyes": 4,
+    "lashes": 6,
+    "brows": 6,
+    "shoes": 5
   },
   "young": {
     "aspect": 1.0058,
