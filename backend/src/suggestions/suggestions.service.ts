@@ -1,6 +1,7 @@
 import { ageInMonths } from '../common/age';
+import { checkupWindow, measuredFor } from '../common/well-child';
+import { checkupAgeText } from '../mail/mail.service';
 import { Injectable } from '@nestjs/common';
-import { ChildSex } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildrenService } from '../children/children.service';
 import { GrowthReferenceService } from '../growth/growth-reference.service';
@@ -47,6 +48,7 @@ const PUBERTY_SCREENING_MIN_AGE_YEARS = 6;
 const RESCREEN_AFTER_MONTHS = FOLLOW_UP_INTERVAL_MONTHS;
 
 export type SuggestionKind =
+  | 'CHECKUP_DUE'
   | 'PUBERTY_SCREENING'
   | 'BONE_AGE_UPLOAD'
   | 'BONE_AGE_REFERRAL'
@@ -236,6 +238,27 @@ export class SuggestionsService {
           actionHref: `/children/${childId}/puberty`,
         });
       }
+    }
+
+    // A well-child check-up age has been reached and nothing measured since
+    // (common/well-child.ts). Shown to everyone who can add a measurement; the matching
+    // notification and email go to parents only (RemindersService).
+    const { current: checkup } = checkupWindow(child.dateOfBirth, now);
+    if (
+      checkup &&
+      !(latestGrowth && measuredFor(checkup.date, latestGrowth.measuredAt))
+    ) {
+      out.unshift({
+        kind: 'CHECKUP_DUE',
+        severity: 'info',
+        title: `The ${checkup.label} check-up is due`,
+        body:
+          `A routine check-up is recommended at ${checkupAgeText(checkup.label)} ` +
+          '(American Academy of Pediatrics schedule). Height and weight are measured there; ' +
+          'add them here so the chart stays up to date.',
+        actionLabel: 'Add measurement',
+        actionHref: `/children/${childId}/growth`,
+      });
     }
 
     return out;

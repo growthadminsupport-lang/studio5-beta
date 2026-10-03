@@ -1,0 +1,37 @@
+name: Check-up reminder emails
+
+# Once a day, asks the API to email parents whose child has reached a well-child check-up age
+# with nothing measured since (backend/src/notifications/reminders.service.ts). In-app reminders
+# do not depend on this: they are created when the parent opens GrowTH.
+#
+# Needs, under Settings > Secrets and variables > Actions:
+# - variable BACKEND_URL, e.g. https://growth-api-xxxx.onrender.com (shared with keep-awake)
+# - secret REMINDERS_SECRET, the same value as REMINDERS_SECRET on Render
+# GitHub runs schedules best-effort (often late), which is fine for a daily email.
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # 08:00 in Thailand
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send due reminders
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+          REMINDERS_SECRET: ${{ secrets.REMINDERS_SECRET }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$REMINDERS_SECRET" ]; then
+            echo "BACKEND_URL or REMINDERS_SECRET is not set; nothing to do."; exit 0
+          fi
+          # The free instance may be asleep: the first call can take a minute. One retry.
+          for attempt in 1 2; do
+            if curl -fsS --max-time 150 -X POST "$BACKEND_URL/reminders/run" \
+                 -H "x-reminders-secret: $REMINDERS_SECRET"; then
+              echo; exit 0
+            fi
+            sleep 30
+          done
+          exit 1

@@ -26,6 +26,12 @@ periodicity schedule (4th ed.) — read from the schedule itself and counted, no
 
 Visits: 3–5 days, then 1, 2, 4, 6, 9, 12, 15, 18, 24 and 30 months, then annually to 21 years.
 
+**The app reminds parents of these visits** (from 1 month to 18 years): when a visit age is
+reached and nothing has been measured since (a measurement up to 30 days before counts), each
+parent gets one in-app reminder and one email, and the dashboard shows "The … check-up is due".
+Code: `backend/src/common/well-child.ts`, `notifications/reminders.service.ts`. Emails need
+`REMINDERS_SECRET` (DEPLOY.md, "Check-up reminder emails").
+
 | Age | Height & weight | Head circumference | BMI | Puberty screening | Bone age |
 | --- | --- | --- | --- | --- | --- |
 | 0–18 mo | every visit | ✅ every visit | — | — | — |

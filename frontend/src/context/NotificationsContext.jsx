@@ -19,6 +19,7 @@ function timeAgo(iso) {
 
 /** Where a notification takes you: the page about it, for its child. */
 const PATH_FOR = {
+  MEASUREMENT_REMINDER: "/growth",
   PUBERTY_SUBMITTED: "/puberty",
   BONE_AGE_RESULT: "/bone-age",
   INVITE_ACCEPTED: "/people",

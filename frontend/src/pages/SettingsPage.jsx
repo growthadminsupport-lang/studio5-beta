@@ -11,6 +11,21 @@ function SettingsPage() {
   const [uploadedPhoto, setUploadedPhoto] = useState(null); // { key, url }
   const [photoError, setPhotoError] = useState(null);
   const [passwordError, setPasswordError] = useState(null);
+  const [reminderError, setReminderError] = useState(null);
+  const [savingReminders, setSavingReminders] = useState(false);
+
+  async function setReminderEmails(on) {
+    setReminderError(null);
+    setSavingReminders(true);
+    try {
+      const res = await api.patch("/users/me", { checkupReminderEmails: on });
+      setUser?.(res.data);
+    } catch (err) {
+      setReminderError(errorMessage(err, "Could not save. Please try again."));
+    } finally {
+      setSavingReminders(false);
+    }
+  }
 
   // An uploaded photo is streamed through an authenticated route, never served as a public file.
   // A Google sign-up's photo is Google's own https URL and is used directly.
@@ -134,6 +149,29 @@ function SettingsPage() {
             </div>
           </div>
           {photoError && <p className="error-message">{photoError}</p>}
+        </div>
+
+        {/* Check-up reminders: in-app always; email can be turned off. */}
+        <div className="settings-card">
+          <h2>Check-up reminders</h2>
+          <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700 dark:text-slate-200">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#056559]"
+              checked={user?.checkupReminderEmails !== false}
+              disabled={savingReminders}
+              onChange={(e) => setReminderEmails(e.target.checked)}
+            />
+            <span>
+              Email me when my child&apos;s routine check-up is due
+              <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                GrowTH follows the American Academy of Pediatrics check-up schedule: at 1, 2, 4, 6, 9, 12, 15 and 18
+                months, at 2 and 2½ years, then every year. You always see the reminder in GrowTH; this only turns
+                the email off.
+              </span>
+            </span>
+          </label>
+          {reminderError && <p className="error-message">{reminderError}</p>}
         </div>
 
         {/* Change Password Card */}

@@ -65,6 +65,9 @@ model User {
   invitesSent     ChildInvite[]    @relation("InvitesSent")
   sessions        Session[]
   notifications   Notification[]
+  /// Email reminders when a well-child check-up is due (Settings). In-app ones always show.
+  checkupReminderEmails Boolean   @default(true)
+  remindersSent   ReminderSent[]
   auditLogs       AuditLog[]
   supportMessages SupportMessage[]
 
@@ -364,6 +367,20 @@ model Notification {
 
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+/// One row per reminder ever sent, so a reminder the user dismissed is never created again.
+/// `key` is e.g. `checkup:<childId>:24` (the 24-month check-up).
+model ReminderSent {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  createdAt DateTime @default(now())
+  /// Set once emailed (or skipped); the daily run emails rows still null.
+  emailedAt DateTime?
+
+  @@id([userId, key])
+  @@map("reminders_sent")
 }
 
 model AuditLog {

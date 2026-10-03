@@ -97,6 +97,22 @@ Set `SEED_DEMO=true` locally for one demo account per role (password `Demo1234!`
 Leave `RESEND_API_KEY` unset locally: forgot-password then returns the reset token in the
 response instead of emailing it.
 
+## Check-up reminder emails
+
+In-app reminders work with no setup. For the daily emails:
+
+1. Make a secret: `openssl rand -hex 32`.
+2. Render → `growth-api` → Environment: add `REMINDERS_SECRET` with that value, then save
+   (it redeploys).
+3. GitHub → the repository → Settings → Secrets and variables → Actions:
+   - **Secrets**: add `REMINDERS_SECRET` with the same value.
+   - **Variables**: `BACKEND_URL` is already there for the keep-awake job.
+4. Actions → "Check-up reminder emails" → Run workflow, to try it now. The log ends with
+   `{"parents":…,"created":…,"emailed":…}`.
+
+It runs every morning at 08:00 Thailand time. Each reminder is sent once; parents can turn the
+emails off in Settings.
+
 ## File storage (Cloudflare R2)
 
 X-rays and profile photos must outlive deploys: Render's free disk is wiped each time. The API

@@ -1,4 +1,10 @@
-import { IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Matches,
+  MinLength,
+} from 'class-validator';
 import { PHONE_MESSAGE, PHONE_REGEX } from '../../common/validators/phone';
 
 export class UpdateProfileDto {
@@ -16,4 +22,9 @@ export class UpdateProfileDto {
   @IsString()
   @Matches(PHONE_REGEX, { message: PHONE_MESSAGE })
   phoneNumber?: string;
+
+  /** Email me when a well-child check-up is due (in-app reminders always show). */
+  @IsOptional()
+  @IsBoolean()
+  checkupReminderEmails?: boolean;
 }

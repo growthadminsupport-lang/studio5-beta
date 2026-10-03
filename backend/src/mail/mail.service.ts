@@ -179,6 +179,29 @@ export class MailService {
    * email is not a place for a child's screening result, so it only says there is something
    * to read and where.
    */
+  /** A well-child check-up is due and nothing has been measured since (RemindersService). */
+  sendCheckupReminder(
+    to: string,
+    name: string | null,
+    childName: string,
+    label: string,
+    path: string,
+  ): Promise<boolean> {
+    const age = checkupAgeText(label);
+    const { html, text } = renderEmail({
+      preheader: `${childName}'s ${label} check-up is due.`,
+      greeting: greet(name),
+      paragraphs: [
+        `${childName} has reached ${age}, the age for a routine well-child check-up in the schedule recommended by the American Academy of Pediatrics.`,
+        "If it is not booked yet, please arrange it with your child's doctor or clinic. Height and weight are measured at the check-up; adding them to GrowTH keeps the growth chart up to date.",
+      ],
+      action: { label: 'Add a measurement', url: `${this.appUrl}${path}` },
+      footnote:
+        'You receive this reminder because you manage this child in GrowTH. You can turn check-up emails off in Settings.',
+    });
+    return this.send(to, `${childName}'s ${label} check-up`, text, html);
+  }
+
   sendNotice(
     to: string,
     subject: string,
@@ -199,6 +222,12 @@ export class MailService {
     });
     return this.send(to, subject, text, html);
   }
+}
+
+export function checkupAgeText(label: string) {
+  // "2-month" -> "2 months", "2½-year" -> "2½ years", "1-year"... never occurs (12 months).
+  const [n, unit] = label.split('-');
+  return `${n} ${unit}s`;
 }
 
 function greet(name?: string | null) {

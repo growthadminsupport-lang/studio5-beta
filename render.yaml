@@ -68,6 +68,10 @@ services:
       # (signed in with Google at least once), so registering the address first gains nothing.
       - key: ADMIN_EMAIL
         sync: false
+      # Shared with the daily GitHub Actions job that emails check-up reminders
+      # (.github/workflows/checkup-reminders.yml). Any long random string; unset = no emails.
+      - key: REMINDERS_SECRET
+        sync: false
       # --- file storage -------------------------------------------------------------
       # X-rays and profile photos are kept in a private Cloudflare R2 bucket, because this
       # free instance's disk is wiped on every deploy. Unset = local disk only (files lost on
