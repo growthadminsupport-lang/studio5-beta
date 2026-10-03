@@ -3,6 +3,21 @@
 TOR §6.5: functional testing before each milestone, on at least two browsers and one mobile
 viewport, with a record kept. This is that record.
 
+## 2026-10-03, admin portal walk-through and Knowledge phone layout
+
+| Check | Result |
+| --- | --- |
+| Browser walk-through, now 47 checks (adds the full admin portal: tabs by clicking, doctor reject and re-approve, article draft, publish, unpublish and delete, inbox read, resolve and reopen, three CSV exports) | Chromium, Firefox, WebKit: **47 / 47** each |
+| Knowledge, Home and article pages on phones (team's new layout) | No overflow at 390 px, light and dark; no word cut mid-letter at 320–600 px in Chromium and WebKit |
+
+Found and fixed:
+- Admin tabs added to the URL on every click (`/admin/doctors/articles/…`) and showed an
+  empty page. React Router 7 resolves relative links inside the `/admin/*` route against the
+  whole URL. The old checks opened each tab by URL, so they never clicked one.
+- CSV export could be dropped by Firefox and Safari (detached link, URL revoked at once).
+- The phone article list read the old hard-coded articles, not the API's.
+- "Understanding" broke as "Understandin / g" on a 390 px phone.
+
 ## 2026-10-02 (evening), held-out model evaluation
 
 | Check | Result |
