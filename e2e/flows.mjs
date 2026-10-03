@@ -369,6 +369,36 @@ try {
     nb.includes('New puberty screening') && nb.includes('bone-age result') && nb.includes('joined as caretaker'));
   await shot(parent, '09-parent-notifications');
 
+  // The bell: opening a notification marks it read (badge drops, also after a reload) and
+  // closes the popup; a click outside, Escape and a page change close it too.
+  await parent.goto(`${APP}/dashboard`);
+  const badge = parent.locator('.bell-button .badge');
+  await badge.waitFor();
+  const unreadBefore = Number(await badge.textContent());
+  await parent.locator('.bell-button').click();
+  await parent.locator('.notification-dropdown .notification-text').first().click();
+  await parent.waitForTimeout(800);
+  const closedOnOpen = (await parent.locator('.notification-dropdown').count()) === 0;
+  const unreadNow = async () => ((await badge.count()) ? Number(await badge.textContent()) : 0);
+  const afterOpen = await unreadNow();
+  await parent.reload();
+  await parent.locator('.bell-button').waitFor();
+  await parent.waitForTimeout(1500);
+  const afterReload = await unreadNow();
+  await parent.locator('.bell-button').click();
+  await parent.mouse.click(20, 700);
+  const closedOutside = (await parent.locator('.notification-dropdown').count()) === 0;
+  await parent.locator('.bell-button').click();
+  await parent.keyboard.press('Escape');
+  const closedEsc = (await parent.locator('.notification-dropdown').count()) === 0;
+  await parent.locator('.bell-button').click();
+  await parent.goto(`${APP}/profile`);
+  await parent.waitForTimeout(500);
+  const closedOnPage = (await parent.locator('.notification-dropdown').count()) === 0;
+  check('opening a notification marks it read and closes the bell; outside click, Escape and a page change close it',
+    closedOnOpen && afterOpen === unreadBefore - 1 && afterReload === unreadBefore - 1 && closedOutside && closedEsc && closedOnPage,
+    `unread ${unreadBefore}→${afterOpen}→${afterReload}, closed ${closedOnOpen}/${closedOutside}/${closedEsc}/${closedOnPage}`);
+
   // ---------------------------------------------------------------- Admin: inbox, usage, export
   await caretaker.goto(`${APP}/dashboard`);
   await caretaker.locator('.profile-trigger').click();

@@ -143,3 +143,7 @@
 [data-theme="dark"] .notifications-list .notification-time {
   color: #64748b;
 }
+/* Opened notifications stay until dismissed, dimmed so new ones stand out. */
+.notification-card.is-read {
+  opacity: 0.6;
+}

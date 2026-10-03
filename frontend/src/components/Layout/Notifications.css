@@ -154,3 +154,7 @@
 [data-theme="dark"] .dropdown-actions a {
   color: #5eead4;
 }
+/* Opened notifications stay until dismissed, dimmed so new ones stand out. */
+.notification-card.is-read {
+  opacity: 0.6;
+}

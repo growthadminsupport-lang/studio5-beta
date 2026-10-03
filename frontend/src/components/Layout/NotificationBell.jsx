@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useChildren } from "../../context/ChildrenContext";
 import { Bell, X } from "lucide-react";
 import { useNotifications } from "../../context/NotificationsContext";
@@ -7,12 +7,32 @@ import "./Notifications.css";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+  const { pathname } = useLocation();
 
-  const { notifications, markAsRead } = useNotifications();
+  const { notifications, markRead, markAsRead } = useNotifications();
   const { setActiveChildId } = useChildren();
   const navigate = useNavigate();
 
+  // Close on a click outside, on Escape, and whenever the page changes (it stayed open over
+  // the next page before).
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => menuRef.current && !menuRef.current.contains(e.target) && setOpen(false);
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const [openedOn, setOpenedOn] = useState(pathname);
+  if (open && openedOn !== pathname) setOpen(false);
+  if (openedOn !== pathname) setOpenedOn(pathname);
+
   function openNotification(n) {
+    if (!n.read) markRead(n.id);
     if (n.childId) setActiveChildId(n.childId);
     setOpen(false);
     navigate(n.path);
@@ -21,7 +41,7 @@ function NotificationBell() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="notification-menu">
+    <div className="notification-menu" ref={menuRef}>
       <button
         className="bell-button"
         onClick={() => setOpen(!open)}
@@ -40,7 +60,7 @@ function NotificationBell() {
             <p className="empty-state">No notifications yet</p>
           ) : (
             notifications.slice(0, 3).map((n) => (
-              <div key={n.id} className="notification-card">
+              <div key={n.id} className={`notification-card${n.read ? " is-read" : ""}`}>
                 <div className="notification-text" role="button" tabIndex={0} style={{ cursor: "pointer" }} onClick={() => openNotification(n)} onKeyDown={(e) => e.key === "Enter" && openNotification(n)}>
                   <h4>{n.title}</h4>
                   <p>{n.description}</p>
