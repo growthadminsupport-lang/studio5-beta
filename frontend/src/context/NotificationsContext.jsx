@@ -78,6 +78,12 @@ export function NotificationsProvider({ children }) {
     };
   }, [user]);
 
+  // Opening a notification marks it read: the badge drops, the item stays (dimmed) until dismissed.
+  const markRead = async (id) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    await api.patch(`/notifications/${id}`).catch(() => refresh().catch(() => {}));
+  };
+
   // Dismissing a notification removes it, as the bell's ✕ always has.
   const markAsRead = async (id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -95,7 +101,7 @@ export function NotificationsProvider({ children }) {
   };
 
   return (
-    <NotificationsContext.Provider value={{ notifications, loading: Boolean(user) && !loaded, markAsRead, markAllRead, clearAll, refresh }}>
+    <NotificationsContext.Provider value={{ notifications, loading: Boolean(user) && !loaded, markRead, markAsRead, markAllRead, clearAll, refresh }}>
       {children}
     </NotificationsContext.Provider>
   );

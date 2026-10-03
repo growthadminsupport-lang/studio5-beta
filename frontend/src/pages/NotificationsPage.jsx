@@ -7,11 +7,12 @@ import "./NotificationsPage.css";
 
 function NotificationsPage() {
   // Read shared notifications and dismissal handler from global context
-  const { notifications, loading, markAsRead } = useNotifications();
+  const { notifications, loading, markRead, markAsRead } = useNotifications();
   const { setActiveChildId } = useChildren();
   const navigate = useNavigate();
 
   function openNotification(n) {
+    if (!n.read) markRead(n.id);
     if (n.childId) setActiveChildId(n.childId);
     navigate(n.path);
   }
@@ -27,7 +28,7 @@ function NotificationsPage() {
       ) : (
         <div className="notifications-list">
           {notifications.map((item) => (
-            <div key={item.id} className="notification-card">
+            <div key={item.id} className={`notification-card${item.read ? " is-read" : ""}`}>
               <button
                 type="button"
                 className="dismiss-btn"
