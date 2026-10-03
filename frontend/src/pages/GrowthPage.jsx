@@ -4,7 +4,7 @@ import ChildProfileCard, { NoChildState } from '../components/ChildProfile/Child
 import GrowthChart from '../components/GrowthTracking/GrowthChart';
 import { Pencil, Trash2, Check, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { api, errorMessage } from '../lib/api';
-import { ageInMonths, describePercentile, useGrowthRecords } from '../lib/growth';
+import { ageInMonths, describePercentile, hasBmi, useGrowthRecords } from '../lib/growth';
 
 const HEAD_CIRCUMFERENCE_MAX_MONTHS = 36; // CDC's head-circumference table ends at 36 months
 const inputCls =
@@ -72,13 +72,16 @@ function GrowthPage() {
   const [editingId, setEditingId] = useState(null);
   const [editHeight, setEditHeight] = useState('');
   const [editWeight, setEditWeight] = useState('');
+  const [editHead, setEditHead] = useState('');
 
   if (!child) return <NoChildState />;
 
   const ageMonthsOnEntry = ageInMonths(child.dateOfBirth, measuredAt || todayIso());
   const askHead = ageMonthsOnEntry <= HEAD_CIRCUMFERENCE_MAX_MONTHS;
   const showHeadChart = askHead || records.some((r) => r.headCircumferenceCm !== null);
-  const showBmiChart = ageInMonths(child.dateOfBirth, new Date()) >= 24;
+  const showBmiChart = hasBmi(child.dateOfBirth);
+  // Head size is editable on any record that has one, or that was taken while it is measured.
+  const headEditable = (r) => r.headCircumferenceCm !== null || ageInMonths(child.dateOfBirth, r.measuredAt) <= HEAD_CIRCUMFERENCE_MAX_MONTHS;
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -116,11 +119,17 @@ function GrowthPage() {
     setEditingId(record.id);
     setEditHeight(record.heightCm ?? '');
     setEditWeight(record.weightKg ?? '');
+    setEditHead(record.headCircumferenceCm ?? '');
   }
 
   async function saveEdit(id) {
     try {
-      await api.patch(`/growth/${id}`, { heightCm: toNumber(editHeight), weightKg: toNumber(editWeight) });
+      const record = records.find((r) => r.id === id);
+      await api.patch(`/growth/${id}`, {
+        heightCm: toNumber(editHeight),
+        weightKg: toNumber(editWeight),
+        ...(record && headEditable(record) ? { headCircumferenceCm: toNumber(editHead) } : {}),
+      });
       setEditingId(null);
       await reload();
     } catch (err) {
@@ -201,7 +210,7 @@ function GrowthPage() {
                   {[
                     lastResult.heightPercentile !== null && lastResult.heightPercentile !== undefined && `Height: ${describePercentile(lastResult.heightPercentile).label.toLowerCase()} (${describePercentile(lastResult.heightPercentile).figure}, SDS ${lastResult.heightSds})`,
                     lastResult.weightPercentile !== null && lastResult.weightPercentile !== undefined && `Weight: ${describePercentile(lastResult.weightPercentile).label.toLowerCase()} (${describePercentile(lastResult.weightPercentile).figure}, SDS ${lastResult.weightSds})`,
-                    lastResult.bmi && `BMI ${lastResult.bmi}`,
+                    lastResult.bmi && hasBmi(child.dateOfBirth, lastResult.measuredAt) && `BMI ${lastResult.bmi}`,
                     guidance.nutritionalStatus,
                   ]
                     .filter(Boolean)
@@ -249,6 +258,17 @@ function GrowthPage() {
                     onChange={(e) => setEditWeight(e.target.value)}
                     className="w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent px-2.5 py-1.5 text-xs outline-none focus:border-[#056559] dark:focus:border-teal-400"
                   />
+                  {headEditable(record) && (
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="Head (cm)"
+                      aria-label="Head circumference (cm)"
+                      value={editHead}
+                      onChange={(e) => setEditHead(e.target.value)}
+                      className="w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent px-2.5 py-1.5 text-xs outline-none focus:border-[#056559] dark:focus:border-teal-400"
+                    />
+                  )}
                   <button type="button" onClick={() => saveEdit(record.id)} aria-label="Save" className="text-[#056559] dark:text-teal-300 hover:text-[#03443c] dark:hover:text-teal-200">
                     <Check size={16} />
                   </button>
@@ -271,7 +291,8 @@ function GrowthPage() {
                       <span className={`ml-1 text-xs ${describePercentile(record.weightPercentile).tone}`} title={describePercentile(record.weightPercentile).figure}>{describePercentile(record.weightPercentile).short}</span>
                     )}
                   </span>
-                  {record.bmi && <span className="text-slate-500 dark:text-slate-400">BMI {record.bmi}</span>}
+                  {/* BMI-for-age starts at 2 years; before that it is not a measure doctors use. */}
+                  {record.bmi && hasBmi(child.dateOfBirth, record.measuredAt) && <span className="text-slate-500 dark:text-slate-400">BMI {record.bmi}</span>}
                   {record.headCircumferenceCm && <span className="text-slate-500 dark:text-slate-400">Head {record.headCircumferenceCm} cm</span>}
                   {record.guidance?.flagged && (
                     <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">

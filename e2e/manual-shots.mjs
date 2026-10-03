@@ -17,6 +17,7 @@ const P = reg.accessToken;
 const { token } = await api('/auth/resend-verification', { token: P });
 await api('/auth/verify-email', { body: { token } });
 const child = await api('/children', { token: P, body: { fullName: 'Ploy Wongsa', nickname: 'Ploy', sex: 'FEMALE', dateOfBirth: '2017-05-10', relation: 'PARENT', avatar: { skin: 'tan', youngHair: 3, babyHair: 2, hairColor: '#3b2416', babyOutfit: 1 } } });
+const baby = await api('/children', { token: P, body: { fullName: 'Mek Wongsa', nickname: 'Mek', sex: 'MALE', dateOfBirth: '2026-03-15', relation: 'PARENT', avatar: { skin: 'tan', babyHair: 4, hairColor: '#1f1a17', babyOutfit: 6, babyEyes: 1 } } });
 for (const [d, h, w] of [['2019-05-12', 86.5, 12.1], ['2021-05-15', 103, 16.2], ['2023-05-20', 118, 21.4], ['2025-05-18', 130.5, 27.3], ['2026-09-20', 137, 31.5]]) {
   await api('/growth', { token: P, body: { childId: child.id, measuredAt: d, heightCm: h, weightKg: w } });
 }
@@ -53,7 +54,10 @@ await p.getByRole('dialog').waitFor(); await p.waitForTimeout(600);
 await p.getByRole('dialog').screenshot({ path: `${OUT}/04-edit-child.png` });
 await p.getByRole('dialog').getByRole('tab', { name: 'Hair' }).click(); await p.waitForTimeout(500);
 await p.getByRole('dialog').screenshot({ path: `${OUT}/05-avatar-hair.png` });
-await p.getByRole('dialog').getByRole('button', { name: /Baby, 0–3/ }).click();
+await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+// The face choices belong to the baby drawing: show them on Ploy's baby brother.
+await p.goto(`${APP}/children/${baby.id}/growth`); await p.waitForTimeout(1200);
+await p.getByRole('button', { name: 'Edit child profile' }).click(); await p.getByRole('dialog').waitFor();
 await p.getByRole('dialog').getByRole('tab', { name: 'Face' }).click(); await p.waitForTimeout(500);
 // Tall enough for the whole editor, which is taller than the default window.
 await p.setViewportSize({ width: 1280, height: 1500 }); await p.waitForTimeout(400);
@@ -61,7 +65,8 @@ await p.getByRole('dialog').locator('.rounded-2xl').first().screenshot({ path: `
 await p.setViewportSize({ width: 1280, height: 860 });
 await p.keyboard.press('Escape'); await p.waitForTimeout(400);
 
-await p.goto(`${APP}/growth`); await p.waitForTimeout(1800);
+// Back to Ploy for the rest.
+await p.goto(`${APP}/children/${child.id}/growth`); await p.waitForTimeout(1800);
 await p.locator('.growth-own-dot').nth(4).hover(); await p.waitForTimeout(400);
 await p.locator('.mb-6.rounded-2xl').filter({ hasText: 'Height' }).first().screenshot({ path: `${OUT}/06-growth-chart.png` });
 await p.getByPlaceholder('Height (cm)').first().fill('137.5'); await p.getByPlaceholder('Weight (kg)').first().fill('31.8');

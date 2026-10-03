@@ -42,11 +42,6 @@ const TABS = [
   { id: "clothes", label: "Clothes", babyOnly: true },
 ];
 
-const VERSIONS = [
-  { id: "baby", label: "Baby, 0–3" },
-  { id: "young", label: "Child, 3+" },
-];
-
 function Section({ title, children }) {
   return (
     <div className="mt-3 first:mt-0">
@@ -93,13 +88,12 @@ function OptionTile({ active, onClick, label, children }) {
 }
 
 /**
- * Preview on top, choices underneath. Both drawings can be set up whatever the child's age:
- * the toggle previews the other one, and the right one shows as the child grows.
+ * Preview on top, choices underneath. The drawing follows the child's age by itself (the baby
+ * until 3, then the young child), so there is nothing to switch.
  */
 function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
   const [tab, setTab] = useState("skin");
-  const current = avatarVersion(dateOfBirth);
-  const [version, setVersion] = useState(current);
+  const version = avatarVersion(dateOfBirth);
   const a = withDefaults(avatar, sex);
   const set = (patch) => onChange({ ...a, ...patch });
   const tabs = TABS.filter((t) => !t.babyOnly || version === "baby");
@@ -110,34 +104,13 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
 
   return (
     <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-      <div role="group" aria-label="Drawing" className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900/60">
-        {VERSIONS.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            aria-pressed={version === v.id}
-            onClick={() => setVersion(v.id)}
-            className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
-              version === v.id
-                ? "bg-white text-[#056559] shadow-sm dark:bg-slate-700 dark:text-teal-300"
-                : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-            }`}
-          >
-            {v.label}
-            {v.id === current && <span className="ml-1 font-normal opacity-70">(now)</span>}
-          </button>
-        ))}
-      </div>
-
       <div className="flex items-end justify-center rounded-xl bg-gradient-to-b from-[#eaf6f3] to-white py-3 dark:from-teal-500/10 dark:to-slate-800">
         <AvatarFigure version={version} sex={sex} avatar={a} height={170} />
       </div>
       <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
-        {version === current
-          ? "This is how your child looks in GrowTH now."
-          : version === "young"
-            ? "From 3 years your child is shown as this young-child drawing. You can set it up now."
-            : "The baby and toddler drawing, used until 3 years."}
+        {version === "baby"
+          ? "Baby and toddler drawing, until 3 years. It changes to the young-child drawing as your child grows."
+          : "Young-child drawing, from 3 years."}
       </p>
 
       <div role="tablist" className="mt-4 flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900/60">

@@ -160,3 +160,14 @@ function ordinal(n) {
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
+
+/**
+ * BMI-for-age starts at 24 months (CDC; the AAP schedule measures BMI from 2 years). Below that,
+ * head circumference is what is measured instead, so the dashboard and the Growth page show
+ * height, weight and head for a baby, and height, weight and BMI from 2 years.
+ */
+export const BMI_FROM_MONTHS = 24;
+
+export function hasBmi(dateOfBirth, on = new Date()) {
+  return ageInMonths(dateOfBirth, on) >= BMI_FROM_MONTHS;
+}

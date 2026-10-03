@@ -3,6 +3,17 @@
 TOR §6.5: functional testing before each milestone, on at least two browsers and one mobile
 viewport, with a record kept. This is that record.
 
+## 2026-10-03 (night), growth page and dashboard agree
+
+| Check | Result |
+| --- | --- |
+| Browser walk-through, 53 checks (adds: a baby's dashboard shows height, weight and head size, no BMI; head size edited in the history; the baby's face and shoe choices saved; a 10-year-old's editor has no drawing switch) | Chromium, Firefox, WebKit: **53 / 53** each |
+
+Found and fixed: the dashboard showed a BMI card and chart for babies while the Growth page
+(correctly) did not, since BMI-for-age starts at 2 years; editing a history row had no head-size
+field; the history listed BMI for measurements taken before 2 years. The avatar's Baby / Child
+switch is removed: the drawing follows the child's age by itself.
+
 ## 2026-10-03 (evening), check-up reminders
 
 | Check | Result |

@@ -68,13 +68,10 @@ After your first sign-in, choose **Add your own child**.
 
 1. **Avatar.** Every child gets a drawn character instead of a photo, for their privacy.
    Babies and toddlers up to 3 years get a baby drawing; it changes to the young-child drawing
-   as your child grows. Choose:
-    - **Skin** tone, and **Hair** colour and style, for both drawings;
-    - for the baby drawing, the **Face** (eye colour, eyebrows, eyelashes and mouth) and
+   as your child grows, by itself. Choose:
+    - **Skin** tone, and **Hair** colour and style;
+    - for the baby drawing, also the **Face** (eye colour, eyebrows, eyelashes and mouth) and
       **Clothes** (outfit and shoes).
-
-   The switch above the picture (**Baby, 0–3** / **Child, 3+**) shows the other drawing, so you
-   can set both up now; "(now)" marks the one your child has today.
 2. **Full name**, and a **nickname** if you like (the charts use it).
 3. **Date of birth.**
 4. **Sex: Girl or Boy.** This matters: growth charts and bone age are different for girls and
@@ -112,7 +109,8 @@ The dashboard shows the selected child at a glance:
 
 - **The child's card** at the top, with three buttons: **switch** child (two arrows),
   **people** who follow this child and invitations (two figures), and **edit** (green pencil).
-- **Height, weight and BMI** from the latest measurement, each with a plain label such as
+- **Height, weight and BMI** from the latest measurement (under 2 years: **height, weight and
+  head size**, because BMI is only used from 2 years), each with a plain label such as
   *Within the usual range*. Choose one to see its chart below.
 - **Puberty screening**: start a questionnaire, or see the latest result.
 - **AI bone age**: the doctor's latest reading, when there is one.
