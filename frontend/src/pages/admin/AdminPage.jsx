@@ -320,8 +320,14 @@ function InboxTab() {
   const fetchInbox = useCallback(() => api.get("/admin/inbox", { params: { kind, status } }).then((r) => r.data), [kind, status]);
   const { data, error, reload } = useLoad(fetchInbox);
 
+  const [actionError, setActionError] = useState("");
   async function mark(message, next) {
-    await api.patch(`/admin/inbox/${message.id}`, { status: next }).catch(() => {});
+    setActionError("");
+    try {
+      await api.patch(`/admin/inbox/${message.id}`, { status: next });
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
     reload();
   }
 
@@ -340,7 +346,7 @@ function InboxTab() {
           <MenuItem value="">All</MenuItem>
         </TextField>
       </div>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {(error || actionError) && <Alert severity="error" sx={{ mb: 2 }}>{error || actionError}</Alert>}
       <div className="flex flex-col gap-3">
         {data?.map((m) => (
           <Paper key={m.id} variant="outlined" sx={{ p: 2 }}>
@@ -446,8 +452,12 @@ function ExportTab() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `growth-${dataset}-${new Date().toISOString().slice(0, 10)}.csv`;
+      // In the page while clicked, and the URL kept a moment: Firefox ignores a click on a
+      // detached link, and Safari can lose a download whose URL is revoked straight away.
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -485,9 +495,12 @@ export default function AdminPage() {
         <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">Admin portal</h1>
         <nav className="my-5 flex flex-wrap gap-2">
           {TABS.map((t) => (
+            // Absolute: inside the /admin/* splat, React Router 7 resolves a relative link against
+            // the whole current URL, so "articles" from /admin/doctors went to
+            // /admin/doctors/articles, matched no tab and showed an empty page.
             <NavLink
               key={t.path}
-              to={t.path}
+              to={`/admin/${t.path}`}
               className={({ isActive }) =>
                 `rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                   isActive
