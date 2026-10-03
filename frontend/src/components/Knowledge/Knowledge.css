@@ -1149,7 +1149,8 @@
 
   .kn-mcard-art {
     position: relative;
-    flex: 0 0 58%;
+    /* At most 58%, always leaving the text 165px, so headings fit on small phones. */
+    flex: 0 0 min(58%, calc(100% - 165px));
     overflow: hidden;
   }
 
@@ -1189,11 +1190,14 @@
 
   .kn-mcard-body h3 {
     margin: 0 0 4px;
-    font-size: 18px;
+    /* Scales with the phone so "Understanding" fits the text column; a word that still does
+       not fit is hyphenated rather than cut at any letter. */
+    font-size: clamp(15px, 4vw, 18px);
     line-height: 1.2;
     font-weight: 700;
     color: #111827;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    hyphens: auto;
   }
 
   .kn-mcard-body p {
