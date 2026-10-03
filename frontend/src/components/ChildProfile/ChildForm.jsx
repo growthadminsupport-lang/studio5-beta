@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { useChildren } from "../../context/ChildrenContext";
 import { errorMessage } from "../../lib/api";
-import { BABY_OUTFITS, HAIR_COLORS, SKIN_TONES, avatarVersion, hairCount, withDefaults } from "../../lib/avatar";
-import { AvatarFigure } from "./ChildAvatar";
+import { AVATAR_SETS, BABY_OUTFITS, EYE_COLORS, HAIR_COLORS, MOUTH_LABELS, SKIN_TONES, avatarVersion, hairCount, withDefaults } from "../../lib/avatar";
+import { AvatarFigure, AvatarZoom } from "./ChildAvatar";
 
 function todayIso() {
   const d = new Date();
@@ -37,10 +37,24 @@ const RELATIONS = [
 
 const TABS = [
   { id: "skin", label: "Skin" },
-  { id: "hair", label: "Hairstyle" },
-  { id: "color", label: "Hair colour" },
-  { id: "outfit", label: "Clothes", babyOnly: true },
+  { id: "hair", label: "Hair" },
+  { id: "face", label: "Face", babyOnly: true },
+  { id: "clothes", label: "Clothes", babyOnly: true },
 ];
+
+const VERSIONS = [
+  { id: "baby", label: "Baby, 0–3" },
+  { id: "young", label: "Child, 3+" },
+];
+
+function Section({ title, children }) {
+  return (
+    <div className="mt-3 first:mt-0">
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{title}</p>
+      {children}
+    </div>
+  );
+}
 
 function Swatch({ color, label, active, onClick }) {
   return (
@@ -78,24 +92,52 @@ function OptionTile({ active, onClick, label, children }) {
   );
 }
 
-/** Preview on top, one row of choices underneath; the drawing follows the child's age. */
+/**
+ * Preview on top, choices underneath. Both drawings can be set up whatever the child's age:
+ * the toggle previews the other one, and the right one shows as the child grows.
+ */
 function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
   const [tab, setTab] = useState("skin");
-  const version = avatarVersion(dateOfBirth);
+  const current = avatarVersion(dateOfBirth);
+  const [version, setVersion] = useState(current);
   const a = withDefaults(avatar, sex);
   const set = (patch) => onChange({ ...a, ...patch });
   const tabs = TABS.filter((t) => !t.babyOnly || version === "baby");
-  const current = tabs.some((t) => t.id === tab) ? tab : "skin";
+  const shown = tabs.some((t) => t.id === tab) ? tab : "skin";
+  const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
+  const hairKey = version === "baby" ? "babyHair" : "youngHair";
+  const zoom = (patch, size = 56) => <AvatarZoom version="baby" sex={sex} avatar={{ ...a, ...patch }} size={size} />;
 
   return (
     <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+      <div role="group" aria-label="Drawing" className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900/60">
+        {VERSIONS.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            aria-pressed={version === v.id}
+            onClick={() => setVersion(v.id)}
+            className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
+              version === v.id
+                ? "bg-white text-[#056559] shadow-sm dark:bg-slate-700 dark:text-teal-300"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+            }`}
+          >
+            {v.label}
+            {v.id === current && <span className="ml-1 font-normal opacity-70">(now)</span>}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-end justify-center rounded-xl bg-gradient-to-b from-[#eaf6f3] to-white py-3 dark:from-teal-500/10 dark:to-slate-800">
         <AvatarFigure version={version} sex={sex} avatar={a} height={170} />
       </div>
       <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
-        {version === "baby"
-          ? "Baby and toddler drawing, until 3 years. It changes to the young-child drawing as your child grows."
-          : "Young-child drawing, from 3 years."}
+        {version === current
+          ? "This is how your child looks in GrowTH now."
+          : version === "young"
+            ? "From 3 years your child is shown as this young-child drawing. You can set it up now."
+            : "The baby and toddler drawing, used until 3 years."}
       </p>
 
       <div role="tablist" className="mt-4 flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900/60">
@@ -104,10 +146,10 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
             key={t.id}
             type="button"
             role="tab"
-            aria-selected={current === t.id}
+            aria-selected={shown === t.id}
             onClick={() => setTab(t.id)}
             className={`flex-1 whitespace-nowrap rounded-lg px-1 py-1.5 text-xs font-semibold transition ${
-              current === t.id
+              shown === t.id
                 ? "bg-white text-[#056559] shadow-sm dark:bg-slate-700 dark:text-teal-300"
                 : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
             }`}
@@ -118,41 +160,96 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
       </div>
 
       <div className="mt-3 min-h-[64px]">
-        {current === "skin" && (
+        {shown === "skin" && (
           <div className="flex flex-wrap gap-3">
             {SKIN_TONES.map((s) => (
               <Swatch key={s.id} color={s.swatch} label={s.label} active={a.skin === s.id} onClick={() => set({ skin: s.id })} />
             ))}
           </div>
         )}
-        {current === "color" && (
-          <div className="flex flex-wrap gap-3">
-            {HAIR_COLORS.map((c) => (
-              <Swatch key={c.hex} color={c.hex} label={c.label} active={a.hairColor === c.hex} onClick={() => set({ hairColor: c.hex })} />
-            ))}
-          </div>
+
+        {shown === "hair" && (
+          <>
+            <Section title="Colour">
+              <div className="flex flex-wrap gap-3">
+                {HAIR_COLORS.map((c) => (
+                  <Swatch key={c.hex} color={c.hex} label={c.label} active={a.hairColor === c.hex} onClick={() => set({ hairColor: c.hex })} />
+                ))}
+              </div>
+            </Section>
+            <Section title="Style">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {range(hairCount(version)).map((n) => (
+                  <OptionTile key={n} label={`Hairstyle ${n}`} active={a[hairKey] === n} onClick={() => set({ [hairKey]: n })}>
+                    {/* The whole figure, so long styles show their full length. */}
+                    <AvatarFigure version={version} sex={sex} avatar={{ ...a, [hairKey]: n }} height={version === "baby" ? 92 : 72} />
+                  </OptionTile>
+                ))}
+              </div>
+            </Section>
+          </>
         )}
-        {current === "hair" && (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {Array.from({ length: hairCount(version) }, (_, i) => i + 1).map((n) => {
-              const key = version === "baby" ? "babyHair" : "youngHair";
-              return (
-                <OptionTile key={n} label={`Hairstyle ${n}`} active={a[key] === n} onClick={() => set({ [key]: n })}>
-                  {/* The whole figure, so long styles show their full length. */}
-                  <AvatarFigure version={version} sex={sex} avatar={{ ...a, [key]: n }} height={version === "baby" ? 92 : 72} />
-                </OptionTile>
-              );
-            })}
-          </div>
+
+        {shown === "face" && (
+          <>
+            <Section title="Eye colour">
+              <div className="flex flex-wrap gap-3">
+                {EYE_COLORS.map((c) => (
+                  <Swatch key={c.id} color={c.swatch} label={`${c.label} eyes`} active={a.babyEyes === c.id} onClick={() => set({ babyEyes: c.id })} />
+                ))}
+              </div>
+            </Section>
+            <Section title="Eyebrows">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {range(AVATAR_SETS.baby.brows).map((n) => (
+                  <OptionTile key={n} label={`Eyebrows ${n}`} active={a.babyBrows === n} onClick={() => set({ babyBrows: n })}>
+                    {zoom({ babyBrows: n })}
+                  </OptionTile>
+                ))}
+              </div>
+            </Section>
+            <Section title="Eyelashes">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {range(AVATAR_SETS.baby.lashes).map((n) => (
+                  <OptionTile key={n} label={`Eyelashes ${n}`} active={a.babyLashes === n} onClick={() => set({ babyLashes: n })}>
+                    {zoom({ babyLashes: n })}
+                  </OptionTile>
+                ))}
+              </div>
+            </Section>
+            <Section title="Mouth">
+              <div className="grid grid-cols-4 gap-2">
+                {range(AVATAR_SETS.baby.mouth).map((n) => (
+                  <OptionTile key={n} label={`Mouth: ${MOUTH_LABELS[n - 1]}`} active={a.babyMouth === n} onClick={() => set({ babyMouth: n })}>
+                    {zoom({ babyMouth: n })}
+                  </OptionTile>
+                ))}
+              </div>
+            </Section>
+          </>
         )}
-        {current === "outfit" && (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {Array.from({ length: BABY_OUTFITS }, (_, i) => i + 1).map((n) => (
-              <OptionTile key={n} label={`Outfit ${n}`} active={a.babyOutfit === n} onClick={() => set({ babyOutfit: n })}>
-                <img src={`/avatars/baby/outfit-${n}-thumb.webp`} alt="" className="h-16 w-full object-contain p-1" draggable={false} />
-              </OptionTile>
-            ))}
-          </div>
+
+        {shown === "clothes" && (
+          <>
+            <Section title="Outfit">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {range(BABY_OUTFITS).map((n) => (
+                  <OptionTile key={n} label={`Outfit ${n}`} active={a.babyOutfit === n} onClick={() => set({ babyOutfit: n })}>
+                    <img src={`/avatars/baby/outfit-${n}-thumb.webp`} alt="" className="h-16 w-full object-contain p-1" draggable={false} />
+                  </OptionTile>
+                ))}
+              </div>
+            </Section>
+            <Section title="Shoes">
+              <div className="grid grid-cols-5 gap-2">
+                {range(AVATAR_SETS.baby.shoes).map((n) => (
+                  <OptionTile key={n} label={`Shoes ${n}`} active={a.babyShoes === n} onClick={() => set({ babyShoes: n })}>
+                    <img src={`/avatars/baby/shoes-${n}-thumb.webp`} alt="" className="h-12 w-full object-contain p-1.5" draggable={false} />
+                  </OptionTile>
+                ))}
+              </div>
+            </Section>
+          </>
         )}
       </div>
     </div>

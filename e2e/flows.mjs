@@ -116,10 +116,21 @@ try {
   check('editing shows only the saved relationship until "Change" is pressed',
     onlySaved && (await dlg.getByLabel('Legal guardian').isVisible()));
   await parent.getByRole('dialog').getByRole('button', { name: 'Deep' }).click();
-  await parent.getByRole('dialog').getByRole('tab', { name: 'Hairstyle' }).click();
+  await parent.getByRole('dialog').getByRole('tab', { name: 'Hair' }).click();
   await parent.getByRole('dialog').getByRole('button', { name: 'Hairstyle 3' }).click();
-  await parent.getByRole('dialog').getByRole('tab', { name: 'Hair colour' }).click();
   await parent.getByRole('dialog').getByRole('button', { name: 'Red' }).click();
+  // The child is 10, so the young drawing shows; the baby one can be set up too, with the
+  // face and shoe sets only the baby drawing has.
+  const youngNow = await dlg.getByRole('button', { name: /Child, 3\+\s*\(now\)/ }).getAttribute('aria-pressed');
+  await dlg.getByRole('button', { name: /Baby, 0–3/ }).click();
+  await dlg.getByRole('tab', { name: 'Face' }).click();
+  await dlg.getByRole('button', { name: 'Blue eyes' }).click();
+  await dlg.getByRole('button', { name: 'Eyebrows 5' }).click();
+  await dlg.getByRole('button', { name: 'Eyelashes 1' }).click();
+  await dlg.getByRole('button', { name: 'Mouth: Big grin' }).click();
+  await dlg.getByRole('tab', { name: 'Clothes' }).click();
+  await dlg.getByRole('button', { name: 'Shoes 2' }).click();
+  const babyLayers = await dlg.locator('img').evaluateAll((imgs) => imgs.map((i) => i.getAttribute('src')));
   await shot(parent, '00-edit-child-avatar');
   await parent.getByRole('dialog').getByRole('button', { name: 'Save changes' }).click();
   await parent.getByRole('dialog').waitFor({ state: 'detached' });
@@ -128,6 +139,11 @@ try {
   const srcs = await parent.$$eval('img', (imgs) => imgs.map((i) => i.getAttribute('src')));
   check('edit child opens as a window; avatar skin, hairstyle and colour are saved',
     stayed && srcs.some((x) => x?.includes('young/girl-deep')) && srcs.some((x) => x?.includes('young/hair-3')));
+  const kids = await (await fetch(`${API}/children`, { headers: { Authorization: `Bearer ${await apiToken(parentEmail)}` } })).json();
+  const saved = kids.find((k) => k.fullName === 'Mali Test')?.avatar ?? {};
+  check('both drawings can be set up: baby eye colour, brows, lashes, mouth and shoes are previewed and saved',
+    youngNow === 'true' && ['eyes-4', 'brows-5', 'lashes-1', 'mouth-4', 'shoes-2'].every((l) => babyLayers.some((x) => x?.includes(`baby/${l}.webp`))) &&
+    saved.babyEyes === 4 && saved.babyBrows === 5 && saved.babyLashes === 1 && saved.babyMouth === 4 && saved.babyShoes === 2, JSON.stringify(saved));
 
   await parent.getByRole('button', { name: 'People who can see this child' }).click();
   await parent.getByRole('dialog').getByText('People who follow Mali Test').waitFor();
