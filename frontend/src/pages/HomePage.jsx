@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import LogoMotion from "../components/LogoMotion";
+import { HeroLogo } from "../components/LogoMotion";
 import { useTheme } from "../context/ThemeContext";
 import { BUILTIN_ARTICLES } from "../content/articles";
 import { AboutShowcase, DashboardShowcase } from "../components/Home/Showcases";
@@ -34,9 +34,12 @@ export default function HomePage() {
       {/* ----------------- Hero Section ----------------- */}
       <section className="max-w-3xl mx-auto px-6 pt-8 pb-10 text-center flex flex-col items-center">
         <div className="flex flex-col items-center justify-center mb-3">
-          <div className="w-32 h-32 md:w-44 md:h-44 mb-1 flex items-center justify-center">
-            <LogoMotion className={`w-full h-full object-contain scale-125 md:scale-130 -translate-y-2 ${theme === "dark" ? "mix-blend-lighten" : "mix-blend-darken"}`} />
-          </div>
+          {/* The blend that hides the image's white (or black) background goes on the wrapper:
+              the float's transform isolates everything inside it from the page. */}
+          <HeroLogo
+            className={`w-32 h-32 md:w-44 md:h-44 mb-1 ${theme === "dark" ? "mix-blend-lighten" : "mix-blend-darken"}`}
+            imageClassName="w-full h-full object-contain scale-125 md:scale-130 -translate-y-2"
+          />
         </div>
 
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 text-[#056559] dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-teal-300 dark:to-cyan-400">

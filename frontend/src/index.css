@@ -159,6 +159,38 @@ textarea {
   }
 }
 
+/* Home hero logo (HeroLogo in LogoMotion.jsx): pops in, then floats; lifts and tilts under a
+   mouse. Deliberately not switched off for reduced motion, unlike the rest of the site. */
+.hero-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation:
+    hero-in 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    hero-float 4s ease-in-out 700ms infinite;
+}
+.hero-logo-inner {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero-logo-inner:hover {
+    transform: translateY(-4px) scale(1.08) rotate(-3deg);
+  }
+}
+@keyframes hero-in {
+  from { opacity: 0; transform: scale(0.8) translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
 /* iPhone Safari zooms the page into any field whose text is under 16px and leaves it zoomed.
    The forms use 14px text, so on iOS only (the one browser that does this) fields get 16px. */
 @supports (-webkit-touch-callout: none) {

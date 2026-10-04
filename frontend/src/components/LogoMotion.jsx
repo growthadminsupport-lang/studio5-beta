@@ -18,8 +18,10 @@ import { useTheme } from "../context/ThemeContext";
  */
 const STILL = "(prefers-reduced-motion: reduce)";
 
-export default function LogoMotion({ className = "" }) {
+export default function LogoMotion({ className = "", always = false }) {
   const dark = useTheme().theme === "dark";
+  // The Home hero is the one place the animation plays regardless (see HeroLogo).
+  if (always) return <img src={dark ? logoAnimDark : logoAnimLight} alt="GrowTH logo" className={className} />;
   return (
     <picture>
       <source media={STILL} srcSet={dark ? posterDark : posterLight} />
@@ -43,5 +45,33 @@ export function NavLogo() {
       </picture>
       <img src={wordmark} alt="GrowTH" />
     </span>
+  );
+}
+
+/**
+ * The big logo on Home. It always animates, reduced-motion setting or not: it is the brand mark,
+ * small, slow, carries no information, and it is what people first see (client decision,
+ * 2026-10-04; the TOR has no motion requirement). On top of the artist's loop it floats, lifts
+ * and tilts under a mouse, and bounces when tapped or clicked, so it reads as alive at a glance.
+ * Everywhere else (navbar, sign-in) keeps the still image for reduced motion.
+ */
+export function HeroLogo({ className = "", imageClassName = "" }) {
+  function bounce(e) {
+    e.currentTarget.animate(
+      [
+        { transform: "scale(1)" },
+        { transform: "scale(0.92)", offset: 0.25 },
+        { transform: "scale(1.1) rotate(-4deg)", offset: 0.6 },
+        { transform: "scale(1)" },
+      ],
+      { duration: 600, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" },
+    );
+  }
+  return (
+    <div className={`hero-logo ${className}`}>
+      <span className="hero-logo-inner" onPointerDown={bounce}>
+        <LogoMotion always className={imageClassName} />
+      </span>
+    </div>
   );
 }
