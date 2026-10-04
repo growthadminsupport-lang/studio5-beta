@@ -9,7 +9,6 @@ import LogoMotion from "../LogoMotion";
 import "./Auth.css";
 
 function RegisterForm() {
-
   const [form, setForm] = useState({
     name: "",
     email: "",

@@ -7,11 +7,12 @@ is an image, so it always plays and loops.
 Writes to frontend/src/assets/:
   logo_anim_{light,dark}.webp    the full logo (home, log in, sign up)
   mascot_anim_{light,dark}.webp  the boy and the arrow only, beside the wordmark in the navbar
+  mascot_still_{light,dark}.webp the first mascot frame, for reduced motion
   logo_wordmark.png              "GrowTH" from logo_dashboard.png
 
 The videos are 30 s with a jump where they restart. One 6.4 s cycle (frames 90-281, picked by
 comparing every pair of frames) loops cleanly; the last frames are blended into the first so the
-seam does not show.
+seam does not show. Every 4th frame at quality 60 keeps the navbar mascot near 100 KB.
 
     uv venv /tmp/logoenv && uv pip install --python /tmp/logoenv/bin/python imageio-ffmpeg pillow
     /tmp/logoenv/bin/python design/logo/build.py
@@ -29,7 +30,7 @@ ASSETS = HERE.parent.parent / "frontend" / "src" / "assets"
 
 LOOP_START, LOOP_END = 90, 281  # inclusive; frame 282 matches frame 90
 FADE = 6  # frames blended across the seam
-STEP = 2  # keep every 2nd frame: 15 fps
+STEP = 4  # keep every 4th frame: 7.5 fps
 FPS = 29.97
 MASCOT_BOX = (113, 69, 545, 452)  # every frame's boy, star and arrow, above the wordmark
 WORDMARK_X = 172  # first column of "GrowTH" in logo_dashboard.png
@@ -72,13 +73,14 @@ def main() -> None:
             body[k] = Image.blend(body[k], lead[t], (t + 1) / (FADE + 1))
         seq = [levels(im, theme == "dark") for im in body[::STEP]]
 
-        save([im.resize((360, 360), Image.LANCZOS) for im in seq], ASSETS / f"logo_anim_{theme}.webp", 70)
+        save([im.resize((360, 360), Image.LANCZOS) for im in seq], ASSETS / f"logo_anim_{theme}.webp", 60)
         h = 128
         mascot = []
         for im in seq:
             im = im.crop(MASCOT_BOX)
             mascot.append(im.resize((round(im.width * h / im.height), h), Image.LANCZOS))
-        save(mascot, ASSETS / f"mascot_anim_{theme}.webp", 72)
+        save(mascot, ASSETS / f"mascot_anim_{theme}.webp", 60)
+        mascot[0].save(ASSETS / f"mascot_still_{theme}.webp", quality=80, method=6)
 
     logo = Image.open(ASSETS / "logo_dashboard.png")
     word = logo.crop((WORDMARK_X, 0, logo.width, logo.height))
