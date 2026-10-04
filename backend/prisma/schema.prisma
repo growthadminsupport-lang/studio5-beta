@@ -61,15 +61,15 @@ model User {
   updatedAt            DateTime      @updatedAt
   deletedAt            DateTime?
 
-  children        ChildGuardian[]
-  invitesSent     ChildInvite[]    @relation("InvitesSent")
-  sessions        Session[]
-  notifications   Notification[]
+  children              ChildGuardian[]
+  invitesSent           ChildInvite[]    @relation("InvitesSent")
+  sessions              Session[]
+  notifications         Notification[]
   /// Email reminders when a well-child check-up is due (Settings). In-app ones always show.
-  checkupReminderEmails Boolean   @default(true)
-  remindersSent   ReminderSent[]
-  auditLogs       AuditLog[]
-  supportMessages SupportMessage[]
+  checkupReminderEmails Boolean          @default(true)
+  remindersSent         ReminderSent[]
+  auditLogs             AuditLog[]
+  supportMessages       SupportMessage[]
 
   @@map("users")
 }
@@ -373,9 +373,9 @@ model Notification {
 /// `key` is e.g. `checkup:<childId>:24` (the 24-month check-up).
 model ReminderSent {
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   key       String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   /// Set once emailed (or skipped); the daily run emails rows still null.
   emailedAt DateTime?
 
@@ -439,4 +439,28 @@ model RateLimit {
 
   @@index([expiresAt])
   @@map("rate_limits")
+}
+
+// ---------------------------------------------------------------------------
+// Public site content
+// ---------------------------------------------------------------------------
+
+/// Copy and media for sections of the public Home page that the admin portal edits.
+/// One row per section, keyed by name ("home-dashboard", "home-about"). A section with no row
+/// shows the copy and illustration built into the frontend.
+model SiteSection {
+  key       String   @id
+  eyebrow   String?
+  title     String
+  body      String
+  /// `/uploads/site/<file>`, a photo or a video.
+  mediaPath String?
+  /// "image" or "video".
+  mediaType String?
+  /// The part of the media to show, in percent of its width and height: { x, y, width, height }.
+  /// The file is never cut; the page scales and offsets it, so the same crop works for video.
+  crop      Json?
+  updatedAt DateTime @updatedAt
+
+  @@map("site_sections")
 }

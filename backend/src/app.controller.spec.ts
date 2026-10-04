@@ -16,7 +16,11 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return service health', () => {
-      expect(appController.getHealth()).toEqual({ status: 'ok', service: 'growth-backend' });
+      expect(appController.getHealth()).toEqual({
+        status: 'ok',
+        service: 'growth-backend',
+        storage: 'local',
+      });
     });
   });
 });

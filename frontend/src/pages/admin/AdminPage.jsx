@@ -21,6 +21,7 @@ import {
   TextField,
 } from "@mui/material";
 import { api, errorMessage } from "../../lib/api";
+import HomeContentTab from "./HomeContentTab";
 
 // The admin portal (docs/user-flows.md §6). An admin runs the service: approves doctors, edits
 // articles, answers the inbox, reads usage, exports anonymised data. There is deliberately no
@@ -483,6 +484,7 @@ function ExportTab() {
 const TABS = [
   { path: "doctors", label: "Doctors", element: <DoctorsTab /> },
   { path: "articles", label: "Articles", element: <ArticlesTab /> },
+  { path: "home", label: "Home page", element: <HomeContentTab /> },
   { path: "inbox", label: "Inbox", element: <InboxTab /> },
   { path: "usage", label: "Usage", element: <UsageTab /> },
   { path: "export", label: "Export", element: <ExportTab /> },

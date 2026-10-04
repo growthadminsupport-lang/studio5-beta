@@ -1,4 +1,5 @@
 import { Logger, NotFoundException, StreamableFile } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { createReadStream, existsSync } from 'fs';
 import { mkdir, readFile, unlink, writeFile } from 'fs/promises';
 import { basename, dirname, extname, join } from 'path';
@@ -7,7 +8,8 @@ import type { ReadableStream as WebReadableStream } from 'stream/web';
 import { AwsClient } from 'aws4fetch';
 
 /**
- * Uploaded files: X-rays (`bone-age/`) and profile photos (`avatars/`).
+ * Uploaded files: X-rays (`bone-age/`), profile photos (`avatars/`) and the Home page's
+ * pictures and videos (`site/`).
  *
  * Multer writes every upload to local disk first, and the bone-age model reads from there.
  * Render's free disk is wiped on each deploy, so when Cloudflare R2 is configured
@@ -29,6 +31,8 @@ const CONTENT_TYPES: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
   '.dcm': 'application/dicom',
 };
 
@@ -194,4 +198,47 @@ export async function removeUpload(
       `R2 delete of ${dir}/${basename(storedPath)} failed: ${(err as Error).message}`,
     );
   }
+}
+
+/**
+ * Sends a public upload with HTTP range support. Safari will not play a <video> from a server
+ * that ignores `Range`, and streamUpload's StreamableFile always answers with the whole file.
+ * Local files go through Express's sendFile, which handles ranges and conditional requests;
+ * after a redeploy the file comes from R2, which is asked for the same range.
+ *
+ * The URL carries the file name, and a new upload gets a new name, so the response can be
+ * cached for good. Only for files that are public anyway: no access check happens here.
+ */
+export async function sendPublicUpload(
+  dir: string,
+  storedPath: string,
+  req: Request,
+  res: Response,
+) {
+  const headers = {
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    'Content-Type': contentType(storedPath),
+  };
+  const file = localPath(dir, storedPath);
+  if (existsSync(file)) {
+    res.sendFile(file, { headers, acceptRanges: true });
+    return;
+  }
+  const store = bucket();
+  if (!store) throw new NotFoundException('File is no longer on the server');
+  const range = req.headers.range;
+  const remote = await store.client.fetch(
+    `${store.base}/${objectKey(dir, storedPath)}`,
+    { headers: range ? { Range: range } : {} },
+  );
+  if (!remote.ok || !remote.body) {
+    throw new NotFoundException('File is no longer available on the server');
+  }
+  res.status(remote.status);
+  res.set({ ...headers, 'Accept-Ranges': 'bytes' });
+  for (const name of ['Content-Length', 'Content-Range', 'ETag']) {
+    const value = remote.headers.get(name);
+    if (value) res.set(name, value);
+  }
+  Readable.fromWeb(remote.body as unknown as WebReadableStream).pipe(res);
 }

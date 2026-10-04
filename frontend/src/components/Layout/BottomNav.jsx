@@ -1,10 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { LayoutGrid, LineChart, Flag, BookOpen } from "lucide-react";
+import { LayoutGrid, LineChart, Flag, ScanLine, BookOpen } from "lucide-react";
 import "./BottomNav.css";
 
 export default function BottomNav() {
   return (
-    <nav className="bottom-nav md:hidden">
+    <nav className="bottom-nav lg:hidden">
       <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active" : "")}>
         <LayoutGrid size={20} />
         <span>Dashboard</span>
@@ -18,6 +18,11 @@ export default function BottomNav() {
       <NavLink to="/puberty" className={({ isActive }) => (isActive ? "active" : "")}>
         <Flag size={20} />
         <span>Puberty</span>
+      </NavLink>
+
+      <NavLink to="/bone-age" className={({ isActive }) => (isActive ? "active" : "")}>
+        <ScanLine size={20} />
+        <span>AI Prediction</span>
       </NavLink>
 
       <NavLink to="/knowledge" className={({ isActive }) => (isActive ? "active" : "")}>

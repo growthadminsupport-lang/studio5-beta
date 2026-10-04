@@ -150,9 +150,9 @@
   border-color: #5eead4;
 }
 
-/* Tablet / small laptop (769px – 1279px): same desktop nav, tighter
-   spacing so all links fit on iPad without pushing the page sideways */
-@media (min-width: 769px) and (max-width: 1279px) {
+/* Tablet / laptop (769px – 1439px): tighter spacing. At full spacing the admin's eight links ran
+   under the theme button at 1280px. */
+@media (min-width: 769px) and (max-width: 1439px) {
   .navbar {
     padding: 0px 16px;
     min-height: 72px;
@@ -194,6 +194,14 @@
   .navbar-actions {
     gap: 12px !important;
     flex-shrink: 0;
+  }
+}
+
+/* The signed-in links (up to eight) need 1024px. Below that they used to scroll sideways inside
+   a hidden scrollbar, so the last ones sat under the action buttons, unreachable. */
+@media (max-width: 1023px) {
+  .navbar-links--app {
+    display: none !important;
   }
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeftRight, Pencil, Plus, X, Check, AlertTriangle, Users, Search } from 'lucide-react';
 import ChildAvatar from './ChildAvatar';
 import { avatarVersion } from '../../lib/avatar';
@@ -332,12 +332,31 @@ export default function ChildProfileCard() {
   }
   const [modal, setModal] = useState(null); // null | 'switch' | 'manage' | 'edit' | 'people'
 
+  // `?open=switch|people` opens that window, so the getting-started guide can link straight to
+  // the step it describes. Closing the window drops the parameter.
+  const [params, setParams] = useSearchParams();
+  const requested = params.get('open');
+  const fromLink = requested === 'switch' || (requested === 'people' && child?.myRole === 'PARENT') ? requested : null;
+  const shown = modal ?? fromLink;
+  function close() {
+    setModal(null);
+    if (requested) {
+      setParams(
+        (p) => {
+          p.delete('open');
+          return p;
+        },
+        { replace: true },
+      );
+    }
+  }
+
   return (
     <>
       {child && (
         <div className="relative mb-6 rounded-2xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 shadow-2xs sm:p-8">
-          {/* Switch, edit and people: one row, each opening a window over this page. */}
-          <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-5 sm:top-5">
+          {/* Switch, people and edit: a column down the right edge, each opening a window. */}
+          <div className="absolute right-3 top-3 flex flex-col items-center gap-1.5 sm:right-5 sm:top-5">
             <button
               type="button"
               aria-label="Switch child"
@@ -374,7 +393,7 @@ export default function ChildProfileCard() {
           </div>
 
           {/* Phones: the figure on top, name and details full width under it. */}
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-6 sm:pr-32">
+          <div className="flex flex-col items-start gap-3 pr-12 sm:flex-row sm:items-center sm:gap-6 sm:pr-16">
             <div className="flex shrink-0 items-end justify-center rounded-2xl bg-gradient-to-b from-[#eaf6f3] to-white px-3 pt-2 dark:from-teal-500/10 dark:to-slate-800">
               <ChildAvatar child={child} size={avatarVersion(child.dateOfBirth) === 'baby' ? 128 : 104} variant="full" />
             </div>
@@ -402,21 +421,21 @@ export default function ChildProfileCard() {
         </div>
       )}
 
-      {modal === 'switch' && (
+      {shown === 'switch' && (
         <SwitchChildModal
           kids={kids}
           activeChildId={activeChildId}
           onSelect={setActiveChildId}
-          onClose={() => setModal(null)}
+          onClose={close}
           onManage={() => setModal('manage')}
         />
       )}
 
-      <ChildEditDialog child={child} open={modal === 'edit'} onClose={() => setModal(null)} />
-      <PeopleDialog child={child} open={modal === 'people'} onClose={() => setModal(null)} />
+      <ChildEditDialog child={child} open={shown === 'edit'} onClose={close} />
+      <PeopleDialog child={child} open={shown === 'people'} onClose={close} />
 
-      {modal === 'manage' && (
-        <ManageChildrenModal kids={kids} onClose={() => setModal(null)} onRemove={removeOrLeave} />
+      {shown === 'manage' && (
+        <ManageChildrenModal kids={kids} onClose={close} onRemove={removeOrLeave} />
       )}
     </>
   );

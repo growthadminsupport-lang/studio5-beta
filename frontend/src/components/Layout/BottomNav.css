@@ -5,8 +5,8 @@
   display: none;
 }
 
-/* Show fixed bar only up to 768px, where Navbar.css hides the top links */
-@media (max-width: 768px) {
+/* Show the fixed bar below 1024px, where Navbar.css hides the signed-in top links */
+@media (max-width: 1023px) {
   .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -40,7 +40,7 @@
 }
 
 /* ---------------- Dark Mode ---------------- */
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
   [data-theme="dark"] .bottom-nav {
     background-color:  #1e293b;
     border-top: 1px solid rgba(255, 255, 255, 0.08);

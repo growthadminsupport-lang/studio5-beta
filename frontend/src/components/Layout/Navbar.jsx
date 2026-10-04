@@ -19,8 +19,9 @@ function Navbar() {
             <NavLogo />
           </Link>
 
-          {/* Hidden on mobile, visible on desktop (md screens and above) */}
-          <div className="navbar-links hidden md:flex items-center gap-5">
+          {/* Signed in there are up to eight links, which only fit from 1024px; below that the
+              bottom tab bar takes over. Signed out, the three links fit from 769px. */}
+          <div className={`navbar-links ${isLoggedIn ? "navbar-links--app" : ""} hidden md:flex items-center gap-5`}>
             {isLoggedIn ? (
               <>
                 <NavLink to="/dashboard">Dashboard</NavLink>

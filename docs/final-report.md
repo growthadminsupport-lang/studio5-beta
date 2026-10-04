@@ -69,7 +69,7 @@ real product, and GrowTH was built to it:
 | C3 | Families see the doctor's reading, not the AI number | FR-18 deviates for families |
 | C4 | Caretakers do not see puberty results | Parent and doctor are notified |
 | C5 | Doctor accounts are approved by an admin | Licence and hospital checked |
-| C6 | Admin portal | Doctors, articles, inbox, usage, anonymised export |
+| C6 | Admin portal | Doctors, articles, Home page content, inbox, usage, anonymised export |
 | C7 | Find a child by hospital number | Doctors only, own patients only |
 | C8 | No promotional work | D7 promo video and D9 social clips dropped |
 
