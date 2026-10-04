@@ -191,6 +191,49 @@ textarea {
   50% { transform: translateY(-8px); }
 }
 
+/* The child's avatar on the profile card (AvatarFigure alive): breathes, sways, blinks. Each
+   runs on its own period so the three never line up into a visible loop. */
+.avatar-sway {
+  transform-origin: 50% 100%;
+  animation: avatar-sway 7s ease-in-out infinite;
+}
+.avatar-alive {
+  transform-origin: 50% 100%;
+  animation: avatar-breathe 3.6s ease-in-out infinite;
+}
+.avatar-alive .avatar-eyes {
+  transform-origin: 50% 34%; /* the eye line of the baby drawing */
+  animation: avatar-blink 5.3s ease-in-out infinite;
+}
+.avatar-alive .avatar-lashes {
+  transform-origin: 50% 30%;
+  animation: avatar-lid 5.3s ease-in-out infinite;
+}
+@keyframes avatar-sway {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+}
+@keyframes avatar-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.008, 1.018); }
+}
+@keyframes avatar-blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0); }
+}
+@keyframes avatar-lid {
+  0%, 93%, 100% { transform: translateY(0) scaleY(1); }
+  96% { transform: translateY(3.5%) scaleY(0.7); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-sway,
+  .avatar-alive,
+  .avatar-alive .avatar-eyes,
+  .avatar-alive .avatar-lashes {
+    animation: none;
+  }
+}
+
 /* iPhone Safari zooms the page into any field whose text is under 16px and leaves it zoomed.
    The forms use 14px text, so on iOS only (the one browser that does this) fields get 16px. */
 @supports (-webkit-touch-callout: none) {
