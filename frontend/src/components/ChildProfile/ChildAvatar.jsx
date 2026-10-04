@@ -23,28 +23,52 @@ function Hair({ version, index, color }) {
   );
 }
 
-/** The whole figure, `height` pixels tall. */
-export function AvatarFigure({ version, sex, avatar, height }) {
+const layer = (l) => <img key={l} src={src(l)} alt="" className="absolute inset-0 h-full w-full" draggable={false} />;
+
+/** A little jump with a squash on landing, when the child taps their own avatar. */
+function hop(e) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  e.currentTarget.animate(
+    [
+      { transform: "translateY(0) scale(1, 1)" },
+      { transform: "translateY(0) scale(1.06, 0.92)", offset: 0.15 },
+      { transform: "translateY(-14%) scale(0.96, 1.05)", offset: 0.45 },
+      { transform: "translateY(0) scale(1.05, 0.95)", offset: 0.75 },
+      { transform: "translateY(0) scale(1, 1)" },
+    ],
+    { duration: 650, easing: "ease-out" },
+  );
+}
+
+/**
+ * The whole figure, `height` pixels tall. `alive` (the profile card) makes it breathe and sway,
+ * blink (the baby drawing, whose eyes are their own layers; the young child's face is one
+ * image) and hop when tapped. CSS transforms only, so it runs at the screen's refresh rate.
+ * Still for anyone who asked for reduced motion (index.css).
+ */
+export function AvatarFigure({ version, sex, avatar, height, alive = false }) {
   const a = withDefaults(avatar, sex);
-  const layers =
-    version === "baby"
-      ? [
-          `baby/skin-${a.skin}`,
-          `baby/outfit-${a.babyOutfit}`,
-          `baby/shoes-${a.babyShoes}`,
-          "baby/eye-white",
-          `baby/mouth-${a.babyMouth}`,
-          `baby/eyes-${a.babyEyes}`,
-          `baby/lashes-${a.babyLashes}`,
-          `baby/brows-${a.babyBrows}`,
-        ]
-      : [`young/${sex === "MALE" ? "boy" : "girl"}-${a.skin}`];
-  return (
-    <div className="relative" style={{ height, width: height * SETS[version].aspect }}>
-      {layers.map((l) => (
-        <img key={l} src={src(l)} alt="" className="absolute inset-0 h-full w-full" draggable={false} />
-      ))}
+  const figure = (
+    <div className={`relative ${alive ? "avatar-alive" : ""}`} style={{ height, width: height * SETS[version].aspect }}>
+      {version === "baby" ? (
+        <>
+          {[`baby/skin-${a.skin}`, `baby/outfit-${a.babyOutfit}`, `baby/shoes-${a.babyShoes}`, `baby/mouth-${a.babyMouth}`].map(layer)}
+          {/* A blink: the eye white and iris close (the skin under them is drawn) while the lash
+              line drops to the middle of the eye, which reads as a closed lid. */}
+          <div className="avatar-eyes absolute inset-0">{["baby/eye-white", `baby/eyes-${a.babyEyes}`].map(layer)}</div>
+          <div className="avatar-lashes absolute inset-0">{layer(`baby/lashes-${a.babyLashes}`)}</div>
+          {layer(`baby/brows-${a.babyBrows}`)}
+        </>
+      ) : (
+        layer(`young/${sex === "MALE" ? "boy" : "girl"}-${a.skin}`)
+      )}
       <Hair version={version} index={version === "baby" ? a.babyHair : a.youngHair} color={a.hairColor} />
+    </div>
+  );
+  if (!alive) return figure;
+  return (
+    <div className="avatar-sway cursor-pointer" onPointerDown={hop}>
+      {figure}
     </div>
   );
 }
@@ -69,10 +93,10 @@ export function AvatarZoom({ version, sex, avatar, size, x = 0.5, y = 0.345, spa
  * The child's avatar. `variant="head"` crops to the face inside a circle of `size` (profile
  * cards, lists); `variant="full"` shows the whole figure `size` pixels tall (the editor).
  */
-export default function ChildAvatar({ child, size = 64, variant = "head", className = "" }) {
+export default function ChildAvatar({ child, size = 64, variant = "head", className = "", alive = false }) {
   const version = avatarVersion(child?.dateOfBirth);
   if (variant === "full") {
-    return <AvatarFigure version={version} sex={child?.sex} avatar={child?.avatar} height={size} />;
+    return <AvatarFigure version={version} sex={child?.sex} avatar={child?.avatar} height={size} alive={alive} />;
   }
   // How much larger the figure is drawn than the circle, and how far up it sits, so the face
   // fills it. The baby is a full body, the young child a bust.

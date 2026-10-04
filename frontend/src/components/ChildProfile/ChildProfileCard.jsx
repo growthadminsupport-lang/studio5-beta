@@ -395,7 +395,7 @@ export default function ChildProfileCard() {
           {/* Phones: the figure on top, name and details full width under it. */}
           <div className="flex flex-col items-start gap-3 pr-12 sm:flex-row sm:items-center sm:gap-6 sm:pr-16">
             <div className="flex shrink-0 items-end justify-center rounded-2xl bg-gradient-to-b from-[#eaf6f3] to-white px-3 pt-2 dark:from-teal-500/10 dark:to-slate-800">
-              <ChildAvatar child={child} size={avatarVersion(child.dateOfBirth) === 'baby' ? 128 : 104} variant="full" />
+              <ChildAvatar child={child} size={avatarVersion(child.dateOfBirth) === 'baby' ? 128 : 104} variant="full" alive />
             </div>
 
             <div className="min-w-0 max-w-full">
