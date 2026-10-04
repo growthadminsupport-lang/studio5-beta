@@ -20,6 +20,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SupportModule } from './support/support.module';
 import { SuggestionsModule } from './suggestions/suggestions.module';
 import { AdminModule } from './admin/admin.module';
+import { SiteModule } from './site/site.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AdminModule } from './admin/admin.module';
     SupportModule,
     SuggestionsModule,
     AdminModule,
+    SiteModule,
   ],
   controllers: [AppController],
   providers: [

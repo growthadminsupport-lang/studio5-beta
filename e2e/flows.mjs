@@ -499,6 +499,24 @@ try {
   }
   check('admin tabs switch by clicking, each at /admin/<tab> with its content', badTabs.length === 0, badTabs.join('; '));
 
+  // Home page tab: a new title and a picture for the dashboard section reach the public Home page.
+  await admin.getByRole('link', { name: 'Home page', exact: true }).click();
+  await admin.waitForURL('**/admin/home');
+  const dashEditor = admin.locator('section', { has: admin.getByRole('heading', { name: 'Comprehensive Dashboard' }) });
+  const homeTitle = `Every measure at a glance ${stamp}`;
+  await dashEditor.getByLabel('Title').fill(homeTitle);
+  await dashEditor.locator('input[type=file]').setInputFiles(`${XRAYS}/x3.jpg`);
+  await dashEditor.locator('.reactEasyCrop_Container').waitFor();
+  await dashEditor.getByRole('button', { name: 'Save' }).click();
+  await dashEditor.getByText('Saved. The Home page shows it now.').waitFor({ timeout: 20000 });
+  const visitor = await newPage();
+  await visitor.goto(`${APP}/`);
+  await visitor.getByRole('heading', { name: homeTitle }).waitFor({ timeout: 15000 });
+  const homeImg = visitor.locator('section', { has: visitor.getByRole('heading', { name: homeTitle }) }).locator('img');
+  const homeImgOk = await homeImg.evaluate((img) => img.complete && img.naturalWidth > 0 && img.src.includes('/site/media/'));
+  check('admin edits a Home page section: new title and picture shown to visitors', homeImgOk);
+  await admin.goto(`${APP}/admin/doctors`);
+
   // Doctors: reject with a reason, find it under Rejected, then approve it from there.
   const rejEmail = `rej${stamp}@e2e.test`, REJ = `Dr Reject ${stamp}`;
   const rejReg = await (await fetch(`${API}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' },

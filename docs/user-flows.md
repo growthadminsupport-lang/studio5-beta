@@ -144,6 +144,7 @@ flowchart TD
     C --> C1[Approve or reject with a reason]
     C1 -. notification .-> D[Doctor]
     B --> E[Articles: create, edit, publish, unpublish<br/>title, category, body, sources]
+    B --> K[Home page: two sections' text,<br/>a picture or video, cropped, with a preview]
     B --> F[Inbox: Contact messages and Problem reports]
     F --> F1[Read, reply by email, mark resolved]
     B --> G[Usage: users by role, children,<br/>growth entries, screenings, X-rays per week]
