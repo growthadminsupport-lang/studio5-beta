@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useChildren } from '../context/ChildrenContext';
 import ChildProfileCard, { NoChildState } from '../components/ChildProfile/ChildProfileCard';
 import InvitationsForYou from '../components/People/InvitationsForYou';
@@ -18,6 +18,8 @@ import {
   Plus,
   AlertTriangle,
   CircleUserRound,
+  ListChecks,
+  ArrowRight,
 } from 'lucide-react';
 
 
@@ -45,35 +47,49 @@ const articles = DASHBOARD_SLUGS.map((slug) => BUILTIN_ARTICLES.find((a) => a.sl
 // What to do next
 // ============================================================
 
+// The one card on the dashboard that asks for something, so it is tinted and accented like the
+// "Worth a look" alert (in teal, as it is a step rather than a warning) and each step has a
+// filled button. A warning step keeps amber.
 function NextSteps({ items }) {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="mb-6 rounded-2xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 shadow-2xs">
-      <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">What to do next</h2>
+    <div className="mb-6 rounded-2xl border border-[#bcece0] border-l-4 border-l-[#056559] bg-[#f2fbf9] p-4 shadow-2xs sm:p-5 dark:border-teal-500/30 dark:border-l-teal-400 dark:bg-teal-500/10">
+      <div className="mb-3 flex items-center gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#056559] text-white dark:bg-teal-400 dark:text-slate-950">
+          <ListChecks size={16} />
+        </span>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">What to do next</h2>
+        {items.length > 1 && (
+          <span className="rounded-full bg-[#056559]/10 px-2 py-0.5 text-xs font-semibold text-[#056559] dark:bg-teal-400/15 dark:text-teal-300">
+            {items.length}
+          </span>
+        )}
+      </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         {items.map((s) => (
           <div
             key={s.kind}
-            className={`flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${
-              s.severity === 'warning' ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10' : 'border-slate-200 dark:border-slate-700'
+            className={`flex flex-col gap-3 rounded-xl border bg-white p-3.5 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-800 ${
+              s.severity === 'warning' ? 'border-amber-300 dark:border-amber-500/40' : 'border-[#d2efe9] dark:border-slate-700'
             }`}
           >
             <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{s.title}</p>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{s.body}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{s.title}</p>
+              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{s.body}</p>
             </div>
 
             <Link
               to={s.actionHref}
-              className={`inline-flex shrink-0 items-center justify-center rounded-full px-4 py-2 text-xs font-semibold transition ${
+              className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition ${
                 s.severity === 'warning'
                   ? 'bg-amber-500 text-white hover:bg-amber-600'
-                  : 'border border-slate-200 dark:border-slate-700 text-[#056559] dark:text-teal-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  : 'bg-[#056559] text-white hover:bg-[#03443c] dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300'
               }`}
             >
               {s.actionLabel}
+              <ArrowRight size={14} />
             </Link>
           </div>
         ))}
@@ -98,6 +114,21 @@ function DashboardPage() {
   const [suggestions, setSuggestions] = useState([]);
   const [boneAge, setBoneAge] = useState(null);
   const [lastScreening, setLastScreening] = useState(null);
+  const location = useLocation();
+
+  // "#growth-trajectory" (from the getting-started guide) scrolls to the measure tiles and
+  // outlines them for a moment. Keyed on the navigation, so clicking the step again works.
+  useEffect(() => {
+    if (location.hash !== '#growth-trajectory') return;
+    const el = document.getElementById('growth-trajectory');
+    if (!el) return;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
+    el.animate(
+      [{ boxShadow: '0 0 0 3px rgba(20, 184, 166, 0.9)' }, { boxShadow: '0 0 0 3px rgba(20, 184, 166, 0)' }],
+      { duration: 2200, easing: 'ease-in' },
+    );
+  }, [location.key, location.hash, child]);
 
   // "What to do next" (cross-feature suggestions), and the latest puberty and bone-age state for
   // the two cards. The API shapes each by role: a caretaker gets no screening result and the
@@ -173,7 +204,10 @@ function DashboardPage() {
 
           {/* Growth Trajectory */}
 
-          <div className="min-w-0 rounded-2xl bg-white dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 shadow-2xs sm:p-5 lg:col-span-2">
+          <div
+            id="growth-trajectory"
+            className="min-w-0 scroll-mt-24 rounded-2xl bg-white dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 shadow-2xs sm:p-5 lg:col-span-2"
+          >
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Growth Trajectory</h2>
 

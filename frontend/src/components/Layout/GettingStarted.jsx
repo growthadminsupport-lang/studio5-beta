@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, Baby, BarChart3, Check, ClipboardCheck, MailOpen, Ruler, Search, ScanLine, Users, X } from "lucide-react";
+import { ArrowLeftRight, Baby, BarChart3, Check, ChevronRight, ClipboardCheck, MailOpen, Ruler, Search, ScanLine, Users, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useChildren } from "../../context/ChildrenContext";
 
@@ -10,20 +10,24 @@ import { useChildren } from "../../context/ChildrenContext";
  * - caretaker: pick the child and add a measurement;
  * - doctor: accept the invitation, find the patient, the AI bone-age steps.
  * Steps tick themselves off where the app can tell; "Got it" (or ×) hides the guide for good.
+ *
+ * Every open step the user can act on is a link to where it is done: a page, a part of the dashboard (`#…`), or one
+ * of the child card's windows (`?open=switch|people`, opened by ChildProfileCard), so nobody has
+ * to go looking for the button the step describes.
  */
 function steps({ isDoctor, kids, active, hasRecords }) {
   if (isDoctor) {
     return [
       { icon: MailOpen, text: "Accept the parent's invitation", done: kids.length > 0 },
-      { icon: Search, text: "Find your patient: switch child, or search by HN" },
+      { icon: Search, text: "Find your patient: switch child, or search by HN", to: kids.length ? "?open=switch" : undefined },
       { icon: ScanLine, text: "AI Prediction: upload the hand X-ray", to: "/bone-age" },
-      { icon: ClipboardCheck, text: "Check the estimate, choose your reading, share it" },
+      { icon: ClipboardCheck, text: "Check the estimate, choose your reading, share it", to: "/bone-age" },
     ];
   }
   const parent = kids.some((k) => k.myRole === "PARENT");
   if (!parent && kids.length > 0) {
     return [
-      { icon: ArrowLeftRight, text: "Pick the child with the switch button" },
+      { icon: ArrowLeftRight, text: "Pick the child with the switch button", to: "?open=switch" },
       { icon: Ruler, text: "Growth: enter height and weight", to: "/growth", done: hasRecords },
     ];
   }
@@ -35,8 +39,8 @@ function steps({ isDoctor, kids, active, hasRecords }) {
       done: parent,
     },
     { icon: Ruler, text: "Add the first height and weight", to: active ? "/growth" : undefined, done: hasRecords },
-    { icon: BarChart3, text: "Tap a measure on the dashboard to see its chart" },
-    { icon: Users, text: "Invite a caretaker or the doctor (people button)" },
+    { icon: BarChart3, text: "Tap a measure on the dashboard to see its chart", to: active ? "#growth-trajectory" : undefined },
+    { icon: Users, text: "Invite a caretaker or the doctor", to: parent && active?.myRole === "PARENT" ? "?open=people" : undefined },
   ];
 }
 
@@ -81,11 +85,15 @@ export default function GettingStarted({ hasRecords = false, className = "" }) {
           return (
             <li key={s.text}>
               {s.to && !s.done ? (
-                <Link to={s.to} className="flex items-center gap-2.5 rounded-xl p-1.5 transition hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <Link
+                  to={s.to}
+                  className="group flex items-center gap-2.5 rounded-xl border border-[#d2efe9] p-1.5 pr-2 transition hover:border-[#056559] hover:bg-[#f2fbf9] dark:border-teal-500/20 dark:hover:border-teal-400 dark:hover:bg-teal-500/10"
+                >
                   {body}
+                  <ChevronRight size={16} className="ml-auto shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-[#056559] dark:group-hover:text-teal-300" />
                 </Link>
               ) : (
-                <div className="flex items-center gap-2.5 p-1.5">{body}</div>
+                <div className="flex items-center gap-2.5 border border-transparent p-1.5">{body}</div>
               )}
             </li>
           );
