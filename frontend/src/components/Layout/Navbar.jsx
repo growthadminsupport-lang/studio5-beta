@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 import ProfileMenu from "./ProfileMenu";
 import ThemeToggle from "./ThemeToggle";
-import logo from "../../assets/logo_dashboard.png";
+import { NavLogo } from "../LogoMotion";
 import "./Navbar.css";
 
 function Navbar() {
@@ -16,7 +16,7 @@ function Navbar() {
         
         <div className="navbar-left flex items-center gap-6">
           <Link to={isLoggedIn ? "/dashboard" : "/"} className="navbar-logo">
-            <img src={logo} alt="GrowTH" className="h-9 w-auto object-contain" />
+            <NavLogo />
           </Link>
 
           {/* Hidden on mobile, visible on desktop (md screens and above) */}

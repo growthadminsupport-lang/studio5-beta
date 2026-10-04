@@ -6,16 +6,10 @@ import { useAuth } from "../../context/AuthContext";
 import { errorMessage } from "../../lib/api";
 import GoogleButton from "./GoogleButton";
 import { useGoogleFlow } from "./useGoogleFlow";
-import { useTheme } from "../../context/ThemeContext";
-import logoDarkVideo from "../../assets/logo_motion_black_small.mp4";
-import logoLightVideo from "../../assets/logo_motion_white_small.mp4";
-import posterDark from "../../assets/poster_dark.webp";
-import posterLight from "../../assets/poster_light.webp";
+import LogoMotion from "../LogoMotion";
 import "./Auth.css";
 
 function LoginForm() {
-  const { theme } = useTheme();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,18 +49,7 @@ function LoginForm() {
     <form onSubmit={handleSubmit} className="auth-form">
       {/* Logo */}
       <div className="auth-logo-container">
-        <video
-          key={theme}
-          src={theme === "dark" ? logoDarkVideo : logoLightVideo}
-          poster={theme === "dark" ? posterDark : posterLight}
-          preload="auto"
-          autoPlay
-          loop
-          muted
-          playsInline
-          aria-label="GrowTH logo"
-          className="auth-logo"
-        />
+        <LogoMotion className="auth-logo" />
       </div>
 
       <h1 className="font-bold text-3xl welcome-title">Welcome back</h1>
