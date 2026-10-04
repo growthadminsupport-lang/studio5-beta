@@ -5,7 +5,8 @@ autoplays a video, even a muted one: it draws a play button over the logo instea
 is an image, so it always plays and loops.
 
 Writes to frontend/src/assets/:
-  logo_anim_{light,dark}.webp    the full logo (home, log in, sign up)
+  logo_anim_{light,dark}.mp4     the full logo for the Home hero, 60 fps (see video() below)
+  logo_anim_{light,dark}.webp    the full logo (log in, sign up; the hero when video is refused)
   mascot_anim_{light,dark}.webp  the boy and the arrow only, beside the wordmark in the navbar
   mascot_still_{light,dark}.webp the first mascot frame, for reduced motion
   logo_wordmark.png              "GrowTH" from logo_dashboard.png
@@ -64,14 +65,41 @@ def save(seq: list[Image.Image], path: Path, quality: int) -> None:
     print(f"{path.name}: {seq[0].size}, {len(seq)} frames, {path.stat().st_size // 1024} KB")
 
 
+def video(seq: list[Image.Image], path: Path) -> None:
+    """The hero's smooth version: every source frame (29.97 fps), motion-interpolated to 60 fps,
+    H.264. The source has no 60 fps; minterpolate's in-between frames were checked at the
+    fastest movement (the waving hand) and show no warping. 480 px covers the hero at 2x."""
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, im in enumerate(seq):
+            im.resize((480, 480), Image.LANCZOS).save(f"{tmp}/{i:04d}.png")
+        subprocess.run(
+            [
+                imageio_ffmpeg.get_ffmpeg_exe(), "-v", "error", "-y",
+                "-framerate", "30000/1001", "-i", f"{tmp}/%04d.png",
+                "-vf", "minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1",
+                "-c:v", "libx264", "-preset", "slow", "-crf", "24", "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart", "-an", str(path),
+            ],
+            check=True,
+        )
+    print(f"{path.name}: 480x480, 60 fps, {path.stat().st_size // 1024} KB")
+
+
+def loop_frames(theme: str, video_file: str) -> list[Image.Image]:
+    """Every frame of the clean cycle, the seam blended, levels fixed."""
+    fr = frames(HERE / video_file, LOOP_START - FADE, LOOP_END)
+    lead, body = fr[:FADE], fr[FADE:]
+    for t in range(FADE):
+        k = len(body) - FADE + t
+        body[k] = Image.blend(body[k], lead[t], (t + 1) / (FADE + 1))
+    return [levels(im, theme == "dark") for im in body]
+
+
 def main() -> None:
-    for theme, video in (("light", "logo_motion_white_small.mp4"), ("dark", "logo_motion_black_small.mp4")):
-        fr = frames(HERE / video, LOOP_START - FADE, LOOP_END)
-        lead, body = fr[:FADE], fr[FADE:]
-        for t in range(FADE):
-            k = len(body) - FADE + t
-            body[k] = Image.blend(body[k], lead[t], (t + 1) / (FADE + 1))
-        seq = [levels(im, theme == "dark") for im in body[::STEP]]
+    for theme, source in (("light", "logo_motion_white_small.mp4"), ("dark", "logo_motion_black_small.mp4")):
+        every = loop_frames(theme, source)
+        video(every, ASSETS / f"logo_anim_{theme}.mp4")
+        seq = every[::STEP]
 
         save([im.resize((360, 360), Image.LANCZOS) for im in seq], ASSETS / f"logo_anim_{theme}.webp", 60)
         h = 128
