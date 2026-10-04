@@ -1,5 +1,7 @@
 .profile-menu {
   position: relative;
+  /* The icon buttons have 5.5px of space around a 21px icon; the avatar circle has none. */
+  margin-left: 6px;
 }
 
 /* Profile button */

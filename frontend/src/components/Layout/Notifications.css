@@ -13,7 +13,10 @@
   border: none;
   color: #004640;
   cursor: pointer;
-  padding: 4px;
+  /* Same 32px box as the theme button, so the icons are evenly spaced. */
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 .badge {
