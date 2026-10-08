@@ -42,9 +42,8 @@ function hop(e) {
 
 /**
  * The whole figure, `height` pixels tall. `alive` (the profile card) makes it breathe and sway,
- * blink (the baby drawing, whose eyes are their own layers; the young child's face is one
- * image) and hop when tapped. CSS transforms only, so it runs at the screen's refresh rate.
- * Still for anyone who asked for reduced motion (index.css).
+ * blink (index.css) and hop when tapped. CSS only, so it runs at the screen's refresh rate. Still
+ * for anyone who asked for reduced motion.
  */
 export function AvatarFigure({ version, sex, avatar, height, alive = false }) {
   const a = withDefaults(avatar, sex);
@@ -53,16 +52,25 @@ export function AvatarFigure({ version, sex, avatar, height, alive = false }) {
       {version === "baby" ? (
         <>
           {[`baby/skin-${a.skin}`, `baby/outfit-${a.babyOutfit}`, `baby/shoes-${a.babyShoes}`, `baby/mouth-${a.babyMouth}`].map(layer)}
-          {/* A blink: the eye white and iris close (the skin under them is drawn) while the lash
-              line drops to the middle of the eye, which reads as a closed lid. */}
-          <div className="avatar-eyes absolute inset-0">{["baby/eye-white", `baby/eyes-${a.babyEyes}`].map(layer)}</div>
-          <div className="avatar-lashes absolute inset-0">{layer(`baby/lashes-${a.babyLashes}`)}</div>
+          <div className="avatar-blink-open absolute inset-0">
+            {["baby/eye-white", `baby/eyes-${a.babyEyes}`, `baby/lashes-${a.babyLashes}`].map(layer)}
+          </div>
+          {/* The artist's closed eye for this skin and lash style; only a living avatar blinks. */}
+          {alive && <div className="avatar-blink-closed absolute inset-0">{layer(`baby/closed-${a.skin}-${a.babyLashes}`)}</div>}
           {layer(`baby/brows-${a.babyBrows}`)}
         </>
       ) : (
-        layer(`young/${sex === "MALE" ? "boy" : "girl"}-${a.skin}`)
+        <>
+          {[`young/skin-${a.skin}`, "young/mouth", "young/brows"].map(layer)}
+          {/* Lashes are part of these eyes, so the blink squashes them to a line, not to nothing. */}
+          <div className="avatar-blink-squash absolute inset-0" style={{ transformOrigin: `50% ${SETS.young.eyeLine * 100}%` }}>
+            {layer(`young/eyes-${a.kidEyes}`)}
+          </div>
+        </>
       )}
-      <Hair version={version} index={version === "baby" ? a.babyHair : a.youngHair} color={a.hairColor} />
+      <Hair version={version} index={version === "baby" ? a.babyHair : a.kidHair} color={a.hairColor} />
+      {/* The young child's collar sits over the ends of long hair, as in the artist's file. */}
+      {version === "young" && layer(`young/outfit-${a.kidOutfit}`)}
     </div>
   );
   if (!alive) return figure;
@@ -98,19 +106,21 @@ export default function ChildAvatar({ child, size = 64, variant = "head", classN
   if (variant === "full") {
     return <AvatarFigure version={version} sex={child?.sex} avatar={child?.avatar} height={size} alive={alive} />;
   }
-  // How much larger the figure is drawn than the circle, and how far up it sits, so the face
-  // fills it. The baby is a full body, the young child a bust.
-  const zoom = version === "baby" ? 2.05 : 1.3;
+  // How much larger the figure is drawn than the circle, and where it sits, so the face fills
+  // it. The baby is a full body, centred; the young child a bust with the face left of centre.
+  const zoom = version === "baby" ? 2.05 : 1.75;
   const height = size * zoom;
   const width = height * SETS[version].aspect;
-  const top = version === "baby" ? -size * 0.02 : -size * 0.04;
+  const face = SETS[version].face;
+  const top = face ? size / 2 - face.y * height : -size * 0.02;
+  const left = face ? size / 2 - face.x * width : (size - width) / 2;
   return (
     <div
       className={`relative shrink-0 overflow-hidden rounded-full bg-[#dff5ee] dark:bg-teal-500/30 ${className}`}
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <div className="absolute" style={{ top, left: (size - width) / 2 }}>
+      <div className="absolute" style={{ top, left }}>
         <AvatarFigure version={version} sex={child?.sex} avatar={child?.avatar} height={height} />
       </div>
     </div>

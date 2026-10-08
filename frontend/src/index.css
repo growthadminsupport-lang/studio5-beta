@@ -201,13 +201,20 @@ textarea {
   transform-origin: 50% 100%;
   animation: avatar-breathe 3.6s ease-in-out infinite;
 }
-.avatar-alive .avatar-eyes {
-  transform-origin: 50% 34%; /* the eye line of the baby drawing */
-  animation: avatar-blink 5.3s ease-in-out infinite;
+/* Blinks. The baby: the artist drew each skin and lash style with the eyes closed, so a blink
+   swaps the open eyes for that drawing for a moment (step-end: no fade). The young child has no
+   closed drawing, so its eyes (lashes included) squash to a line at the eye line. */
+.avatar-blink-closed {
+  opacity: 0;
 }
-.avatar-alive .avatar-lashes {
-  transform-origin: 50% 30%;
-  animation: avatar-lid 5.3s ease-in-out infinite;
+.avatar-alive .avatar-blink-open {
+  animation: avatar-blink-open 5.3s step-end infinite;
+}
+.avatar-alive .avatar-blink-closed {
+  animation: avatar-blink-closed 5.3s step-end infinite;
+}
+.avatar-alive .avatar-blink-squash {
+  animation: avatar-blink-squash 5.3s ease-in-out infinite;
 }
 @keyframes avatar-sway {
   0%, 100% { transform: rotate(-1.2deg); }
@@ -217,19 +224,26 @@ textarea {
   0%, 100% { transform: scale(1, 1); }
   50% { transform: scale(1.008, 1.018); }
 }
-@keyframes avatar-blink {
-  0%, 93%, 100% { transform: scaleY(1); }
-  96% { transform: scaleY(0); }
+@keyframes avatar-blink-open {
+  0% { opacity: 1; }
+  94% { opacity: 0; }
+  97.5% { opacity: 1; }
 }
-@keyframes avatar-lid {
-  0%, 93%, 100% { transform: translateY(0) scaleY(1); }
-  96% { transform: translateY(3.5%) scaleY(0.7); }
+@keyframes avatar-blink-closed {
+  0% { opacity: 0; }
+  94% { opacity: 1; }
+  97.5% { opacity: 0; }
+}
+@keyframes avatar-blink-squash {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.14); }
 }
 @media (prefers-reduced-motion: reduce) {
   .avatar-sway,
   .avatar-alive,
-  .avatar-alive .avatar-eyes,
-  .avatar-alive .avatar-lashes {
+  .avatar-alive .avatar-blink-open,
+  .avatar-alive .avatar-blink-closed,
+  .avatar-alive .avatar-blink-squash {
     animation: none;
   }
 }

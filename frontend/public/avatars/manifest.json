@@ -16,10 +16,14 @@
     "shoes": 5
   },
   "young": {
-    "aspect": 1.0058,
-    "hair": 9,
+    "aspect": 1.0245,
+    "hair": 4,
+    "eyes": 4,
+    "outfits": 3,
     "hairWithAccessories": [
-      2
-    ]
+      2,
+      3
+    ],
+    "eyeLine": 0.358
   }
 }

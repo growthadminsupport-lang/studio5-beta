@@ -22,7 +22,11 @@ export const HAIR_COLORS = [
 
 export const AVATAR_SETS = {
   baby: { aspect: 0.748, hair: 10, outfits: 6, accessories: [1, 2, 6, 10], mouth: 4, lashes: 6, brows: 6, shoes: 5 },
-  young: { aspect: 1.0058, hair: 9, accessories: [2] },
+  // The young child (3+, the artist's layered bust from October 2026): eyes, hair and outfit
+  // are separate layers. `eyeLine` is where the blink pivots, as a share of the height.
+  // `face` is the face's centre as a share of width and height (it sits left of centre in this
+  // drawing), for the round head avatar and the editor's close-ups.
+  young: { aspect: 1.0245, hair: 4, eyes: 4, outfits: 3, accessories: [2, 3], eyeLine: 0.358, face: { x: 0.37, y: 0.42 } },
 };
 
 export function hairCount(version) {
@@ -50,7 +54,11 @@ export function withDefaults(avatar, sex) {
   return {
     skin: avatar?.skin ?? "fair",
     babyHair: avatar?.babyHair ?? (girl ? 2 : 9),
-    youngHair: avatar?.youngHair ?? (girl ? 7 : 5),
+    // The young-child fields start with "kid": `youngHair` belonged to the drawing this one
+    // replaced, and its numbers mean different styles, so saved values are left unused.
+    kidHair: avatar?.kidHair ?? (girl ? 3 : 4),
+    kidEyes: avatar?.kidEyes ?? (girl ? 2 : 4),
+    kidOutfit: avatar?.kidOutfit ?? (girl ? 3 : 2),
     hairColor: avatar?.hairColor ?? HAIR_COLORS[0].hex,
     babyOutfit: avatar?.babyOutfit ?? (girl ? 1 : 6),
     // Defaults are the layers the artist left on, so avatars saved before these existed look

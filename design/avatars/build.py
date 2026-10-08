@@ -2,12 +2,11 @@
 Build the child avatar layers the app stacks in the browser (frontend/public/avatars/).
 
 Sources are the team's art on the GrowTH Drive, downloaded to SRC (not committed, ~60 MB):
-  SRC/profile/อวาตาร์เด็กจิ๋ว.psd   baby / small child, full body (4 skins, 10 hair, 6 outfits,
-                                      4 mouths, 4 eye colours, 6 lashes, 6 brows, 5 shoes)
-  SRC/custom/avatar_jpeg.jpg          young child bust, bald base
-  SRC/custom/avatar_design1.png       young child, face variant 1 (girl)
-  SRC/custom/avatar_design2.png       young child, face variant 2 (boy)
-  SRC/custom/hair/avatar_hairNN_only.png   9 young-child hairstyles
+  SRC/profile/เด็กจิ๋ว _verล่าสุด.psd  baby / small child, full body (4 skins, 10 hair, 6 outfits,
+                                      4 mouths, 4 eye colours, 6 lashes, 6 brows, 5 shoes, and
+                                      closed eyes for every skin and lash style, for the blink)
+  SRC/young/avatar_last.psd           young child (3+), bust: 3 skins, 4 eye sets, mouth, brows
+                                      and nose, 4 hairstyles, 3 outfits
 
     pip install psd-tools pillow numpy
     python build.py /path/to/SRC ../../frontend/public/avatars
@@ -29,6 +28,8 @@ from scipy import ndimage
 SRC = Path(sys.argv[1])
 OUT = Path(sys.argv[2])
 SKINS = ['fair', 'rosy', 'tan', 'deep']
+BABY_PSD = Path('profile') / 'เด็กจิ๋ว _verล่าสุด.psd'
+YOUNG_PSD = Path('young') / 'avatar_last.psd'
 
 
 def show(layer):
@@ -40,6 +41,11 @@ def show(layer):
 
 def render(psd, layer):
     show(layer)
+    # A layer inside a hidden group composites to nothing, so its groups are switched on too.
+    parent = layer.parent
+    while parent is not None and parent is not psd:
+        parent.visible = True
+        parent = parent.parent
     im = layer.composite(force=True)
     full = Image.new('RGBA', psd.size, (0, 0, 0, 0))
     if im is not None and layer.bbox:
@@ -113,11 +119,14 @@ def union_box(images, pad=12):
 
 
 def baby(manifest):
-    psd = PSDImage.open(SRC / 'profile' / 'อวาตาร์เด็กจิ๋ว.psd')
+    psd = PSDImage.open(SRC / BABY_PSD)
     g = {l.name: l for l in psd}
     body = g['ตัว ตา ผิว']
     skins = [l for l in body if l.name.startswith('ผิว')]  # fair, rosy, tan, deep
     parts = {l.name: l for l in body if not l.name.startswith('ผิว')}
+    # Closed eyes: one group per skin (same order), one lid per lash style (same order as the
+    # lashes), so the blink shows the artist's own closed eye in the child's skin and lashes.
+    closed = [[render(psd, l) for l in tone] for tone in parts.pop('หลับตา')]
     # Face: eye whites are fixed; each other set is exported option by option so the app can
     # mix them (FACE_SETS order = the PSD's order, bottom to top).
     eye_white = render(psd, parts['ตาขาว'])
@@ -143,6 +152,10 @@ def baby(manifest):
         counts[key] = len(ims)
         for i, im in enumerate(ims, 1):
             save(im, OUT / 'baby' / f'{key}-{i}.webp', box, H)
+    for name, lids in zip(SKINS, closed):
+        assert len(lids) == counts['lashes'], f'{name}: {len(lids)} closed eyes for {counts["lashes"]} lash styles'
+        for i, im in enumerate(lids, 1):
+            save(im, OUT / 'baby' / f'closed-{name}-{i}.webp', box, H)
     shoes_ims = dedupe(rendered['shoes'])
     counts['shoes'] = len(shoes_ims)
     for i, im in enumerate(shoes_ims, 1):
@@ -175,7 +188,7 @@ SKIN_RGB = {}
 
 def skin_targets():
     """Each tone's colour, sampled from the baby PSD so both drawings use the same palette."""
-    psd = PSDImage.open(SRC / 'profile' / 'อวาตาร์เด็กจิ๋ว.psd')
+    psd = PSDImage.open(SRC / BABY_PSD)
     body = {l.name: l for l in psd}['ตัว ตา ผิว']
     for name, layer in zip(SKINS, [l for l in body if l.name.startswith('ผิว')]):
         a = np.asarray(render(psd, layer)).astype(np.float32)
@@ -197,66 +210,79 @@ def recolour_skin(im, target):
     return Image.fromarray(out.astype(np.uint8), 'RGBA')
 
 
-def white_to_alpha(im, soft=40):
-    """Hair drawn on white: anything clearly not white is solid; edges fade over `soft` levels."""
-    a = np.asarray(im.convert('RGB')).astype(np.float32)
-    d = (255 - a).max(axis=2)
-    alpha = np.clip(d / soft, 0, 1)
-    return Image.fromarray(np.dstack([a, alpha * 255]).astype(np.uint8), 'RGBA')
+def render_group(psd, group):
+    """A group as the artist set it up: the group on, its own hidden layers (drafts) left off."""
+    group.visible = True
+    im = group.composite(force=True)
+    full = Image.new('RGBA', psd.size, (0, 0, 0, 0))
+    if im is not None and group.bbox:
+        full.alpha_composite(im.convert('RGBA'), (group.bbox[0], group.bbox[1]))
+    return full
 
 
-def background_to_alpha(im, soft=40):
-    """A figure on white: only white connected to the border is background, so eye highlights
-    and teeth stay opaque."""
-    a = np.asarray(im.convert('RGB')).astype(np.float32)
-    d = (255 - a).max(axis=2)
-    near_white = d < 12
-    labels, _ = ndimage.label(near_white)
-    border = set(np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))) - {0}
-    background = np.isin(labels, list(border))
-    # Soften the outline: pixels next to the background take an alpha from their whiteness.
-    edge = ndimage.binary_dilation(background, iterations=2) & ~background
-    alpha = np.where(background, 0, 1).astype(np.float32)
-    alpha[edge] = np.clip(d[edge] / soft, 0, 1)
-    return Image.fromarray(np.dstack([a, alpha * 255]).astype(np.uint8), 'RGBA')
+# The young-child PSD's groups, in the app's order. Skin 1 (the one the artist leaves on) is
+# recoloured to the four app tones, the baby's palette, so a child keeps their skin choice when
+# the drawing changes at 3. Eyes: three drawn for girls, one for boys; the app offers all four.
+YOUNG = {
+    'skin': 'สีผิว1',
+    'eyes': ['ตาหญิง1', 'ตาหญิง2', 'ตาหญิง3', 'ตาชาย1'],
+    'mouth': 'ปาก1',
+    'brows': 'คิ้วจมูก',
+    'hair': ['ผมหญิง1', 'ผมหญิง2', 'ผมหญิง3', 'ผมชาย1'],
+    'outfits': ['ชุด1', 'ชุด2', 'ชุด3'],
+}
 
 
 def young(manifest):
-    base = background_to_alpha(Image.open(SRC / 'custom' / 'avatar_jpeg.jpg'))
-    hair_files = sorted((SRC / 'custom' / 'hair').glob('avatar_hair0?_only.png'))
-    hairs = [white_to_alpha(Image.open(f)) for f in hair_files]
-    design_hair = np.asarray(white_to_alpha(Image.open(SRC / 'custom' / 'hair' / 'avatar_hair06_only.png')))[..., 3]
-    # Grow the drawn hair's footprint slightly so no dark fringe pixels survive its removal.
-    hair_mask = ndimage.grey_dilation(design_hair, size=(5, 5)).astype(np.float32) / 255
-    faces = []
-    for variant in ('design1', 'design2'):
-        d = np.asarray(background_to_alpha(Image.open(SRC / 'custom' / f'avatar_{variant}.png'))).astype(np.float32)
-        w = hair_mask[..., None]
-        merged = d * (1 - w) + np.asarray(base).astype(np.float32) * w
-        faces.append(Image.fromarray(merged.clip(0, 255).astype(np.uint8), 'RGBA'))
-    box = union_box(faces + hairs)
+    psd = PSDImage.open(SRC / YOUNG_PSD)
+    root = next(l for l in psd if l.is_group())
+    g = {l.name: l for l in root if l.is_group()}
+    skin = render_group(psd, g[YOUNG['skin']])
+    eyes = [render_group(psd, g[n]) for n in YOUNG['eyes']]
+    hairs = [render_group(psd, g[n]) for n in YOUNG['hair']]
+    outfits = [render_group(psd, g[n]) for n in YOUNG['outfits']]
+    box = union_box([skin] + hairs + outfits)
     H = 360
-    for sex, face in zip(('girl', 'boy'), faces):
-        for name in SKINS:
-            save(recolour_skin(face, SKIN_RGB[name]), OUT / 'young' / f'{sex}-{name}.webp', box, H)
+    out = OUT / 'young'
+    for old in out.glob('*.webp'):
+        old.unlink()  # the previous young-child drawing, retired
+    for name in SKINS:
+        save(recolour_skin(skin, SKIN_RGB[name]), out / f'skin-{name}.webp', box, H)
+    for i, im in enumerate(eyes, 1):
+        save(im, out / f'eyes-{i}.webp', box, H)
+    save(render_group(psd, g[YOUNG['mouth']]), out / 'mouth.webp', box, H)
+    save(render_group(psd, g[YOUNG['brows']]), out / 'brows.webp', box, H)
     acc = []
     for i, im in enumerate(hairs, 1):
         shade, accessories, has_acc = tintable(im)
-        save(shade, OUT / 'young' / f'hair-{i}.webp', box, H)
+        save(shade, out / f'hair-{i}.webp', box, H)
         if has_acc:
-            save(accessories, OUT / 'young' / f'hair-{i}-acc.webp', box, H)
+            save(accessories, out / f'hair-{i}-acc.webp', box, H)
             acc.append(i)
+    for i, im in enumerate(outfits, 1):
+        save(im, out / f'outfit-{i}.webp', box, H)
+        save(im, out / f'outfit-{i}-thumb.webp', union_box([im], pad=6), 160)
+    # Where the eyes sit, as a fraction of the figure's height: the blink pivots there.
+    ys = [b for b in (e.getchannel('A').getbbox() for e in eyes) if b]
+    eye_line = ((min(b[1] for b in ys) + max(b[3] for b in ys)) / 2 - box[1]) / (box[3] - box[1])
     manifest['young'] = {
         'aspect': round((box[2] - box[0]) / (box[3] - box[1]), 4),
         'hair': len(hairs),
+        'eyes': len(eyes),
+        'outfits': len(outfits),
         'hairWithAccessories': acc,
+        'eyeLine': round(eye_line, 4),
     }
 
 
 if __name__ == '__main__':
     manifest = {}
     skin_targets()
-    baby(manifest)
+    if '--young-only' in sys.argv:
+        # Rebuild just the young child, keeping the baby layers and manifest entry as they are.
+        manifest = json.loads((OUT / 'manifest.json').read_text())
+    else:
+        baby(manifest)
     young(manifest)
     (OUT / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(json.dumps(manifest))

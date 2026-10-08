@@ -44,8 +44,8 @@ const RELATIONS = [
 const TABS = [
   { id: "skin", label: "Skin" },
   { id: "hair", label: "Hair" },
-  { id: "face", label: "Face", babyOnly: true },
-  { id: "clothes", label: "Clothes", babyOnly: true },
+  { id: "face", label: "Face" },
+  { id: "clothes", label: "Clothes" },
 ];
 
 function Section({ title, children }) {
@@ -102,19 +102,26 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
   const version = avatarVersion(dateOfBirth);
   const a = withDefaults(avatar, sex);
   const set = (patch) => onChange({ ...a, ...patch });
-  const tabs = TABS.filter((t) => !t.babyOnly || version === "baby");
-  const shown = tabs.some((t) => t.id === tab) ? tab : "skin";
+  const shown = tab;
   const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
-  const hairKey = version === "baby" ? "babyHair" : "youngHair";
-  const zoom = (patch, size = 56) => <AvatarZoom version="baby" sex={sex} avatar={{ ...a, ...patch }} size={size} />;
+  const baby = version === "baby";
+  const hairKey = baby ? "babyHair" : "kidHair";
+  // A close-up of the face, so a face option fills its tile. The young child is a bust, so the
+  // face is a larger share of the drawing.
+  const zoom = (patch, size = 56) =>
+    baby ? (
+      <AvatarZoom version="baby" sex={sex} avatar={{ ...a, ...patch }} size={size} />
+    ) : (
+      <AvatarZoom version="young" sex={sex} avatar={{ ...a, ...patch }} size={size} {...AVATAR_SETS.young.face} span={0.42} />
+    );
 
   return (
     <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
       <div className="flex items-end justify-center rounded-xl bg-gradient-to-b from-[#eaf6f3] to-white py-3 dark:from-teal-500/10 dark:to-slate-800">
         <AvatarFigure version={version} sex={sex} avatar={a} height={170} />
       </div>
-      <div role="tablist" className="mt-4 flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900/60">
-        {tabs.map((t) => (
+      <div role="tablist" className="mt-4 flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900/60">
+        {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -155,7 +162,7 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
                 {range(hairCount(version)).map((n) => (
                   <OptionTile key={n} label={`Hairstyle ${n}`} active={a[hairKey] === n} onClick={() => set({ [hairKey]: n })}>
                     {/* The whole figure, so long styles show their full length. */}
-                    <AvatarFigure version={version} sex={sex} avatar={{ ...a, [hairKey]: n }} height={version === "baby" ? 92 : 72} />
+                    <AvatarFigure version={version} sex={sex} avatar={{ ...a, [hairKey]: n }} height={baby ? 92 : 72} />
                   </OptionTile>
                 ))}
               </div>
@@ -163,7 +170,31 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
           </>
         )}
 
-        {shown === "face" && (
+        {shown === "face" && !baby && (
+          <Section title="Eyes">
+            <div className="grid grid-cols-4 gap-2">
+              {range(AVATAR_SETS.young.eyes).map((n) => (
+                <OptionTile key={n} label={`Eyes ${n}`} active={a.kidEyes === n} onClick={() => set({ kidEyes: n })}>
+                  {zoom({ kidEyes: n })}
+                </OptionTile>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {shown === "clothes" && !baby && (
+          <Section title="Outfit">
+            <div className="grid grid-cols-3 gap-2">
+              {range(AVATAR_SETS.young.outfits).map((n) => (
+                <OptionTile key={n} label={`Outfit ${n}`} active={a.kidOutfit === n} onClick={() => set({ kidOutfit: n })}>
+                  <img src={`/avatars/young/outfit-${n}-thumb.webp`} alt="" className="h-16 w-full object-contain p-1" draggable={false} />
+                </OptionTile>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {shown === "face" && baby && (
           <>
             <Section title="Eye colour">
               <div className="flex flex-wrap gap-3">
@@ -202,7 +233,7 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
           </>
         )}
 
-        {shown === "clothes" && (
+        {shown === "clothes" && baby && (
           <>
             <Section title="Outfit">
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
