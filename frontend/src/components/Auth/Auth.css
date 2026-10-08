@@ -447,7 +447,7 @@
 }
 
 .auth-theme-toggle .theme-button:hover {
-  color: #00685f;
+  color: #056559;
 
   border-color: rgba(0, 104, 95, 0.3);
 }
@@ -634,6 +634,11 @@
 .account-type-toggle button.active {
   background: var(--color-primary);
   color: white;
+}
+
+/* Dark mode's primary is a light teal: white on it was 1.9:1. */
+[data-theme="dark"] .account-type-toggle button.active {
+  color: #0f172a;
 }
 
 /* =========================

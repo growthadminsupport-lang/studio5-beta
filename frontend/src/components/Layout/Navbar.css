@@ -44,13 +44,13 @@
 }
 
 .navbar-links a:hover {
-  color: #00685f;
+  color: #056559;
   text-decoration: none;
 }
 
 .navbar-links a.active {
-  color: #00685f;
-  border-bottom: 3px solid #00685f;
+  color: #056559;
+  border-bottom: 3px solid #056559;
   padding-bottom: 6px;
 }
 
@@ -85,7 +85,7 @@
 }
 
 .theme-button:hover {
-  color: #00685f;
+  color: #056559;
 }
 
 .login-btn-pill {

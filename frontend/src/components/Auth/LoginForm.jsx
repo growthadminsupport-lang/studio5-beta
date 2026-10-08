@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -23,6 +23,9 @@ function LoginForm() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  // `disabled` only applies after a re-render; a fast double click got in first and sent the
+  // login twice. This flag is set synchronously.
+  const inFlight = useRef(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -33,6 +36,8 @@ function LoginForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError("");
     setSubmitting(true);
     try {
@@ -46,6 +51,7 @@ function LoginForm() {
           : errorMessage(err),
       );
       setSubmitting(false);
+      inFlight.current = false;
     }
   };
 

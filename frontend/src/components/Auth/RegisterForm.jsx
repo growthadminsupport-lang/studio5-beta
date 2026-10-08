@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -41,8 +41,12 @@ function RegisterForm() {
     });
   };
 
+  // Set synchronously, so a double click cannot create the account twice (see LoginForm).
+  const inFlight = useRef(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (inFlight.current) return;
     setError("");
 
     if (!acceptedTerms) {
@@ -54,6 +58,7 @@ function RegisterForm() {
       return;
     }
 
+    inFlight.current = true;
     setSubmitting(true);
     try {
       await register({
@@ -72,6 +77,7 @@ function RegisterForm() {
       // The server says whether the address is taken by a password or a Google account.
       setError(errorMessage(err));
       setSubmitting(false);
+      inFlight.current = false;
     }
   };
 

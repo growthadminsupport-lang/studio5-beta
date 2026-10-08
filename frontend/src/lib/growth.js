@@ -152,7 +152,7 @@ export function describePercentile(percentile) {
   if (percentile >= 99.5) return { label: "Well above the usual range", short: "Very high", figure, tone: warn };
   if (percentile < 3) return { label: "Below the usual range", short: "Low", figure, tone: warn };
   if (percentile > 97) return { label: "Above the usual range", short: "High", figure, tone: warn };
-  return { label: "Within the usual range", short: "Usual", figure, tone: "text-[#056559] dark:text-teal-300" };
+  return { label: "Within the usual range", short: "Usual", figure, tone: "text-brand dark:text-teal-300" };
 }
 
 function ordinal(n) {

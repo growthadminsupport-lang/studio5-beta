@@ -16,6 +16,11 @@
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
 }
+@media (max-width: 767px) {
+  .main-layout.has-public-nav {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
 
 /* Dark mode: one shared page background (slate-950, same as Home) */
 [data-theme="dark"] .page-content {

@@ -494,7 +494,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-50/50 py-8 dark:bg-slate-900">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-        <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">Admin portal</h1>
+        <h1 className="text-xl font-bold text-brand dark:text-teal-300">Admin portal</h1>
         <nav className="my-5 flex flex-wrap gap-2">
           {TABS.map((t) => (
             // Absolute: inside the /admin/* splat, React Router 7 resolves a relative link against
@@ -506,7 +506,7 @@ export default function AdminPage() {
               className={({ isActive }) =>
                 `rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                   isActive
-                    ? "bg-[#056559] text-white dark:bg-teal-400 dark:text-slate-950"
+                    ? "bg-brand text-white dark:bg-teal-400 dark:text-slate-950"
                     : "border border-slate-200 text-slate-600 hover:bg-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 }`
               }

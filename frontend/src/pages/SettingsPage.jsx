@@ -157,7 +157,7 @@ function SettingsPage() {
           <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700 dark:text-slate-200">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#056559]"
+              className="mt-0 h-5 w-5 shrink-0 accent-brand"
               checked={user?.checkupReminderEmails !== false}
               disabled={savingReminders}
               onChange={(e) => setReminderEmails(e.target.checked)}

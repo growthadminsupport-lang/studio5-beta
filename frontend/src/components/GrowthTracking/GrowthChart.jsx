@@ -118,7 +118,7 @@ function ChartTooltip({ active, payload, spec, isBmi, childName, sexWord }) {
       <p className="font-semibold text-slate-900 dark:text-slate-100">At {ageWords(age)}</p>
       {own && (
         <p className="mt-1 text-slate-700 dark:text-slate-200">
-          <span className="font-semibold text-[#056559] dark:text-teal-300">
+          <span className="font-semibold text-brand dark:text-teal-300">
             {childName}: {fmt(own.value)}
           </span>
           {row && <>, {verdict(own.value, row, isBmi)}</>}
@@ -259,17 +259,17 @@ export default function GrowthChart({ child, measure, records, bare = false, hei
         items={
           isBmi
             ? [
-                [line("bg-[#056559] dark:bg-teal-400"), name],
-                [dashed("border-[#00685f] dark:border-teal-300"), `Average for ${sexWord}`],
+                [line("bg-brand dark:bg-teal-400"), name],
+                [dashed("border-brand dark:border-teal-300"), `Average for ${sexWord}`],
                 ...BMI_BANDS.map(([, , label], i) => [
                   dot(["bg-[#dbe4f5] dark:bg-blue-500/50", "bg-[#c8f0dc] dark:bg-emerald-500/50", "bg-[#fbeec2] dark:bg-yellow-500/50", "bg-[#fde2c8] dark:bg-orange-500/50", "bg-[#f9d3d3] dark:bg-red-500/50"][i]),
                   label,
                 ]),
               ]
             : [
-                [line("bg-[#056559] dark:bg-teal-400"), name],
+                [line("bg-brand dark:bg-teal-400"), name],
                 [dot("bg-[#c8f0dc] dark:bg-emerald-500/50"), `Usual range for ${sexWord}`],
-                [dashed("border-[#00685f] dark:border-teal-300"), "Average"],
+                [dashed("border-brand dark:border-teal-300"), "Average"],
                 [dot("bg-[#dbe4f5] dark:bg-blue-500/50"), spec.low],
                 [dot("bg-[#fde2c8] dark:bg-orange-500/50"), spec.high],
               ]

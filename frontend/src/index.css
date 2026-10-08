@@ -9,8 +9,8 @@
   --color-brand-200: #a3eadc;
   --color-brand-300: #6fdcc7;
   --color-brand-400: #3fc7ac;
-  --color-brand-500: #00695c;
-  --color-brand-600: #00544a;
+  --color-brand-500: #056559;
+  --color-brand-600: #03443c;
   --color-brand-700: #023d34;
   --color-brand-800: #06322c;
   --color-brand-900: #042420;
@@ -46,7 +46,7 @@
   --radius: 16px;
   --radius-input: 12px;
 
-  --font-family: "Segoe UI", Roboto, sans-serif;
+  --font-family: "Segoe UI", Roboto, "Noto Sans Thai", "Leelawadee UI", Thonburi, system-ui, sans-serif;
   --font-size-base: 17px;
   --font-size-small: 14px;
   --font-size-body: 16px;
@@ -103,6 +103,9 @@ html {
 
 body {
   margin: 0;
+  /* A word longer than its box (large text settings, narrow cards) breaks instead of pushing
+     the page sideways. Words that fit are never broken. */
+  overflow-wrap: break-word;
   font-family: var(--font-family);
   font-size: 17px;
   line-height: 1.6;
@@ -255,5 +258,20 @@ textarea {
   select,
   textarea {
     font-size: 16px !important;
+  }
+  /* iOS gives date fields a minimum width of their own and centres the date: in the edit-child
+     window on an iPad the field ran past the window's edge. */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    /* Without its native look an empty date field (a new child) has no line box on iOS and
+       shrinks to its padding. */
+    min-height: 44px;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
   }
 }

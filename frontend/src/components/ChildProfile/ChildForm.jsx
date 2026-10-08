@@ -4,6 +4,7 @@ import { useChildren } from "../../context/ChildrenContext";
 import { errorMessage } from "../../lib/api";
 import { AVATAR_SETS, BABY_OUTFITS, EYE_COLORS, HAIR_COLORS, MOUTH_LABELS, SKIN_TONES, avatarVersion, hairCount, withDefaults } from "../../lib/avatar";
 import { AvatarFigure, AvatarZoom } from "./ChildAvatar";
+import DateInput from "../DateInput";
 
 function dueMaxIso() {
   const d = new Date(Date.now() + 300 * 86_400_000);
@@ -18,7 +19,7 @@ function todayIso() {
 }
 
 const field =
-  "w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#056559] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-teal-400";
+  "w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-teal-400";
 
 /** `group` for a set of buttons: a <label> would forward clicks on its text to the first one. */
 function Field({ label, hint, children, group }) {
@@ -66,7 +67,7 @@ function Swatch({ color, label, active, onClick }) {
       aria-pressed={active}
       title={label}
       className={`relative h-10 w-10 rounded-full border border-black/10 transition active:scale-95 ${
-        active ? "ring-2 ring-[#056559] ring-offset-2 dark:ring-teal-400 dark:ring-offset-slate-800" : "hover:scale-105"
+        active ? "ring-2 ring-brand ring-offset-2 dark:ring-teal-400 dark:ring-offset-slate-800" : "hover:scale-105"
       }`}
       style={{ backgroundColor: color }}
     >
@@ -84,7 +85,7 @@ function OptionTile({ active, onClick, label, children }) {
       aria-pressed={active}
       className={`flex items-center justify-center rounded-xl border-2 p-1 transition active:scale-95 ${
         active
-          ? "border-[#056559] bg-[#eaf6f3] dark:border-teal-400 dark:bg-teal-500/10"
+          ? "border-brand bg-[#eaf6f3] dark:border-teal-400 dark:bg-teal-500/10"
           : "border-slate-200 bg-slate-50 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/40"
       }`}
     >
@@ -128,9 +129,9 @@ function AvatarEditor({ sex, dateOfBirth, avatar, onChange }) {
             role="tab"
             aria-selected={shown === t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-1 whitespace-nowrap rounded-lg px-1 py-1.5 text-xs font-semibold transition ${
+            className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
               shown === t.id
-                ? "bg-white text-[#056559] shadow-sm dark:bg-slate-700 dark:text-teal-300"
+                ? "bg-white text-brand shadow-sm dark:bg-slate-700 dark:text-teal-300"
                 : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
             }`}
           >
@@ -317,7 +318,7 @@ export default function ChildForm({ child, onDone, submitLabel }) {
     <button
       type="submit"
       disabled={saving}
-      className="w-full rounded-xl bg-[#056559] py-3 text-sm font-semibold text-white transition hover:bg-[#03443c] active:scale-[0.99] disabled:opacity-60 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+      className="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white transition hover:bg-brand-hover active:scale-[0.99] disabled:opacity-60 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
     >
       {saving ? "Saving…" : (submitLabel ?? (isEdit ? "Save changes" : "Save and continue"))}
     </button>
@@ -347,18 +348,18 @@ export default function ChildForm({ child, onDone, submitLabel }) {
       <Field label="Nickname (optional)">
         <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} className={field} />
       </Field>
-      <label className="-mb-2 flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-        <input type="checkbox" checked={notBorn} onChange={(e) => setNotBorn(e.target.checked)} className="h-4 w-4 accent-[#056559]" />
+      <label className="-mb-2 flex min-h-11 cursor-pointer items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
+        <input type="checkbox" checked={notBorn} onChange={(e) => setNotBorn(e.target.checked)} className="h-5 w-5 accent-brand" />
         Not born yet
       </label>
       <Field label={notBorn ? "Due date" : "Date of birth"}>
-        <input
-          type="date"
+        <DateInput
           required
           min={notBorn ? todayIso() : undefined}
           max={notBorn ? dueMaxIso() : todayIso()}
           value={dateOfBirth}
-          onChange={(e) => setDateOfBirth(e.target.value)}
+          resetTo={child?.dateOfBirth ?? ""}
+          onChange={setDateOfBirth}
           className={field}
         />
       </Field>
@@ -376,7 +377,7 @@ export default function ChildForm({ child, onDone, submitLabel }) {
               onClick={() => setSex(v)}
               className={`py-2.5 text-sm font-semibold transition ${i ? "border-l-2 border-slate-200 dark:border-slate-700" : ""} ${
                 sex === v
-                  ? "bg-[#eaf6f3] text-[#056559] dark:bg-teal-500/10 dark:text-teal-300"
+                  ? "bg-[#eaf6f3] text-brand dark:bg-teal-500/10 dark:text-teal-300"
                   : "bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400"
               }`}
             >
@@ -400,11 +401,11 @@ export default function ChildForm({ child, onDone, submitLabel }) {
                 key={r.value}
                 className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-2.5 text-sm transition ${
                   relation === r.value
-                    ? "border-[#056559] bg-[#eaf6f3] dark:border-teal-400 dark:bg-teal-500/10"
+                    ? "border-brand bg-[#eaf6f3] dark:border-teal-400 dark:bg-teal-500/10"
                     : "border-slate-200 dark:border-slate-700"
                 }`}
               >
-                <input type="radio" name="relation" value={r.value} checked={relation === r.value} onChange={() => setRelation(r.value)} className="accent-[#056559]" />
+                <input type="radio" name="relation" value={r.value} checked={relation === r.value} onChange={() => setRelation(r.value)} className="accent-brand" />
                 <span>
                   <span className="font-semibold text-slate-900 dark:text-slate-100">{r.label}</span>
                   {r.hint && <span className="block text-xs text-slate-500 dark:text-slate-400">{r.hint}</span>}
@@ -416,7 +417,7 @@ export default function ChildForm({ child, onDone, submitLabel }) {
             <button
               type="button"
               onClick={() => setChangingRelation(true)}
-              className="mt-1.5 text-xs font-semibold text-[#056559] hover:underline dark:text-teal-300"
+              className="mt-1.5 text-xs font-semibold text-brand hover:underline dark:text-teal-300"
             >
               Change
             </button>

@@ -171,7 +171,7 @@
   top: 16px;
   font-size: 14px;
   font-weight: 400;
-  color: #94a3b8;
+  color: #64748b; /* 4.8:1 on white; #94a3b8 was 2.6:1 */
 }
 
 /* Floating behavior when active or focused */
@@ -209,7 +209,7 @@
 }
 
 .gt-icon-accent {
-  color: #00685f;
+  color: #056559;
 }
 
 .gt-success-icon {
@@ -278,7 +278,7 @@
 
 [data-theme="dark"] .gt-float-field input:placeholder-shown + label,
 [data-theme="dark"] .gt-float-field textarea:placeholder-shown + label {
-  color: #64748b;
+  color: #94a3b8; /* 6.9:1 on the dark card; #64748b was 3.8:1 */
 }
 
 [data-theme="dark"] .gt-float-field label {

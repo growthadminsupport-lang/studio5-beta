@@ -11,7 +11,7 @@ export default function AboutPage() {
       <div className="max-w-4xl mx-auto">
         
         {/* Subtitle & Title */}
-        <span className="text-[#056559] dark:text-teal-300 text-sm font-semibold tracking-wide block mb-3">
+        <span className="text-brand dark:text-teal-300 text-sm font-semibold tracking-wide block mb-3">
           About
         </span>
         
@@ -32,7 +32,7 @@ export default function AboutPage() {
           
           {/* Growth Tracking */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/80 dark:border-teal-400/10 shadow-xs dark:shadow-none space-y-3">
-            <LineChart className="w-6 h-6 text-[#056559] dark:text-teal-300" strokeWidth={2} />
+            <LineChart className="w-6 h-6 text-brand dark:text-teal-300" strokeWidth={2} />
             <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">Growth Tracking</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
               Log height, weight, and BMI over time, plotted against standard pediatric growth references — not just raw numbers.
@@ -41,7 +41,7 @@ export default function AboutPage() {
 
           {/* Puberty Screening */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/80 dark:border-teal-400/10 shadow-xs dark:shadow-none space-y-3">
-            <Lightbulb className="w-6 h-6 text-[#056559] dark:text-teal-300" strokeWidth={2} />
+            <Lightbulb className="w-6 h-6 text-brand dark:text-teal-300" strokeWidth={2} />
             <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">Puberty Screening</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
               A guided, sex-specific questionnaire that flags signs that fall outside the typical age range, as a screening aid.
@@ -50,7 +50,7 @@ export default function AboutPage() {
 
           {/* AI Bone Age */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/80 dark:border-teal-400/10 shadow-xs dark:shadow-none space-y-3">
-            <PlusSquare className="w-6 h-6 text-[#056559] dark:text-teal-300" strokeWidth={2} />
+            <PlusSquare className="w-6 h-6 text-brand dark:text-teal-300" strokeWidth={2} />
             <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">AI Bone Age (in progress)</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
               Upload a hand X-ray for an AI-assisted bone age estimate to support — never replace — clinical assessment.
@@ -59,7 +59,7 @@ export default function AboutPage() {
 
           {/* Privacy by design */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/80 dark:border-teal-400/10 shadow-xs dark:shadow-none space-y-3">
-            <Shield className="w-6 h-6 text-[#056559] dark:text-teal-300" strokeWidth={2} />
+            <Shield className="w-6 h-6 text-brand dark:text-teal-300" strokeWidth={2} />
             <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">Privacy by design</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
               Data collection is limited to what each feature needs. A child's records stay visible only to their linked guardians.

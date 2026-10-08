@@ -54,14 +54,14 @@ function NextSteps({ items }) {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="mb-6 rounded-2xl border border-[#bcece0] border-l-4 border-l-[#056559] bg-[#f2fbf9] p-4 shadow-2xs sm:p-5 dark:border-teal-500/30 dark:border-l-teal-400 dark:bg-teal-500/10">
+    <div className="mb-6 rounded-2xl border border-[#bcece0] border-l-4 border-l-brand bg-[#f2fbf9] p-4 shadow-2xs sm:p-5 dark:border-teal-500/30 dark:border-l-teal-400 dark:bg-teal-500/10">
       <div className="mb-3 flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#056559] text-white dark:bg-teal-400 dark:text-slate-950">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white dark:bg-teal-400 dark:text-slate-950">
           <ListChecks size={16} />
         </span>
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">What to do next</h2>
         {items.length > 1 && (
-          <span className="rounded-full bg-[#056559]/10 px-2 py-0.5 text-xs font-semibold text-[#056559] dark:bg-teal-400/15 dark:text-teal-300">
+          <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand dark:bg-teal-400/15 dark:text-teal-300">
             {items.length}
           </span>
         )}
@@ -85,7 +85,7 @@ function NextSteps({ items }) {
               className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition ${
                 s.severity === 'warning'
                   ? 'bg-amber-500 text-white hover:bg-amber-600'
-                  : 'bg-[#056559] text-white hover:bg-[#03443c] dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300'
+                  : 'bg-brand text-white hover:bg-brand-hover dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300'
               }`}
             >
               {s.actionLabel}
@@ -213,7 +213,7 @@ function DashboardPage() {
 
               <Link
                 to="/growth"
-                className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-[#056559] dark:text-teal-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-brand dark:text-teal-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 <Plus size={14} />
                 Add Measurement
@@ -236,11 +236,11 @@ function DashboardPage() {
                     onClick={() => setSelectedMeasure(key)}
                     className={`min-w-0 rounded-xl border p-2.5 text-left transition sm:p-3 ${
                       active
-                        ? 'border-[#00685f] dark:border-teal-300 bg-white dark:bg-slate-800 ring-1 ring-[#00685f] dark:ring-teal-400'
+                        ? 'border-brand dark:border-teal-300 bg-white dark:bg-slate-800 ring-1 ring-brand dark:ring-teal-400'
                         : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
                     }`}
                   >
-                    <span className="flex items-center gap-1 truncate text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    <span className="flex items-center gap-1 truncate text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       <Icon size={12} className="shrink-0" />
                       {measure.label}
                     </span>
@@ -273,7 +273,7 @@ function DashboardPage() {
 
           <div className="flex w-full flex-col self-start rounded-2xl bg-white dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 shadow-2xs sm:p-5">
             <div className="mb-2 flex items-center gap-2.5">
-              <Sparkles size={18} className="text-[#056559] dark:text-teal-300" />
+              <Sparkles size={18} className="text-brand dark:text-teal-300" />
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Puberty Screening</h2>
             </div>
 
@@ -287,7 +287,7 @@ function DashboardPage() {
 
             <Link
               to="/puberty"
-              className="mt-4 flex w-full items-center justify-center rounded-full bg-[#056559] dark:bg-teal-400 px-4 py-2.5 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300"
+              className="mt-4 flex w-full items-center justify-center rounded-full bg-brand dark:bg-teal-400 px-4 py-2.5 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-brand-hover dark:hover:bg-teal-300"
             >
               {lastScreening ? 'Open Screening' : 'Start Screening'}
             </Link>
@@ -301,7 +301,7 @@ function DashboardPage() {
 
         <div className="mb-6 rounded-2xl bg-white dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 shadow-2xs sm:p-5">
           <div className="mb-2 flex flex-wrap items-center gap-2.5">
-            <Sparkles size={18} className="text-[#056559] dark:text-teal-300" />
+            <Sparkles size={18} className="text-brand dark:text-teal-300" />
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">AI Bone Age Analysis</h2>
             <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
               BETA
@@ -324,7 +324,7 @@ function DashboardPage() {
 
           <Link
             to="/bone-age"
-            className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-[#056559] dark:text-teal-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
+            className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-brand dark:text-teal-300 transition hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             {child.myRole === 'DOCTOR' ? (
               <>
@@ -345,7 +345,7 @@ function DashboardPage() {
 
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Parenting Resources</h2>
-          <Link to="/knowledge" className="text-xs font-semibold text-[#00685f] dark:text-teal-300 hover:underline">
+          <Link to="/knowledge" className="text-xs font-semibold text-brand dark:text-teal-300 hover:underline">
             View all
           </Link>
         </div>
@@ -364,7 +364,7 @@ function DashboardPage() {
           
                 <Link
                   to={`/knowledge/${a.slug}`}
-                  className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#00685f] dark:text-teal-300 hover:underline"
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand dark:text-teal-300 hover:underline"
                 >
                   Read More →
                 </Link>
