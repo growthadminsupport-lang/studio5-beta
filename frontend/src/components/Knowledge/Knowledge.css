@@ -1,10 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap");
 
 /* =========================================================
-   PAGE WRAPPER  (full width, no centered max-width)
+   PAGE WRAPPER: the hero banner is full width; everything under it is capped at
+   --kn-max and centred, so a 16:9 desktop does not stretch a card to 1450px.
    ========================================================= */
 
 .knowledge-page {
+  --kn-max: 1240px;
   width: 100%;
 }
 
@@ -14,10 +16,12 @@
   padding: 0 0 70px;
 }
 
-/* Everything under the hero: fills the page, small side margin */
+/* Everything under the hero: centred, at most --kn-max wide, small side margin */
 
 .kn-content {
   width: 100%;
+  max-width: var(--kn-max);
+  margin: 0 auto;
   padding: 20px 32px 0;
 }
 
@@ -34,7 +38,9 @@
   width: 100%;
   min-height: 296px;
 
-  padding: 30px 64px;
+  /* The title lines up with the centred content below on wide screens (the text block has its
+     own 40px inset). */
+  padding: 30px max(64px, calc((100% - var(--kn-max)) / 2 - 8px));
   margin: 0;
 
   border-radius: 0;
@@ -373,7 +379,7 @@
   margin-top: 16px;
   padding: 9px 22px;
   border-radius: 999px;
-  background: #00695c;
+  background: #056559;
   color: #ffffff;
   font-size: 16px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
@@ -469,7 +475,7 @@
 }
 
 .knowledge-label {
-  color: #00685f;
+  color: #056559;
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -518,7 +524,7 @@
 
   font-size: 16px;
   font-weight: 700;
-  color: #00685f;
+  color: #056559;
   text-decoration: none;
 }
 
@@ -654,7 +660,7 @@
 
 .kn-support-arrow {
   margin-left: auto;
-  color: #00685f;
+  color: #056559;
   flex-shrink: 0;
   font-size: 20px;
 }
@@ -702,12 +708,12 @@
 }
 
 .kn-resource-row .arrow-icon {
-  color: #00685f;
+  color: #056559;
 }
 
 .kn-resource-row:hover {
-  color: #00685f;
-  border-color: #00685f;
+  color: #056559;
+  border-color: #056559;
   text-decoration: none;
 }
 
@@ -1038,7 +1044,7 @@
 }
 
 [data-theme="dark"] .kn-featured .knowledge-readmore {
-  background: #0d9488;
+  background: #0f766e; /* 5.5:1 with white; #0d9488 was 3.7:1 */
   color: #ffffff;
 }
 
@@ -1073,19 +1079,67 @@
   gap: 12px;
 }
 
+/* A filled field with a search icon and a border of at least 3:1 against the page (WCAG 1.4.11);
+   it used to be a pale outline that disappeared, worst in dark mode. */
 .kn-search {
-  min-width: 220px;
-  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 360px;
+  min-width: 240px;
+  min-height: 44px;
+  padding: 0 16px;
   border-radius: 999px;
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid #64748b;
+  background: #fff;
+  color: #0f172a;
+  cursor: text;
+}
+
+.kn-search-icon {
+  flex-shrink: 0;
+  color: #475569;
+}
+
+.kn-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
   background: transparent;
   color: inherit;
-  font-size: 14px;
+  font-size: 15px;
   outline: none;
 }
 
-.kn-search:focus {
+.kn-search input::placeholder {
+  color: #64748b;
+}
+
+.kn-search:focus-within {
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(5, 101, 89, 0.25);
+}
+
+[data-theme="dark"] .kn-search {
+  border-color: #94a3b8;
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .kn-search-icon,
+[data-theme="dark"] .kn-search input::placeholder {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .kn-search:focus-within {
+  border-color: #5eead4;
+  box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.25);
+}
+
+@media (max-width: 600px) {
+  .kn-search {
+    flex: 1 1 100%;
+  }
 }
 
 
@@ -1215,7 +1269,7 @@
     margin-top: 10px;
     padding: 4px 12px;
     border-radius: 999px;
-    background: #00695c;
+    background: #056559;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
     font-size: 12px;
     font-weight: 700;
@@ -1292,7 +1346,7 @@
   }
 
   [data-theme="dark"] .kn-mcard-btn {
-    background: #0d9488;
+    background: #0f766e;
   }
 
   [data-theme="dark"] .kn-quickfacts {
@@ -1303,4 +1357,9 @@
   [data-theme="dark"] .kn-quickfacts p {
     color: #94a3b8;
   }
+}
+
+/* The support card's arrow kept the light theme's dark teal on the dark card (2.7:1). */
+[data-theme="dark"] .kn-support-arrow {
+  color: #5eead4;
 }

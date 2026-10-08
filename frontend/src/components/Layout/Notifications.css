@@ -23,7 +23,7 @@
   position: absolute;
   top: -2px;
   right: -2px;
-  background-color: #ef4444;
+  background-color: #dc2626; /* 4.8:1 with white; #ef4444 was 3.8:1 */
   color: white;
   font-size: 10px;
   font-weight: 700;

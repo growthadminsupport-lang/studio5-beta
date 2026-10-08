@@ -60,7 +60,7 @@ export default function GettingStarted({ hasRecords = false, className = "" }) {
 
   return (
     <div className={`relative rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-2xs sm:p-5 dark:border-slate-700 dark:bg-slate-800 ${className}`}>
-      <button type="button" aria-label="Close guide" onClick={close} className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+      <button type="button" aria-label="Close guide" onClick={close} className="absolute right-0.5 top-0.5 inline-flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200">
         <X size={16} />
       </button>
       <h2 className="mb-3 pr-6 text-sm font-semibold text-slate-900 dark:text-slate-100">Getting started</h2>
@@ -71,12 +71,12 @@ export default function GettingStarted({ hasRecords = false, className = "" }) {
             <>
               <span
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                  s.done ? "bg-[#056559] text-white dark:bg-teal-400 dark:text-slate-950" : "bg-[#eaf6f3] text-[#056559] dark:bg-teal-500/15 dark:text-teal-300"
+                  s.done ? "bg-brand text-white dark:bg-teal-400 dark:text-slate-950" : "bg-[#eaf6f3] text-brand dark:bg-teal-500/15 dark:text-teal-300"
                 }`}
               >
                 {s.done ? <Check size={14} strokeWidth={3} /> : <Icon size={14} />}
               </span>
-              <span className={`text-sm ${s.done ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}>
+              <span className={`text-sm ${s.done ? "text-slate-500 line-through dark:text-slate-400" : "text-slate-700 dark:text-slate-200"}`}>
                 <span className="sr-only">Step {i + 1}: </span>
                 {s.text}
               </span>
@@ -87,10 +87,10 @@ export default function GettingStarted({ hasRecords = false, className = "" }) {
               {s.to && !s.done ? (
                 <Link
                   to={s.to}
-                  className="group flex items-center gap-2.5 rounded-xl border border-[#d2efe9] p-1.5 pr-2 transition hover:border-[#056559] hover:bg-[#f2fbf9] dark:border-teal-500/20 dark:hover:border-teal-400 dark:hover:bg-teal-500/10"
+                  className="group flex items-center gap-2.5 rounded-xl border border-[#d2efe9] p-1.5 pr-2 transition hover:border-brand hover:bg-[#f2fbf9] dark:border-teal-500/20 dark:hover:border-teal-400 dark:hover:bg-teal-500/10"
                 >
                   {body}
-                  <ChevronRight size={16} className="ml-auto shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-[#056559] dark:group-hover:text-teal-300" />
+                  <ChevronRight size={16} className="ml-auto shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-brand dark:group-hover:text-teal-300" />
                 </Link>
               ) : (
                 <div className="flex items-center gap-2.5 border border-transparent p-1.5">{body}</div>
@@ -99,7 +99,7 @@ export default function GettingStarted({ hasRecords = false, className = "" }) {
           );
         })}
       </ol>
-      <button type="button" onClick={close} className="mt-3 text-xs font-semibold text-[#056559] hover:underline dark:text-teal-300">
+      <button type="button" onClick={close} className="mt-1 -ml-3 min-h-11 px-3 text-sm font-semibold text-brand hover:underline dark:text-teal-300">
         Got it
       </button>
     </div>

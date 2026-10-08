@@ -36,7 +36,7 @@ function SignQuestion({ label, description, value, onChange, ageValue, onAgeChan
               onClick={() => onChange(o.v)}
               className={`px-3 py-1.5 text-xs font-semibold transition ${
                 value === o.v
-                  ? 'bg-[#eaf6f3] dark:bg-teal-500/10 text-[#056559] dark:text-teal-300'
+                  ? 'bg-[#eaf6f3] dark:bg-teal-500/10 text-brand dark:text-teal-300'
                   : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
               } ${o.v !== 'yes' ? 'border-l border-slate-200 dark:border-slate-700' : ''}`}
             >
@@ -52,7 +52,7 @@ function SignQuestion({ label, description, value, onChange, ageValue, onAgeChan
             placeholder="Approx. age (years)"
             value={ageValue ?? ''}
             onChange={(e) => onAgeChange(e.target.value ? Number(e.target.value) : undefined)}
-            className="w-36 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-[#056559] dark:focus:border-teal-400"
+            className="w-36 rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-brand dark:focus:border-teal-400"
           />
         )}
       </div>
@@ -92,7 +92,7 @@ function ResultCard({ result, assessedAt }) {
         {tone === 'warning' ? (
           <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
         ) : (
-          <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-[#056559] dark:text-teal-300" />
+          <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-brand dark:text-teal-300" />
         )}
         <div className="min-w-0">
           <p className="text-xs text-slate-500 dark:text-slate-400">Screening result · {formatDate(assessedAt)}</p>
@@ -105,7 +105,7 @@ function ResultCard({ result, assessedAt }) {
             <ul className="mt-3 flex flex-col gap-1.5 text-sm text-slate-700 dark:text-slate-300">
               {result.guidance.map((g) => (
                 <li key={g} className="flex gap-2">
-                  <span className="text-[#056559] dark:text-teal-300">•</span>
+                  <span className="text-brand dark:text-teal-300">•</span>
                   <span>{g}</span>
                 </li>
               ))}
@@ -126,7 +126,7 @@ function FollowUpPlan({ plan }) {
   return (
     <div className="mb-6 rounded-2xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 shadow-2xs">
       <div className="flex items-center gap-2">
-        <CalendarClock size={18} className="text-[#056559] dark:text-teal-300" />
+        <CalendarClock size={18} className="text-brand dark:text-teal-300" />
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Follow-up plan</h2>
       </div>
       {plan.conclusion ? (
@@ -255,8 +255,8 @@ function PubertyContent({ child }) {
         ==================================================== */}
 
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">Puberty Screening</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="text-xl font-bold text-brand dark:text-teal-300">Puberty Screening</h1>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             A screening aid, not a diagnosis.
           </p>
         </div>
@@ -269,7 +269,7 @@ function PubertyContent({ child }) {
 
         {justSent && (
           <div className="mb-6 flex gap-3 rounded-2xl border border-[#bcece0] dark:border-teal-500/30 bg-[#f2fbf9] dark:bg-teal-500/10 p-4">
-            <Send size={18} className="mt-0.5 shrink-0 text-[#056559] dark:text-teal-300" />
+            <Send size={18} className="mt-0.5 shrink-0 text-brand dark:text-teal-300" />
             <p className="text-sm text-slate-700 dark:text-slate-300">
               <span className="font-semibold">Submitted.</span> {child.familyName ?? 'The parent'} and {child.fullName}&apos;s doctor have
               been notified and will read the result.
@@ -288,21 +288,21 @@ function PubertyContent({ child }) {
         {!formOpen && !hasHistory && (
           <div className="mb-6 flex flex-col gap-4 rounded-2xl bg-white dark:bg-slate-800 p-6 border border-slate-200 dark:border-slate-700 shadow-2xs">
             <div className="flex items-center gap-2">
-              <Brain size={20} className="text-[#056559] dark:text-teal-300" />
+              <Brain size={20} className="text-brand dark:text-teal-300" />
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Before you start</h2>
             </div>
 
             <ul className="flex flex-col gap-2.5 text-sm text-slate-600 dark:text-slate-300">
-              <li className="flex items-center gap-2.5"><Eye size={16} className="shrink-0 text-[#056559] dark:text-teal-300" />Answer only what you have noticed. Never examine {child.nickname || child.fullName.split(' ')[0]}.</li>
-              <li className="flex items-center gap-2.5"><HelpCircle size={16} className="shrink-0 text-[#056559] dark:text-teal-300" />&quot;Not sure&quot; is a good answer.</li>
-              <li className="flex items-center gap-2.5"><Lock size={16} className="shrink-0 text-[#056559] dark:text-teal-300" />Only the parent and the doctor see the result.</li>
-              <li className="flex items-center gap-2.5"><Clock size={16} className="shrink-0 text-[#056559] dark:text-teal-300" />About 2 minutes.</li>
+              <li className="flex items-center gap-2.5"><Eye size={16} className="shrink-0 text-brand dark:text-teal-300" />Answer only what you have noticed. Never examine {child.nickname || child.fullName.split(' ')[0]}.</li>
+              <li className="flex items-center gap-2.5"><HelpCircle size={16} className="shrink-0 text-brand dark:text-teal-300" />&quot;Not sure&quot; is a good answer.</li>
+              <li className="flex items-center gap-2.5"><Lock size={16} className="shrink-0 text-brand dark:text-teal-300" />Only the parent and the doctor see the result.</li>
+              <li className="flex items-center gap-2.5"><Clock size={16} className="shrink-0 text-brand dark:text-teal-300" />About 2 minutes.</li>
             </ul>
 
             <button
               type="button"
               onClick={() => setFormOpen(true)}
-              className="rounded-full bg-[#056559] dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300"
+              className="rounded-full bg-brand dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-brand-hover dark:hover:bg-teal-300"
             >
               Start screening
             </button>
@@ -318,7 +318,7 @@ function PubertyContent({ child }) {
           <button
             type="button"
             onClick={() => setFormOpen(true)}
-            className="mb-6 w-full rounded-full bg-[#056559] dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300"
+            className="mb-6 w-full rounded-full bg-brand dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-brand-hover dark:hover:bg-teal-300"
           >
             Screen again
           </button>
@@ -450,7 +450,7 @@ function PubertyContent({ child }) {
                 placeholder="Who answered?"
                 value={answers.answeredBy ?? ''}
                 onChange={(e) => set('answeredBy', e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-[#056559] dark:focus:border-teal-400"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-brand dark:focus:border-teal-400"
               />
 
               <input
@@ -461,7 +461,7 @@ function PubertyContent({ child }) {
                 onChange={(e) =>
                   set('familyPubertyOnsetAgeYears', e.target.value ? Number(e.target.value) : undefined)
                 }
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-[#056559] dark:focus:border-teal-400"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-brand dark:focus:border-teal-400"
               />
 
               <textarea
@@ -469,7 +469,7 @@ function PubertyContent({ child }) {
                 rows={2}
                 value={answers.otherHealthNotes ?? ''}
                 onChange={(e) => set('otherHealthNotes', e.target.value)}
-                className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-[#056559] dark:focus:border-teal-400"
+                className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-brand dark:focus:border-teal-400"
               />
 
               <textarea
@@ -477,7 +477,7 @@ function PubertyContent({ child }) {
                 rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-[#056559] dark:focus:border-teal-400"
+                className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-brand dark:focus:border-teal-400"
               />
                 </div>
               </details>
@@ -486,7 +486,7 @@ function PubertyContent({ child }) {
                 type="button"
                 onClick={handleSubmit}
                 disabled={saving}
-                className="rounded-full bg-[#056559] dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300 disabled:opacity-60"
+                className="rounded-full bg-brand dark:bg-teal-400 py-3 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-brand-hover dark:hover:bg-teal-300 disabled:opacity-60"
               >
                 {saving ? 'Submitting…' : seesResults ? 'See result' : 'Submit'}
               </button>
@@ -513,7 +513,7 @@ function PubertyContent({ child }) {
                   {s.result ? (
                     <span
                       className={`text-right text-xs font-medium ${
-                        OUTCOME_TONE[s.result.outcome] === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-[#056559] dark:text-teal-300'
+                        OUTCOME_TONE[s.result.outcome] === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-brand dark:text-teal-300'
                       }`}
                     >
                       {s.result.title}

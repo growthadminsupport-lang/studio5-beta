@@ -19,6 +19,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { SessionTerms, sessionExpiry } from './session-limits';
 
 const REFRESH_TOKEN_BYTES = 48;
 
@@ -37,9 +38,28 @@ export class AuthService {
     private mail: MailService,
   ) {}
 
-  private async issueTokens(user: { id: string; email: string; role: string }) {
+  /**
+   * A new refresh token (a session row) and an access token naming it (`sid`). How long they
+   * last is in session-limits.ts.
+   */
+  private async issueTokens(
+    user: { id: string; email: string; role: string },
+    terms: SessionTerms,
+  ) {
+    const refreshToken = randomBytes(REFRESH_TOKEN_BYTES).toString('hex');
+    const { expiresAt, absoluteExpiresAt } = sessionExpiry(terms);
+    const session = await this.prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: hashToken(refreshToken),
+        expiresAt,
+        absoluteExpiresAt,
+        persistent: terms.persistent,
+      },
+    });
+
     const accessToken = await this.jwt.signAsync(
-      { sub: user.id, email: user.email, role: user.role },
+      { sub: user.id, email: user.email, role: user.role, sid: session.id },
       {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         expiresIn: this.config.getOrThrow<string>(
@@ -47,20 +67,6 @@ export class AuthService {
         ) as any,
       },
     );
-
-    const refreshToken = randomBytes(REFRESH_TOKEN_BYTES).toString('hex');
-    const refreshExpiresIn =
-      this.config.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
-    const days = parseInt(refreshExpiresIn.replace(/[^0-9]/g, ''), 10) || 7;
-    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-
-    await this.prisma.session.create({
-      data: {
-        userId: user.id,
-        refreshToken: hashToken(refreshToken),
-        expiresAt,
-      },
-    });
 
     return { accessToken, refreshToken };
   }
@@ -106,7 +112,8 @@ export class AuthService {
     });
     await this.mail.sendVerificationEmail(email, verifyToken, user.fullName);
 
-    const tokens = await this.issueTokens(user);
+    // Creating an account is remembered, as before; the "Remember me" choice is on log in.
+    const tokens = await this.issueTokens(user, { persistent: true });
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
@@ -136,7 +143,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.issueTokens(user);
+    const tokens = await this.issueTokens(user, {
+      persistent: dto.remember === true,
+    });
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
@@ -198,8 +207,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    const terms = { persistent: dto.remember === true };
     if (existing?.googleId) {
-      const tokens = await this.issueTokens(existing);
+      const tokens = await this.issueTokens(existing, terms);
       return { user: this.sanitizeUser(existing), ...tokens };
     }
 
@@ -232,7 +242,7 @@ export class AuthService {
           },
         });
       });
-      const tokens = await this.issueTokens(user);
+      const tokens = await this.issueTokens(user, terms);
       return {
         user: this.sanitizeUser(user),
         ...tokens,
@@ -284,7 +294,7 @@ export class AuthService {
       },
     });
 
-    const tokens = await this.issueTokens(user);
+    const tokens = await this.issueTokens(user, terms);
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
@@ -387,7 +397,13 @@ export class AuthService {
       include: { user: true },
     });
 
-    if (!session || session.expiresAt < new Date()) {
+    const now = new Date();
+    // expiresAt is the idle limit; absoluteExpiresAt ends the session however active it was.
+    if (
+      !session ||
+      session.expiresAt < now ||
+      session.absoluteExpiresAt < now
+    ) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
@@ -403,14 +419,16 @@ export class AuthService {
         throw new UnauthorizedException('Invalid or expired refresh token');
       }
     } else {
-      const now = new Date();
       await this.prisma.session.update({
         where: { id: session.id },
         data: { revokedAt: now, rotatedAt: now },
       });
     }
 
-    const tokens = await this.issueTokens(session.user);
+    const tokens = await this.issueTokens(session.user, {
+      persistent: session.persistent,
+      absoluteExpiresAt: session.absoluteExpiresAt,
+    });
     return { user: this.sanitizeUser(session.user), ...tokens };
   }
 
@@ -486,6 +504,7 @@ export class AuthService {
 
   async changePassword(
     userId: string,
+    sessionId: string | undefined,
     currentPassword: string,
     newPassword: string,
   ) {
@@ -509,6 +528,14 @@ export class AuthService {
       throw new BadRequestException('Current password is incorrect');
     }
     const passwordHash = await bcrypt.hash(newPassword, 10);
+    // This device's replacement session keeps its own terms: a session that was not
+    // remembered must not come back as a 30-day one. Without a session id (an access token
+    // from before `sid` existed), the short limits.
+    const current = sessionId
+      ? await this.prisma.session.findFirst({
+          where: { id: sessionId, userId },
+        })
+      : null;
     await this.prisma.$transaction([
       this.prisma.user.update({
         where: { id: userId },
@@ -517,7 +544,13 @@ export class AuthService {
       this.revokeAllSessions(userId),
     ]);
     // Every other device is signed out; this one gets a fresh pair so it stays signed in.
-    return { success: true, ...(await this.issueTokens(user)) };
+    const terms = current
+      ? {
+          persistent: current.persistent,
+          absoluteExpiresAt: current.absoluteExpiresAt,
+        }
+      : { persistent: false };
+    return { success: true, ...(await this.issueTokens(user, terms)) };
   }
 
   async getProfile(userId: string) {

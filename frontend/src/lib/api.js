@@ -41,6 +41,11 @@ export function getRefreshToken() {
   return localStorage.getItem(REFRESH_KEY) ?? sessionStorage.getItem(REFRESH_KEY);
 }
 
+/** "Remember me": the refresh token survives the browser closing. */
+export function isRemembered() {
+  return localStorage.getItem(REFRESH_KEY) !== null;
+}
+
 export function storeRefreshToken(token, remember) {
   const keep = remember ?? localStorage.getItem(REFRESH_KEY) !== null;
   localStorage.removeItem(REFRESH_KEY);
@@ -131,10 +136,35 @@ api.interceptors.response.use(
  * The message to show for a failed request. The API sends `{ message }`, sometimes an array of
  * validation messages; a network failure or a cold start that ran out of time has neither.
  */
+// Validation messages from the API name fields the way the code does ("heightCm must not be
+// greater than 300"). Shown to people, they read as a fault; these become plain words.
+const FIELD_NAMES = {
+  heightCm: "Height (cm)",
+  weightKg: "Weight (kg)",
+  headCircumferenceCm: "Head circumference (cm)",
+  dateOfBirth: "Date of birth",
+  measuredAt: "Date measured",
+  examDate: "Exam date",
+  fullName: "Full name",
+  phoneNumber: "Phone number",
+  newPassword: "New password",
+  currentPassword: "Current password",
+  licenseNumber: "Licence number",
+};
+
+function plainValidation(message) {
+  return message
+    .replace(/^([a-z]+(?:[A-Z][a-z]+)+)\b/, (name) => FIELD_NAMES[name] ?? name.replace(/([A-Z])/g, " $1").toLowerCase().replace(/^./, (c) => c.toUpperCase()))
+    .replace(/must not be greater than ([\d.]+)/, "must be $1 or less")
+    .replace(/must not be less than ([\d.]+)/, "must be $1 or more")
+    .replace(/must be a number conforming to the specified constraints/, "must be a number")
+    .replace(/must be a valid ISO 8601 date string/, "must be a valid date");
+}
+
 export function errorMessage(err, fallback = "Something went wrong. Please try again.") {
   const msg = err?.response?.data?.message;
-  if (Array.isArray(msg)) return msg[0];
-  if (typeof msg === "string") return msg;
+  if (Array.isArray(msg)) return plainValidation(String(msg[0]));
+  if (typeof msg === "string") return plainValidation(msg);
   if (err?.code === "ECONNABORTED") return "The server is taking a while to wake up. Please try again in a moment.";
   if (!err?.response) return "Can't reach the server. Check your connection and try again.";
   return fallback;

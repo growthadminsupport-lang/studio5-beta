@@ -4,6 +4,7 @@ import {
   clearTokens,
   COLD_START_TIMEOUT_MS,
   getRefreshToken,
+  isRemembered,
   refreshSession,
   setAccessToken,
   setOnSessionLost,
@@ -12,6 +13,13 @@ import {
 } from "../lib/api";
 
 const AuthContext = createContext(null);
+
+/** Why the app ended a session, for the login page to say once. */
+export const SIGNED_OUT_KEY = "growth_signed_out";
+/** A session without "Remember me" ends after this long without input (session-limits.ts). */
+const IDLE_MS = 30 * 60 * 1000;
+const ACTIVE_KEY = "growth_last_active";
+const ACTIVITY = ["pointerdown", "keydown", "wheel", "touchstart"];
 
 /**
  * The signed-in account. `user.role` is USER, DOCTOR or ADMIN; whether someone is a parent,
@@ -25,6 +33,7 @@ export function AuthProvider({ children }) {
 
   const endSession = useCallback(() => {
     clearTokens();
+    sessionStorage.removeItem(ACTIVE_KEY);
     setUser(null);
   }, []);
 
@@ -32,7 +41,15 @@ export function AuthProvider({ children }) {
     if (started.current) return;
     started.current = true;
     warmUpBackend();
-    setOnSessionLost(endSession);
+    // The server refused the session: it ran out (idle or absolute limit) or was revoked.
+    // Requests still in flight when the idle sign-out ends a session land here too; that reason,
+    // already set, is the one to show.
+    setOnSessionLost(() => {
+      if (!sessionStorage.getItem(SIGNED_OUT_KEY)) {
+        sessionStorage.setItem(SIGNED_OUT_KEY, "Your session has ended. Please log in again.");
+      }
+      endSession();
+    });
     if (!getRefreshToken()) return;
     // If the first try fails but the token is still stored, the failure was the network (a
     // cold start, a blip), not the token: try once more before showing the login page.
@@ -54,7 +71,7 @@ export function AuthProvider({ children }) {
   }
 
   async function login(email, password, remember) {
-    const res = await api.post("/auth/login", { email, password }, { timeout: COLD_START_TIMEOUT_MS });
+    const res = await api.post("/auth/login", { email, password, remember }, { timeout: COLD_START_TIMEOUT_MS });
     return applySession(res.data, remember);
   }
 
@@ -65,7 +82,7 @@ export function AuthProvider({ children }) {
    */
   async function googleSignIn(body) {
     const res = await api.post("/auth/google", body, { timeout: COLD_START_TIMEOUT_MS });
-    if (res.data.accessToken) applySession(res.data, true);
+    if (res.data.accessToken) applySession(res.data, body.remember === true);
     return res.data;
   }
 
@@ -80,6 +97,42 @@ export function AuthProvider({ children }) {
     endSession();
     if (refreshToken) await api.post("/auth/logout", { refreshToken }).catch(() => {});
   }
+
+  // A session that is not remembered ends after 30 minutes without input, so a shared computer
+  // left on a child's records does not stay open. Checked on a timer and whenever the tab comes
+  // back (timers sleep with the tab). The last input is kept in sessionStorage, so a reload does
+  // not restart the clock; it is per tab, like the session itself.
+  const remembered = Boolean(user) && isRemembered();
+  useEffect(() => {
+    if (!user || remembered) return undefined;
+    let last = Number(sessionStorage.getItem(ACTIVE_KEY)) || Date.now();
+    let saved = 0;
+    const bump = () => {
+      last = Date.now();
+      if (last - saved > 15_000) {
+        saved = last;
+        sessionStorage.setItem(ACTIVE_KEY, String(last));
+      }
+    };
+    const check = () => {
+      if (Date.now() - last < IDLE_MS) return false;
+      const refreshToken = getRefreshToken();
+      endSession();
+      sessionStorage.setItem(SIGNED_OUT_KEY, "You were signed out after 30 minutes without activity.");
+      if (refreshToken) api.post("/auth/logout", { refreshToken }).catch(() => {});
+      return true;
+    };
+    if (check()) return undefined; // came back (a reload) after too long
+    bump();
+    ACTIVITY.forEach((e) => window.addEventListener(e, bump, { passive: true }));
+    document.addEventListener("visibilitychange", check);
+    const timer = setInterval(check, 30_000);
+    return () => {
+      ACTIVITY.forEach((e) => window.removeEventListener(e, bump));
+      document.removeEventListener("visibilitychange", check);
+      clearInterval(timer);
+    };
+  }, [user, remembered, endSession]);
 
   async function reloadUser() {
     const res = await api.get("/users/me");

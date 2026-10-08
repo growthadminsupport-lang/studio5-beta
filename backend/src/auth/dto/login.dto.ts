@@ -1,4 +1,10 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class LoginDto {
   @IsEmail()
@@ -7,4 +13,9 @@ export class LoginDto {
   @IsString()
   @MinLength(1)
   password: string;
+
+  /** "Remember me": the long session limits (session-limits.ts). Off unless sent. */
+  @IsOptional()
+  @IsBoolean()
+  remember?: boolean;
 }

@@ -6,7 +6,7 @@ const LIGHT = {
   grid: "#eef2f1",
   axis: "#e2e8f0",
   tick: "#94a3b8",
-  median: "#00685f",
+  median: "#056559",
   own: "#056559",
   tooltip: { background: "#ffffff", border: "#eef2f1", text: "#0f172a" },
   bandOpacityScale: 1,

@@ -26,6 +26,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    min-height: 48px;
     gap: 2px;
     color: #64748b;
     font-size: 11px;
@@ -52,5 +55,11 @@
 
   [data-theme="dark"] .bottom-nav a.active {
     color: #5eead4;
+  }
+}
+/* Signed out: only where the top bar has no links (below 768px, Navbar.jsx). */
+@media (min-width: 768px) {
+  .bottom-nav--public {
+    display: none !important;
   }
 }

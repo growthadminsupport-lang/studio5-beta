@@ -24,7 +24,7 @@
 .footer-brand {
   font-size: 18px;
   font-weight: 800;
-  color: #00685f;
+  color: #056559;
   margin: 0;
 }
 
@@ -37,7 +37,7 @@
 
 .footer-disclaimer {
   font-size: 13px;
-  color: #7a8e99;
+  color: #52646e; /* 5.6:1 on the mint footer; #7a8e99 was 3.2:1 */
   margin: 0;
   line-height: 1.4;
 }
@@ -59,7 +59,7 @@
 }
 
 .footer-links a:hover {
-  color: #00685f;
+  color: #056559;
 }
 
 /* ---------------- Dark Mode ---------------- */

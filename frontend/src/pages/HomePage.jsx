@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { HeroLogo } from "../components/LogoMotion";
-import { useTheme } from "../context/ThemeContext";
 import { BUILTIN_ARTICLES } from "../content/articles";
 import { AboutShowcase, DashboardShowcase } from "../components/Home/Showcases";
 import { useSiteSections } from "../lib/siteContent";
@@ -24,7 +23,6 @@ const articles = HOME_SLUGS.map((slug) => BUILTIN_ARTICLES.find((a) => a.slug ==
 }));
 
 export default function HomePage() {
-  const { theme } = useTheme();
   const { isLoggedIn } = useAuth() || {};
   const sections = useSiteSections();
 
@@ -34,15 +32,13 @@ export default function HomePage() {
       {/* ----------------- Hero Section ----------------- */}
       <section className="max-w-3xl mx-auto px-6 pt-8 pb-10 text-center flex flex-col items-center">
         <div className="flex flex-col items-center justify-center mb-3">
-          {/* The blend that hides the image's white (or black) background goes on the wrapper:
-              the float's transform isolates everything inside it from the page. */}
           <HeroLogo
-            className={`w-32 h-32 md:w-44 md:h-44 mb-1 ${theme === "dark" ? "mix-blend-lighten" : "mix-blend-darken"}`}
+            className="w-32 h-32 md:w-44 md:h-44 mb-1"
             imageClassName="w-full h-full object-contain scale-125 md:scale-130 -translate-y-2"
           />
         </div>
 
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 text-[#056559] dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-teal-300 dark:to-cyan-400">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 text-brand dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-teal-300 dark:to-cyan-400">
           Nurture Every Milestone
         </h1>
         
@@ -50,10 +46,10 @@ export default function HomePage() {
           Simple, calm growth tracking for your child.
         </p>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
               to={isLoggedIn ? "/dashboard" : "/register"}
-              className="px-5 py-2.5 bg-[#056559] hover:bg-[#03443c] dark:bg-teal-400 dark:hover:bg-teal-300 text-white dark:text-slate-950 font-medium text-sm rounded-full transition shadow-sm"
+              className="px-5 py-2.5 bg-brand hover:bg-brand-hover dark:bg-teal-400 dark:hover:bg-teal-300 text-white dark:text-slate-950 font-medium text-sm rounded-full transition shadow-sm"
             >
               Start tracking
             </Link>
@@ -81,7 +77,7 @@ export default function HomePage() {
           </div>
           <Link
             to="/knowledge"
-            className="shrink-0 whitespace-nowrap text-sm font-semibold text-[#00685f] dark:text-teal-300 hover:underline"
+            className="shrink-0 whitespace-nowrap text-sm font-semibold text-brand dark:text-teal-300 hover:underline"
           >
             View all
           </Link>
@@ -118,7 +114,7 @@ export default function HomePage() {
                 <Link
                   to={`/knowledge/${a.slug}`}
                   state={{ from: "/" }}
-                  className="self-start mt-3 md:mt-4 inline-flex items-center rounded-full bg-[#00695c] px-3 py-1 text-xs font-semibold text-white shadow-[0_3px_6px_rgba(0,0,0,0.25)] hover:no-underline dark:bg-teal-600 md:rounded-none md:bg-transparent md:p-0 md:text-[#00685f] md:shadow-none md:hover:underline md:dark:bg-transparent md:dark:text-teal-300"
+                  className="self-start mt-3 md:mt-4 inline-flex items-center rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white shadow-[0_3px_6px_rgba(0,0,0,0.25)] hover:no-underline dark:bg-teal-600 md:rounded-none md:bg-transparent md:p-0 md:text-brand md:shadow-none md:hover:underline md:dark:bg-transparent md:dark:text-teal-300"
                 >
                   Read More →
                 </Link>

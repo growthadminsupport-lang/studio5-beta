@@ -8,7 +8,7 @@ const firstName = (child) => child.nickname || child.fullName.split(" ")[0];
 export function BabyOnTheWay({ child }) {
   return (
     <div className="mb-6 flex items-start gap-3 rounded-2xl border border-[#bcece0] bg-[#f2fbf9] p-5 dark:border-teal-500/30 dark:bg-teal-500/10">
-      <Baby size={22} className="mt-0.5 shrink-0 text-[#056559] dark:text-teal-300" />
+      <Baby size={22} className="mt-0.5 shrink-0 text-brand dark:text-teal-300" />
       <div className="text-sm text-slate-700 dark:text-slate-200">
         <p className="font-semibold text-slate-900 dark:text-slate-100">
           {firstName(child)} is on the way · {getBornLabel(child.dateOfBirth)}
@@ -34,7 +34,7 @@ export function BirthDatePrompt({ child, hasRecords }) {
       </p>
       <Link
         to={`/children/${child.id}/edit`}
-        className="shrink-0 rounded-full bg-[#056559] px-4 py-2 text-center text-xs font-semibold text-white hover:bg-[#03443c] dark:bg-teal-400 dark:text-slate-950"
+        className="shrink-0 rounded-full bg-brand px-4 py-2 text-center text-xs font-semibold text-white hover:bg-brand-hover dark:bg-teal-400 dark:text-slate-950"
       >
         Set birth date
       </Link>

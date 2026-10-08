@@ -18,18 +18,41 @@ export class ChildAvatarDto {
   @Max(10)
   babyHair?: number;
 
-  /** One of the 9 young-child hairstyles. */
+  /** The retired young-child drawing's hairstyle (1-9). Still accepted, no longer shown. */
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(9)
   youngHair?: number;
 
+  // The young child (3+), layered: hairstyle, eye set and outfit (design/avatars/build.py).
+
+  /** 1 long curls, 2 bob with a clip, 3 pigtails, 4 short. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  kidHair?: number;
+
+  /** 1 green, 2 blue, 3 red, 4 green (rounder, drawn for boys). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  kidEyes?: number;
+
+  /** 1 suit and tie, 2 overalls, 3 flower top. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  kidOutfit?: number;
+
   @IsOptional()
   @Matches(/^#[0-9a-f]{6}$/i)
   hairColor?: string;
 
-  /** One of the 6 baby outfits (the young-child drawing is a bust). */
+  /** One of the 6 baby outfits. */
   @IsOptional()
   @IsInt()
   @Min(1)

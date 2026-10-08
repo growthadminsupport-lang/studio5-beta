@@ -13,6 +13,7 @@ import MainLayout from "./components/Layout/MainLayout";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import ScrollToTop from "./components/Layout/ScrollToTop";
+import PageTitle from "./components/Layout/PageTitle";
 
 // Home and login load with the app; every other page is fetched when first opened, so a
 // phone on a mobile connection downloads one page, not all of them (the single bundle was
@@ -38,6 +39,8 @@ const page = {
   InvitePage: () => import("./pages/InvitePage"),
   PeoplePage: () => import("./pages/PeoplePage"),
   WelcomePage: () => import("./pages/WelcomePage"),
+  GoogleCallbackPage: () => import("./pages/GoogleCallbackPage"),
+  NotFoundPage: () => import("./pages/NotFoundPage"),
   VerifyEmailPage: () => import("./pages/VerifyEmailPage"),
 };
 const lazyPage = Object.fromEntries(Object.entries(page).map(([k, load]) => [k, lazy(load)]));
@@ -62,6 +65,8 @@ const {
   InvitePage,
   PeoplePage,
   WelcomePage,
+  GoogleCallbackPage,
+  NotFoundPage,
   VerifyEmailPage,
 } = lazyPage;
 const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
@@ -84,7 +89,7 @@ function usePrefetchAppPages(enabled) {
 function FullPageSpinner() {
   return (
     <div className="flex min-h-screen items-center justify-center dark:bg-slate-900" role="status" aria-label="Loading">
-      <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#056559] dark:border-slate-700 dark:border-t-teal-400" />
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand dark:border-slate-700 dark:border-t-teal-400" />
     </div>
   );
 }
@@ -113,6 +118,7 @@ function App() {
   return (
     <>
     <ScrollToTop />
+    <PageTitle />
     {/* Pages inside MainLayout suspend inside it (navbar stays); this catches the standalone ones. */}
     <Suspense fallback={<FullPageSpinner />}>
     <Routes>
@@ -122,6 +128,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/welcome" element={<WelcomePage />} />
+      <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* Public Pages with Navigation Header/Footer */}
@@ -163,8 +170,10 @@ function App() {
         </Route>
       </Route>
 
-      {/* Catch-all Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Anything else: say so, inside the site's frame, instead of silently showing Home. */}
+      <Route element={<MainLayout />}>
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
     </Routes>
     </Suspense>
     </>

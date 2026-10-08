@@ -88,6 +88,11 @@ model Session {
   /// logout or a password change. A rotated token is still accepted for a few seconds; see
   /// AuthService.refresh.
   rotatedAt    DateTime?
+  /// "Remember me": the long limits. `expiresAt` is the idle limit, renewed with each refresh;
+  /// `absoluteExpiresAt` is fixed at sign-in and carried across refreshes. See
+  /// src/auth/session-limits.ts.
+  persistent        Boolean  @default(true)
+  absoluteExpiresAt DateTime
 
   @@index([userId])
   @@map("sessions")

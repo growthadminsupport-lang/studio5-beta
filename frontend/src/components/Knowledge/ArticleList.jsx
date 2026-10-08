@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { Search } from "lucide-react";
 import { useArticles } from "../../content/articles";
 
 import growthIcon from "../../assets/icons_knowledge/growth.png";
@@ -196,14 +197,16 @@ function ArticleList() {
           <span className="kn-h-desktop">Parenting Resources</span>
           <span className="kn-h-mobile">Nurturing Knowledge</span>
         </h2>
-        <input
-          type="search"
-          className="kn-search"
-          placeholder="Search articles"
-          aria-label="Search articles"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <label className="kn-search">
+          <Search size={18} aria-hidden="true" className="kn-search-icon" />
+          <input
+            type="search"
+            placeholder="Search articles"
+            aria-label="Search articles"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
       </div>
 
 

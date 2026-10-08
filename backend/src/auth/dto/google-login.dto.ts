@@ -27,6 +27,11 @@ export class GoogleLoginDto {
   @MinLength(1)
   credential: string;
 
+  /** "Remember me": the long session limits (session-limits.ts). Off unless sent. */
+  @IsOptional()
+  @IsBoolean()
+  remember?: boolean;
+
   /** The person confirmed linking Google to their existing password account. */
   @IsOptional()
   @IsBoolean()

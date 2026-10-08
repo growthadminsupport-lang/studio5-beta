@@ -55,12 +55,12 @@ function ChildTile({ kid, active, onClick }) {
       onClick={onClick}
       className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition ${
         active
-          ? 'border-[#056559] dark:border-teal-400 bg-[#eaf6f3] dark:bg-teal-500/10'
+          ? 'border-brand dark:border-teal-400 bg-[#eaf6f3] dark:bg-teal-500/10'
           : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'
       }`}
     >
       {active && (
-        <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#056559] dark:bg-teal-400 text-white dark:text-slate-950">
+        <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand dark:bg-teal-400 text-white dark:text-slate-950">
           <Check size={12} strokeWidth={3} />
         </span>
       )}
@@ -104,7 +104,7 @@ function SwitchChildModal({ kids, activeChildId, onSelect, onClose, onManage }) 
         <button
           type="button"
           onClick={onManage}
-          className="ml-auto text-sm font-semibold text-[#056559] dark:text-teal-300 hover:underline"
+          className="ml-auto text-sm font-semibold text-brand dark:text-teal-300 hover:underline"
         >
           Manage
         </button>
@@ -150,7 +150,7 @@ function SwitchChildModal({ kids, activeChildId, onSelect, onClose, onManage }) 
 
         <Link
           to="/children/new"
-          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bcece0] dark:border-teal-500/30 p-3 text-center text-sm font-semibold text-[#056559] dark:text-teal-300 transition hover:bg-[#f2fbf9] dark:hover:bg-teal-500/10"
+          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bcece0] dark:border-teal-500/30 p-3 text-center text-sm font-semibold text-brand dark:text-teal-300 transition hover:bg-[#f2fbf9] dark:hover:bg-teal-500/10"
         >
           <Plus size={18} />
           Add your own child
@@ -226,7 +226,7 @@ function ManageChildrenModal({ kids, onClose, onRemove }) {
         <button
           type="button"
           onClick={onClose}
-          className="ml-auto text-sm font-semibold text-[#056559] dark:text-teal-300 hover:underline"
+          className="ml-auto text-sm font-semibold text-brand dark:text-teal-300 hover:underline"
         >
           Done
         </button>
@@ -240,7 +240,7 @@ function ManageChildrenModal({ kids, onClose, onRemove }) {
         {kids.map((kid) => (
           <div
             key={kid.id}
-            className="relative flex flex-col items-center gap-2 rounded-xl border-2 border-[#056559] dark:border-teal-400 bg-[#eaf6f3] dark:bg-teal-500/10 p-4 text-center"
+            className="relative flex flex-col items-center gap-2 rounded-xl border-2 border-brand dark:border-teal-400 bg-[#eaf6f3] dark:bg-teal-500/10 p-4 text-center"
           >
             <button
               type="button"
@@ -279,11 +279,30 @@ function ManageChildrenModal({ kids, onClose, onRemove }) {
 // depends on who is asking: a parent adds a child, a caretaker or doctor waits for an invitation.
 export function NoChildState() {
   const { isDoctor, user } = useAuth() ?? {};
-  const { loading } = useChildren();
+  const { loading, loadFailed, retry } = useChildren();
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center dark:bg-slate-900">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#056559] dark:border-slate-700 dark:border-t-teal-400" />
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand dark:border-slate-700 dark:border-t-teal-400" />
+      </div>
+    );
+  }
+  // Not "no children": the list did not load. Offering "Add your child" here made parents add
+  // a child they already had.
+  if (loadFailed) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50/50 px-4 py-16 text-center dark:bg-slate-900" role="alert">
+        <p className="text-base font-semibold text-slate-900 dark:text-slate-100">We couldn’t load your children’s profiles.</p>
+        <p className="max-w-sm text-sm text-slate-600 dark:text-slate-300">
+          Check your internet connection and try again. Nothing you saved is lost.
+        </p>
+        <button
+          type="button"
+          onClick={retry}
+          className="min-h-11 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-hover dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+        >
+          Try again
+        </button>
       </div>
     );
   }
@@ -307,7 +326,7 @@ export function NoChildState() {
       )}
       <Link
         to="/children/new"
-        className="inline-flex items-center gap-1 rounded-full bg-[#056559] dark:bg-teal-400 px-5 py-2.5 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-[#03443c] dark:hover:bg-teal-300"
+        className="inline-flex items-center gap-1 rounded-full bg-brand dark:bg-teal-400 px-5 py-2.5 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-brand-hover dark:hover:bg-teal-300"
       >
         <Plus size={16} />
         Add your own child
@@ -362,7 +381,7 @@ export default function ChildProfileCard() {
               aria-label="Switch child"
               title="Switch child"
               onClick={() => setModal('switch')}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-[#056559] active:scale-95 dark:hover:bg-slate-700 dark:hover:text-teal-300"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-brand active:scale-95 dark:hover:bg-slate-700 dark:hover:text-teal-300"
             >
               <ArrowLeftRight size={18} />
             </button>
@@ -373,7 +392,7 @@ export default function ChildProfileCard() {
                 aria-label="People who can see this child"
                 title="People and invitations"
                 onClick={() => setModal('people')}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-[#056559] active:scale-95 dark:hover:bg-slate-700 dark:hover:text-teal-300"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-brand active:scale-95 dark:hover:bg-slate-700 dark:hover:text-teal-300"
               >
                 <Users size={18} />
               </button>
@@ -385,7 +404,7 @@ export default function ChildProfileCard() {
                 aria-label={child.myRole === 'DOCTOR' ? 'Set hospital number' : 'Edit child profile'}
                 title={child.myRole === 'DOCTOR' ? 'Set hospital number' : 'Edit profile'}
                 onClick={() => setModal('edit')}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#056559] text-white shadow-sm transition hover:bg-[#03443c] active:scale-95 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white shadow-sm transition hover:bg-brand-hover active:scale-95 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
               >
                 <Pencil size={15} />
               </button>
@@ -410,7 +429,7 @@ export default function ChildProfileCard() {
                 ].filter(Boolean).map((label) => (
                   <span
                     key={label}
-                    className="rounded-full border border-[#bcece0] dark:border-teal-500/30 px-2 py-0.5 text-xs font-medium text-[#056559] dark:text-teal-300"
+                    className="rounded-full border border-[#bcece0] dark:border-teal-500/30 px-2 py-0.5 text-xs font-medium text-brand dark:text-teal-300"
                   >
                     {label}
                   </span>

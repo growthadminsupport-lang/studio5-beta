@@ -8,11 +8,11 @@ import { useAuth } from "../../context/AuthContext";
 import "./MainLayout.css";
 
 function MainLayout() {
-  const { isLoggedIn } = useAuth() || {};
+  const { isLoggedIn, loading } = useAuth() || {};
   const { pathname } = useLocation();
 
   return (
-    <div className={`main-layout${isLoggedIn ? " has-bottom-nav" : ""}`}>
+    <div className={`main-layout ${isLoggedIn ? "has-bottom-nav" : "has-public-nav"}`}>
       <Navbar />
       <main className="page-content">
         <AccountBanner />
@@ -22,7 +22,7 @@ function MainLayout() {
           <Suspense
             fallback={
               <div className="flex min-h-[60vh] items-center justify-center" role="status" aria-label="Loading">
-                <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#056559] dark:border-slate-700 dark:border-t-teal-400" />
+                <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand dark:border-slate-700 dark:border-t-teal-400" />
               </div>
             }
           >
@@ -31,7 +31,9 @@ function MainLayout() {
         </div>
       </main>
       <Footer />
-      {isLoggedIn && <BottomNav />}
+      {/* While a returning visitor's session is restored, neither bar: the signed-out one would
+          flash before the app's tabs replace it. */}
+      {!loading && <BottomNav signedOut={!isLoggedIn} />}
     </div>
   );
 }

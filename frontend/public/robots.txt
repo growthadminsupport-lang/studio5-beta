@@ -1,0 +1,18 @@
+# Public pages may be indexed; signed-in pages have nothing for a crawler and stay out.
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /growth
+Disallow: /puberty
+Disallow: /bone-age
+Disallow: /profile
+Disallow: /notifications
+Disallow: /settings
+Disallow: /people
+Disallow: /children/
+Disallow: /admin
+Disallow: /invite/
+Disallow: /welcome
+Disallow: /auth/
+
+Sitemap: https://studio5-beta.vercel.app/sitemap.xml

@@ -60,7 +60,7 @@ function InvitePage() {
     <div className="min-h-screen px-4 pb-16 pt-16 dark:bg-slate-900">
       <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-2xs dark:border-slate-700 dark:bg-slate-800">
         <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eaf6f3] dark:bg-teal-500/10">
-          <MailOpen size={22} className="text-[#056559] dark:text-teal-300" />
+          <MailOpen size={22} className="text-brand dark:text-teal-300" />
         </span>
 
         {!preview && !error && <p className="text-sm text-slate-500 dark:text-slate-400">Opening invitation…</p>}
@@ -109,7 +109,7 @@ function InvitePage() {
                 type="button"
                 onClick={accept}
                 disabled={accepting || doctorMismatch || doctorPending}
-                className="rounded-full bg-[#056559] py-3 text-sm font-semibold text-white transition hover:bg-[#03443c] disabled:opacity-50 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+                className="rounded-full bg-brand py-3 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
               >
                 {accepting ? "Accepting…" : "Accept invitation"}
               </button>
@@ -117,13 +117,13 @@ function InvitePage() {
               <>
                 <Link
                   to={`/login?next=${here}`}
-                  className="rounded-full bg-[#056559] py-3 text-sm font-semibold text-white transition hover:bg-[#03443c] dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+                  className="rounded-full bg-brand py-3 text-sm font-semibold text-white transition hover:bg-brand-hover dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
                 >
                   Log in to accept
                 </Link>
                 <Link
                   to={`/register?next=${here}`}
-                  className="rounded-full border border-slate-200 py-3 text-sm font-semibold text-[#056559] transition hover:bg-slate-50 dark:border-slate-700 dark:text-teal-300 dark:hover:bg-slate-800"
+                  className="rounded-full border border-slate-200 py-3 text-sm font-semibold text-brand transition hover:bg-slate-50 dark:border-slate-700 dark:text-teal-300 dark:hover:bg-slate-800"
                 >
                   Create an account
                 </Link>

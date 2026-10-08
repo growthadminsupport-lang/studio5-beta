@@ -45,7 +45,7 @@ The flows and permission matrix are in `docs/user-flows.md`, and the API is in `
 | --- | --- | --- |
 | FR-1 | Register with full name, email, password, **and phone number** | 🟢 **Back in line.** The register form asks for a phone number and it is saved. It can be edited in Profile. It is optional in the form. |
 | FR-2 | Terms and privacy accepted before account creation | 🟢 Enforced on the server (`acceptedTerms` must be `true`), on the Google path too |
-| FR-3 | Log in and out securely | 🟢 15-minute access tokens and rotating 7-day refresh tokens, stored hashed. A password reset or change signs out every other session. |
+| FR-3 | Log in and out securely | 🟢 15-minute access tokens and rotating refresh tokens, stored hashed. Sessions end after 7 days unused (1 hour without "Remember me") and 30 days after sign-in at most (12 hours). A password reset or change signs out every other session. |
 | FR-4 | Add child profiles: name, sex, DOB, relationship | 🟢 Plus an optional HN (C7) |
 | FR-5 | View, edit, switch between multiple children | 🟢 Caretakers see children grouped by family; doctors search by HN |
 

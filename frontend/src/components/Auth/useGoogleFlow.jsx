@@ -7,7 +7,7 @@ import { errorMessage } from "../../lib/api";
 export const NOTICE_KEY = "growth_notice";
 
 /**
- * What happens after Google hands us a credential, shared by Log in and Create account:
+ * What happens after Google hands us a credential (GoogleCallbackPage):
  * - an account already linked: signed in, on to `destination`;
  * - a new address: the welcome form, prefilled from Google, to choose the account type;
  * - a password account with the same address: ask first, then link, so both ways in reach
@@ -18,17 +18,24 @@ export function useGoogleFlow(destination, setError) {
   const navigate = useNavigate();
   const [link, setLink] = useState(null);
   const [busy, setBusy] = useState(false);
+  // "Not now" on the link question: nothing more happens, and the page should say so.
+  const [declined, setDeclined] = useState(false);
+  const decline = () => {
+    setLink(null);
+    setDeclined(true);
+  };
 
-  async function handleCredential(credential) {
+  async function handleCredential(credential, remember) {
     setError("");
     try {
-      const data = await googleSignIn({ credential });
+      const data = await googleSignIn({ credential, remember });
       if (data.signupRequired) {
         navigate("/welcome", {
-          state: { credential, email: data.email, fullName: data.fullName, picture: data.picture, next: destination },
+          replace: true,
+          state: { credential, remember, email: data.email, fullName: data.fullName, picture: data.picture, next: destination },
         });
       } else if (data.linkRequired) {
-        setLink({ credential, email: data.email });
+        setLink({ credential, remember, email: data.email });
       } else {
         navigate(destination, { replace: true });
       }
@@ -40,7 +47,7 @@ export function useGoogleFlow(destination, setError) {
   async function confirmLink() {
     setBusy(true);
     try {
-      const data = await googleSignIn({ credential: link.credential, linkAccount: true });
+      const data = await googleSignIn({ credential: link.credential, remember: link.remember, linkAccount: true });
       if (data.passwordRemoved) {
         sessionStorage.setItem(
           NOTICE_KEY,
@@ -58,7 +65,7 @@ export function useGoogleFlow(destination, setError) {
   }
 
   const dialog = (
-    <Dialog open={Boolean(link)} onClose={busy ? undefined : () => setLink(null)} maxWidth="xs" fullWidth>
+    <Dialog open={Boolean(link)} onClose={busy ? undefined : decline} maxWidth="xs" fullWidth>
       <DialogTitle>Link your Google account?</DialogTitle>
       <DialogContent>
         <p className="text-sm text-slate-700 dark:text-slate-200">
@@ -73,7 +80,7 @@ export function useGoogleFlow(destination, setError) {
         </Alert>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => setLink(null)} disabled={busy}>
+        <Button onClick={decline} disabled={busy}>
           Not now
         </Button>
         <Button variant="contained" onClick={confirmLink} disabled={busy}>
@@ -83,5 +90,5 @@ export function useGoogleFlow(destination, setError) {
     </Dialog>
   );
 
-  return { handleCredential, dialog };
+  return { handleCredential, dialog, linking: Boolean(link), declined };
 }

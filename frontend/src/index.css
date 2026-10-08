@@ -9,8 +9,8 @@
   --color-brand-200: #a3eadc;
   --color-brand-300: #6fdcc7;
   --color-brand-400: #3fc7ac;
-  --color-brand-500: #00695c;
-  --color-brand-600: #00544a;
+  --color-brand-500: #056559;
+  --color-brand-600: #03443c;
   --color-brand-700: #023d34;
   --color-brand-800: #06322c;
   --color-brand-900: #042420;
@@ -46,7 +46,7 @@
   --radius: 16px;
   --radius-input: 12px;
 
-  --font-family: "Segoe UI", Roboto, sans-serif;
+  --font-family: "Segoe UI", Roboto, "Noto Sans Thai", "Leelawadee UI", Thonburi, system-ui, sans-serif;
   --font-size-base: 17px;
   --font-size-small: 14px;
   --font-size-body: 16px;
@@ -103,6 +103,9 @@ html {
 
 body {
   margin: 0;
+  /* A word longer than its box (large text settings, narrow cards) breaks instead of pushing
+     the page sideways. Words that fit are never broken. */
+  overflow-wrap: break-word;
   font-family: var(--font-family);
   font-size: 17px;
   line-height: 1.6;
@@ -201,13 +204,20 @@ textarea {
   transform-origin: 50% 100%;
   animation: avatar-breathe 3.6s ease-in-out infinite;
 }
-.avatar-alive .avatar-eyes {
-  transform-origin: 50% 34%; /* the eye line of the baby drawing */
-  animation: avatar-blink 5.3s ease-in-out infinite;
+/* Blinks. The baby: the artist drew each skin and lash style with the eyes closed, so a blink
+   swaps the open eyes for that drawing for a moment (step-end: no fade). The young child has no
+   closed drawing, so its eyes (lashes included) squash to a line at the eye line. */
+.avatar-blink-closed {
+  opacity: 0;
 }
-.avatar-alive .avatar-lashes {
-  transform-origin: 50% 30%;
-  animation: avatar-lid 5.3s ease-in-out infinite;
+.avatar-alive .avatar-blink-open {
+  animation: avatar-blink-open 5.3s step-end infinite;
+}
+.avatar-alive .avatar-blink-closed {
+  animation: avatar-blink-closed 5.3s step-end infinite;
+}
+.avatar-alive .avatar-blink-squash {
+  animation: avatar-blink-squash 5.3s ease-in-out infinite;
 }
 @keyframes avatar-sway {
   0%, 100% { transform: rotate(-1.2deg); }
@@ -217,19 +227,26 @@ textarea {
   0%, 100% { transform: scale(1, 1); }
   50% { transform: scale(1.008, 1.018); }
 }
-@keyframes avatar-blink {
-  0%, 93%, 100% { transform: scaleY(1); }
-  96% { transform: scaleY(0); }
+@keyframes avatar-blink-open {
+  0% { opacity: 1; }
+  94% { opacity: 0; }
+  97.5% { opacity: 1; }
 }
-@keyframes avatar-lid {
-  0%, 93%, 100% { transform: translateY(0) scaleY(1); }
-  96% { transform: translateY(3.5%) scaleY(0.7); }
+@keyframes avatar-blink-closed {
+  0% { opacity: 0; }
+  94% { opacity: 1; }
+  97.5% { opacity: 0; }
+}
+@keyframes avatar-blink-squash {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.14); }
 }
 @media (prefers-reduced-motion: reduce) {
   .avatar-sway,
   .avatar-alive,
-  .avatar-alive .avatar-eyes,
-  .avatar-alive .avatar-lashes {
+  .avatar-alive .avatar-blink-open,
+  .avatar-alive .avatar-blink-closed,
+  .avatar-alive .avatar-blink-squash {
     animation: none;
   }
 }
@@ -241,5 +258,20 @@ textarea {
   select,
   textarea {
     font-size: 16px !important;
+  }
+  /* iOS gives date fields a minimum width of their own and centres the date: in the edit-child
+     window on an iPad the field ran past the window's edge. */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    /* Without its native look an empty date field (a new child) has no line box on iOS and
+       shrinks to its padding. */
+    min-height: 44px;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
   }
 }

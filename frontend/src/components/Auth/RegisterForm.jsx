@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { errorMessage } from "../../lib/api";
 import GoogleButton from "./GoogleButton";
-import { useGoogleFlow } from "./useGoogleFlow";
 import LogoMotion from "../LogoMotion";
 import "./Auth.css";
 
@@ -42,8 +41,12 @@ function RegisterForm() {
     });
   };
 
+  // Set synchronously, so a double click cannot create the account twice (see LoginForm).
+  const inFlight = useRef(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (inFlight.current) return;
     setError("");
 
     if (!acceptedTerms) {
@@ -55,6 +58,7 @@ function RegisterForm() {
       return;
     }
 
+    inFlight.current = true;
     setSubmitting(true);
     try {
       await register({
@@ -73,11 +77,11 @@ function RegisterForm() {
       // The server says whether the address is taken by a password or a Google account.
       setError(errorMessage(err));
       setSubmitting(false);
+      inFlight.current = false;
     }
   };
 
   // Terms, account type and phone are asked on the welcome page that follows.
-  const { handleCredential: handleGoogleSignUp, dialog: googleDialog } = useGoogleFlow(destination, setError);
 
   return (
     <form onSubmit={handleSubmit} className="auth-form">
@@ -279,10 +283,10 @@ function RegisterForm() {
           <div className="auth-divider">
             <span>or</span>
           </div>
-          <GoogleButton onCredential={handleGoogleSignUp} label="Sign up with Google" />
+          {/* Creating an account is remembered, as with the form. */}
+          <GoogleButton next={destination} remember from="/register" label="Sign up with Google" />
         </>
       )}
-      {googleDialog}
 
       {/* Login Link */}
       <div className="auth-links">

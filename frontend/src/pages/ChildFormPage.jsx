@@ -25,7 +25,7 @@ function ChildFormPage() {
           <button
             type="button"
             onClick={() => navigate("/dashboard", { replace: true })}
-            className="mt-5 rounded-full bg-[#056559] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#03443c] dark:bg-teal-400 dark:text-slate-950"
+            className="mt-5 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-hover dark:bg-teal-400 dark:text-slate-950"
           >
             Back to dashboard
           </button>
@@ -37,7 +37,7 @@ function ChildFormPage() {
   return (
     <div className="min-h-screen px-4 pb-16 pt-10 dark:bg-slate-900">
       <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs dark:border-slate-700 dark:bg-slate-800 sm:p-8">
-        <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">
+        <h1 className="text-xl font-bold text-brand dark:text-teal-300">
           {child?.myRole === "DOCTOR" ? `Hospital number for ${child.fullName}` : isEdit ? "Edit child" : "Add your child"}
         </h1>
         <p className="mb-6 mt-1 text-sm text-slate-500 dark:text-slate-400">

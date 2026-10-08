@@ -62,10 +62,6 @@
   transform-origin: center;
 }
 
-/* Dark mode logo */
-[data-theme="dark"] .auth-logo {
-  mix-blend-mode: lighten;
-}
 
 /* =========================
    WELCOME TITLE
@@ -233,6 +229,20 @@
   font-size: 13px;
 
   margin: 0;
+}
+
+/* Why the last session ended (LoginForm), and the Google callback's status. */
+.auth-notice {
+  background: #e8f4f1;
+  color: #035048;
+  padding: 10px 14px;
+  border-radius: var(--radius-input);
+  font-size: 13px;
+  margin: 0;
+}
+[data-theme="dark"] .auth-notice {
+  background: rgba(45, 212, 191, 0.12);
+  color: #99f6e4;
 }
 
 /* =========================
@@ -437,7 +447,7 @@
 }
 
 .auth-theme-toggle .theme-button:hover {
-  color: #00685f;
+  color: #056559;
 
   border-color: rgba(0, 104, 95, 0.3);
 }
@@ -624,6 +634,11 @@
 .account-type-toggle button.active {
   background: var(--color-primary);
   color: white;
+}
+
+/* Dark mode's primary is a light teal: white on it was 1.9:1. */
+[data-theme="dark"] .account-type-toggle button.active {
+  color: #0f172a;
 }
 
 /* =========================

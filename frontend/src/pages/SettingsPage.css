@@ -46,7 +46,7 @@
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  background-color: #00685f;
+  background-color: #056559;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,7 +60,7 @@
   position: absolute;
   bottom: 0px;
   right: 0px;
-  background: #00685f;
+  background: #056559;
   border: 2px solid #ffffff;
   width: 28px;
   height: 28px;
@@ -135,7 +135,7 @@
 }
 
 .float-field input:focus {
-  border-color: #00685f;
+  border-color: #056559;
 }
 
 /* Error State */
@@ -179,7 +179,7 @@
 }
 
 .btn-update-password:enabled {
-  background-color: #00685f;
+  background-color: #056559;
   color: #ffffff;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 104, 95, 0.2);

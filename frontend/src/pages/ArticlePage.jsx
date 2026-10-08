@@ -3,6 +3,7 @@ import Markdown from "react-markdown";
 import { api } from "../lib/api";
 import { fromApi } from "../content/articles";
 import { Link, useParams, useLocation } from "react-router-dom";
+import { useDocumentTitle } from "../lib/pageTitle";
 import growthSpurtImg from "../assets/knowledgeImg/growthPage1.png";
 import nutriImg from "../assets/knowledgeImg/nutriPage1.png";
 import calciumIcon from "../assets/knowledgeImg/nutriPage2.png";
@@ -584,6 +585,7 @@ function ArticlePage() {
   }, [slug]);
   const remote = fetched.slug === slug ? fetched.article : null;
   const remoteState = builtin ? "idle" : fetched.slug !== slug ? "loading" : remote ? "idle" : "missing";
+  useDocumentTitle(builtin?.title ?? remote?.title ?? (remoteState === "missing" ? "Article not found" : null));
 
   if (!builtin && remoteState === "loading") {
     return (

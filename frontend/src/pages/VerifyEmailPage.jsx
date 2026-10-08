@@ -36,7 +36,7 @@ export default function VerifyEmailPage() {
         {!result && <p className="auth-subtitle">Confirming your email address…</p>}
         {result?.ok && (
           <>
-            <CheckCircle2 size={44} className="mx-auto text-[#056559] dark:text-teal-300" />
+            <CheckCircle2 size={44} className="mx-auto text-brand dark:text-teal-300" />
             <h1 className="font-bold text-2xl welcome-title">Email address confirmed</h1>
             <p className="auth-subtitle">Thank you. Your GrowTH account is fully set up.</p>
             <Link to={user ? "/dashboard" : "/login"} className="auth-primary-link">

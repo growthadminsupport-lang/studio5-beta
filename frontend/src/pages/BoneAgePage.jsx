@@ -8,6 +8,7 @@ import { isUnborn } from '../utils/childDisplay';
 import { api, errorMessage, dateOnly } from '../lib/api';
 import { ACCEPT } from '../lib/xray';
 import XrayPrepareDialog from '../components/BoneAge/XrayPrepareDialog';
+import DateInput from '../components/DateInput';
 
 // Before preparing: a PDF report or a phone photo can be large; what is uploaded is at most
 // 2048 px and 10 MB (lib/xray.js).
@@ -19,7 +20,7 @@ const MAX_PICK_BYTES = 50 * 1024 * 1024;
 // the model's number and never the X-ray. The API enforces both.
 
 const REVIEW = {
-  NORMAL: { label: 'Normal for age', tone: 'border-[#bcece0] dark:border-teal-500/30 bg-[#f2fbf9] dark:bg-teal-500/10 text-[#056559] dark:text-teal-300' },
+  NORMAL: { label: 'Normal for age', tone: 'border-[#bcece0] dark:border-teal-500/30 bg-[#f2fbf9] dark:bg-teal-500/10 text-brand dark:text-teal-300' },
   ADVANCED: { label: 'Advanced for age', tone: 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300' },
   DELAYED: { label: 'Delayed for age', tone: 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300' },
 };
@@ -152,7 +153,7 @@ function DoctorRecord({ record, onSaved, onDelete }) {
               Not reviewed · the family sees nothing yet
             </span>
           )}
-          <button type="button" aria-label="Delete" onClick={() => onDelete(record.id)} className="ml-auto text-slate-400 hover:text-red-500">
+          <button type="button" aria-label="Delete" onClick={() => onDelete(record.id)} className="ml-auto inline-flex h-11 w-11 -my-3 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 hover:text-red-600">
             <Trash2 size={15} />
           </button>
         </div>
@@ -199,25 +200,26 @@ function DoctorRecord({ record, onSaved, onDelete }) {
           <select
             value={review}
             onChange={(e) => setReview(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#056559] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             <option value="">Your reading…</option>
             <option value="NORMAL">Normal for age</option>
             <option value="ADVANCED">Advanced for age</option>
             <option value="DELAYED">Delayed for age</option>
           </select>
-          <input
-            type="date"
+          <DateInput
             value={examDate}
+            resetTo={dateOnly(record.examDate)}
             max={todayIso()}
-            onChange={(e) => setExamDate(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#056559] dark:border-slate-700 dark:text-slate-100"
+            onChange={setExamDate}
+            aria-label="Exam date"
+            className="rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand dark:border-slate-700 dark:text-slate-100"
           />
           <button
             type="button"
             onClick={save}
             disabled={saving}
-            className="rounded-xl bg-[#056559] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#03443c] disabled:opacity-60 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+            className="rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
           >
             {saving ? 'Saving…' : record.review ? 'Update reading' : 'Save and share with family'}
           </button>
@@ -227,7 +229,7 @@ function DoctorRecord({ record, onSaved, onDelete }) {
           placeholder="Note for the family (shown with your reading)"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#056559] dark:border-slate-700 dark:text-slate-100"
+          className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand dark:border-slate-700 dark:text-slate-100"
         />
         {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
       </div>
@@ -339,15 +341,15 @@ function DoctorView({ child }) {
 
       <Card className="mb-6">
         <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">Add a hand X-ray</h2>
-        <label className="mb-3 flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+        <label className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
           Exam date
-          <input
-            type="date"
+          <DateInput
             value={examDate}
+            resetTo={todayIso()}
             min={child.dateOfBirth}
             max={todayIso()}
-            onChange={(e) => setExamDate(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-transparent px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-[#056559] dark:border-slate-700 dark:text-slate-100"
+            onChange={setExamDate}
+            className="min-w-0 rounded-xl border border-slate-200 bg-transparent px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand dark:border-slate-700 dark:text-slate-100"
           />
         </label>
         <div
@@ -363,10 +365,10 @@ function DoctorView({ child }) {
           }}
           onClick={() => inputRef.current?.click()}
           className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-8 text-center transition ${
-            dragActive ? 'border-[#056559] bg-[#f2fbf9] dark:border-teal-400 dark:bg-teal-500/10' : 'border-slate-200 hover:border-slate-300 dark:border-slate-700'
+            dragActive ? 'border-brand bg-[#f2fbf9] dark:border-teal-400 dark:bg-teal-500/10' : 'border-slate-200 hover:border-slate-300 dark:border-slate-700'
           }`}
         >
-          <UploadCloud size={28} className="text-[#056559] dark:text-teal-300" />
+          <UploadCloud size={28} className="text-brand dark:text-teal-300" />
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{uploading ? 'Uploading…' : 'Drop the X-ray here or click to choose'}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">Left hand and wrist · PDF, JPEG, PNG or WebP · you can crop before upload</p>
           <input ref={inputRef} type="file" accept={ACCEPT} className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
@@ -415,7 +417,7 @@ function FamilyView({ child }) {
   if (records.length === 0) {
     return (
       <Card className="flex flex-col items-center gap-3 text-center">
-        <Stethoscope size={28} className="text-[#056559] dark:text-teal-300" />
+        <Stethoscope size={28} className="text-brand dark:text-teal-300" />
         <p className="text-sm text-slate-600 dark:text-slate-300">
           No bone-age results yet. {child.fullName}&apos;s doctor adds the hand X-ray here and records what it shows; you will be notified
           when there is a result.
@@ -423,7 +425,7 @@ function FamilyView({ child }) {
         {child.myRole === 'PARENT' && (
           <Link
             to="/people"
-            className="rounded-full bg-[#056559] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#03443c] dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
           >
             Invite {child.fullName}&apos;s doctor
           </Link>
@@ -471,7 +473,7 @@ function BoneAgePage() {
         <ChildProfileCard />
 
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">Bone Age</h1>
+          <h1 className="text-xl font-bold text-brand dark:text-teal-300">Bone Age</h1>
           <p className="mt-1 flex items-start gap-1.5 text-sm text-slate-500 dark:text-slate-400">
             <ShieldCheck size={16} className="mt-0.5 shrink-0" />
             {isDoctor

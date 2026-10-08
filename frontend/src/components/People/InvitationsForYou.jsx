@@ -45,7 +45,7 @@ export default function InvitationsForYou({ className = "" }) {
   if (invites.length === 0) return null;
   return (
     <div className={`w-full max-w-xl rounded-2xl border border-[#bcece0] bg-[#f2fbf9] p-4 text-left dark:border-teal-500/30 dark:bg-teal-500/10 ${className}`}>
-      <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#056559] dark:text-teal-300">
+      <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand dark:text-teal-300">
         <MailOpen size={16} />
         Invitations for you
       </h2>
@@ -60,7 +60,7 @@ export default function InvitationsForYou({ className = "" }) {
               type="button"
               disabled={busy === i.id}
               onClick={() => accept(i)}
-              className="shrink-0 rounded-full bg-[#056559] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#03443c] disabled:opacity-60 dark:bg-teal-400 dark:text-slate-950"
+              className="shrink-0 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60 dark:bg-teal-400 dark:text-slate-950"
             >
               {busy === i.id ? "Accepting…" : "Accept"}
             </button>

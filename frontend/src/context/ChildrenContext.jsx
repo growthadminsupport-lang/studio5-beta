@@ -20,10 +20,13 @@ export function ChildrenProvider({ children: tree }) {
   const { user } = useAuth();
   // The list is kept with the account it was loaded for, so a different sign-in never shows the
   // previous account's children while its own are loading.
-  const [state, setState] = useState({ userId: null, list: [] });
+  // `failed`: the list could not be loaded (server error, offline). Pages must not read that as
+  // "no children": a parent would be told to add a child they already have.
+  const [state, setState] = useState({ userId: null, list: [], failed: false });
+  const [attempt, setAttempt] = useState(0);
   const [selectedId, setSelectedId] = useState(() => localStorage.getItem(SELECTED_KEY));
 
-  const loaded = Boolean(user) && state.userId === user.id;
+  const loaded = Boolean(user) && state.userId === user.id && state.attempt === attempt;
   const kids = useMemo(() => (loaded ? state.list : []), [loaded, state.list]);
   const userId = user?.id;
 
@@ -41,21 +44,24 @@ export function ChildrenProvider({ children: tree }) {
   const refresh = useCallback(async () => {
     const res = await api.get("/children");
     const list = res.data.map(normalise);
-    setState({ userId, list });
+    setState({ userId, list, failed: false, attempt });
     return list;
-  }, [userId]);
+  }, [userId, attempt]);
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     api
       .get("/children")
-      .then((res) => !cancelled && setState({ userId, list: res.data.map(normalise) }))
-      .catch(() => !cancelled && setState({ userId, list: [] }));
+      .then((res) => !cancelled && setState({ userId, list: res.data.map(normalise), failed: false, attempt }))
+      .catch(() => !cancelled && setState({ userId, list: [], failed: true, attempt }));
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, attempt]);
+
+  /** Try loading the list again (after `loadFailed`). */
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   const value = useMemo(() => {
     // The selected child, or the first one if the selection is gone (removed, or another account).
@@ -95,6 +101,8 @@ export function ChildrenProvider({ children: tree }) {
     return {
       children: kids,
       loading: Boolean(user) && !loaded,
+      loadFailed: loaded && state.failed,
+      retry,
       activeChild,
       activeChildId,
       /** The selected child's role for the signed-in account: PARENT, CARETAKER or DOCTOR. */
@@ -107,7 +115,7 @@ export function ChildrenProvider({ children: tree }) {
       leaveChild,
       refresh,
     };
-  }, [kids, selectedId, user, loaded, setKids, setActiveChildId, refresh]);
+  }, [kids, selectedId, user, loaded, state.failed, retry, setKids, setActiveChildId, refresh]);
 
   return <ChildrenContext.Provider value={value}>{tree}</ChildrenContext.Provider>;
 }

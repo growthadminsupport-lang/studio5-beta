@@ -124,8 +124,10 @@ try {
   await parent.getByRole('dialog').getByRole('button', { name: 'Hairstyle 3' }).click();
   await parent.getByRole('dialog').getByRole('button', { name: 'Red' }).click();
   // The drawing follows the child's age by itself: a 10-year-old gets the young child, with no
-  // switch and no baby-only tabs (Face, Clothes).
-  const youngOnly = (await dlg.getByRole('tab', { name: 'Face' }).count()) === 0 && (await dlg.getByRole('button', { name: /Baby, 0–3/ }).count()) === 0;
+  // switch, and its own face and clothes options (eyes, outfits), not the baby's.
+  await dlg.getByRole('tab', { name: 'Face' }).click();
+  const youngOnly = (await dlg.getByRole('button', { name: 'Eyes 1' }).count()) === 1 && (await dlg.getByText('Eye colour').count()) === 0 && (await dlg.getByRole('button', { name: /Baby, 0–3/ }).count()) === 0;
+  await dlg.getByRole('button', { name: 'Eyes 3' }).click();
   await shot(parent, '00-edit-child-avatar');
   await parent.getByRole('dialog').getByRole('button', { name: 'Save changes' }).click();
   await parent.getByRole('dialog').waitFor({ state: 'detached' });
@@ -133,8 +135,8 @@ try {
   await parent.getByText('Mali Test').first().waitFor();
   const srcs = await parent.$$eval('img', (imgs) => imgs.map((i) => i.getAttribute('src')));
   check('edit child opens as a window; avatar skin, hairstyle and colour are saved',
-    stayed && srcs.some((x) => x?.includes('young/girl-deep')) && srcs.some((x) => x?.includes('young/hair-3')));
-  check('a 10-year-old gets the young drawing with no switch and no baby-only tabs', youngOnly);
+    stayed && srcs.some((x) => x?.includes('young/skin-deep')) && srcs.some((x) => x?.includes('young/hair-3')) && srcs.some((x) => x?.includes('young/eyes-3')));
+  check('a 10-year-old gets the young drawing with no switch, and its own eyes and outfits', youngOnly);
 
   await parent.getByRole('button', { name: 'People who can see this child' }).click();
   await parent.getByRole('dialog').getByText('People who follow Mali Test').waitFor();

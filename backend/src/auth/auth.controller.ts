@@ -113,6 +113,7 @@ export class AuthController {
   ) {
     return this.authService.changePassword(
       user.userId,
+      user.sessionId,
       dto.currentPassword,
       dto.newPassword,
     );

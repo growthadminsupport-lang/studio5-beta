@@ -10,7 +10,7 @@ function DashboardMock() {
   return (
     <div className="p-2 sm:p-3 bg-[#f7fcfb] dark:bg-slate-800/50 border border-[#d2efe9] dark:border-slate-700 m-2 sm:m-3 rounded-xl space-y-2">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-semibold text-[#056559] dark:text-teal-300">GrowTH</span>
+        <span className="text-xs font-semibold text-brand dark:text-teal-300">GrowTH</span>
         <div className="w-4 h-4 rounded-full bg-[#a3eadc] dark:bg-teal-500/50"></div>
       </div>
 
@@ -24,7 +24,7 @@ function DashboardMock() {
 
       <div className="grid grid-cols-3 gap-2">
         {[1, 2, 3].map((_, index) => (
-          <div key={index} className="bg-white dark:bg-slate-800 rounded-lg py-1.5 px-2.5 border border-[#056559] dark:border-teal-500/50 space-y-1 shadow-2xs">
+          <div key={index} className="bg-white dark:bg-slate-800 rounded-lg py-1.5 px-2.5 border border-brand dark:border-teal-500/50 space-y-1 shadow-2xs">
             <div className="h-1 w-8 bg-slate-200 dark:bg-slate-600 rounded-full"></div>
             <div className="h-2 w-12 bg-[#444444] dark:bg-slate-300 rounded-full"></div>
           </div>
@@ -34,7 +34,7 @@ function DashboardMock() {
       <div className="bg-white dark:bg-slate-800 rounded-lg p-2.5 border border-[#e2f4f0] dark:border-slate-700 space-y-2 shadow-2xs">
         <div className="h-2 w-24 bg-[#444444] dark:bg-slate-300 rounded-full"></div>
     
-        <div className="relative h-10 sm:h-12 w-full overflow-hidden rounded-md text-[#056559] dark:text-teal-400">
+        <div className="relative h-10 sm:h-12 w-full overflow-hidden rounded-md text-brand dark:text-teal-400">
           <svg className="w-full h-full" viewBox="0 0 500 50" preserveAspectRatio="none">
             <defs>
               <linearGradient id="dashboardChartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -58,7 +58,7 @@ function PhoneMock() {
 
       {/* Header */}
       <div className="flex items-center justify-between px-1 pt-0.5">
-        <span className="text-xs font-bold text-[#056559] dark:text-teal-300">GrowTH</span>
+        <span className="text-xs font-bold text-brand dark:text-teal-300">GrowTH</span>
         <div className="w-5 h-5 rounded-full bg-[#a7ebd9] dark:bg-teal-500/50" />
       </div>
 
@@ -76,7 +76,7 @@ function PhoneMock() {
         {[1, 2, 3].map((item) => (
           <div 
             key={item} 
-            className="bg-white dark:bg-slate-800 rounded-lg p-1.5 border border-[#00685f] dark:border-teal-500/50 flex flex-col gap-1"
+            className="bg-white dark:bg-slate-800 rounded-lg p-1.5 border border-brand dark:border-teal-500/50 flex flex-col gap-1"
           >
             <div className="h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full w-2/3" />
             <div className="h-2 bg-slate-700 dark:bg-slate-200 rounded-full w-full" />
@@ -145,12 +145,14 @@ export function DashboardShowcase({ section }) {
 export function AboutShowcase({ section }) {
   return (
     <section id="about" className="max-w-5xl mx-auto px-6 mb-24">
-      <div className="grid md:grid-cols-12 gap-12 items-center">
+      {/* Two columns, one gap: twelve columns meant eleven gaps, which with large text set
+          (gap-12 is rem-based) added up to more than a tablet's width. */}
+      <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-12 items-center">
 
         {/* Left Mockup Preview */}
-        <div className="md:col-span-4 flex justify-center">
+        <div className="flex min-w-0 justify-center">
           {section.mediaSrc ? (
-            <div className="w-60 rounded-[32px] border-4 border-slate-200 bg-[#f4f9f8] p-1.5 shadow-md dark:border-slate-700 dark:bg-slate-900/70">
+            <div className="w-60 max-w-full rounded-[32px] border-4 border-slate-200 bg-[#f4f9f8] p-1.5 shadow-md dark:border-slate-700 dark:bg-slate-900/70">
               <CroppedMedia src={section.mediaSrc} type={section.mediaType} crop={section.crop} aspect={section.aspect} className="rounded-[24px]" />
             </div>
           ) : (
@@ -159,7 +161,7 @@ export function AboutShowcase({ section }) {
         </div>
         
         {/* Right Content */}
-        <div className="md:col-span-8">
+        <div className="min-w-0">
           <span className="text-teal-700 dark:text-teal-300 text-xs font-semibold tracking-wider uppercase mb-2 block">
             {section.eyebrow}
           </span>
@@ -173,7 +175,7 @@ export function AboutShowcase({ section }) {
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-white dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 shadow-2xs space-y-3">
               <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-500/10 border border-teal-100/80 dark:border-teal-500/20 flex items-center justify-center">
-                <TrendingUp size={20} className="text-[#056559] dark:text-teal-300" strokeWidth={2} />
+                <TrendingUp size={20} className="text-brand dark:text-teal-300" strokeWidth={2} />
               </div>
               <div>
                 <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-1">Track Progress</h4>
@@ -183,7 +185,7 @@ export function AboutShowcase({ section }) {
         
             <div className="p-4 rounded-xl bg-white dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 shadow-2xs space-y-3">
               <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-500/10 border border-teal-100/80 dark:border-teal-500/20 flex items-center justify-center">
-                <Sparkles size={20} className="text-[#056559] dark:text-teal-300" strokeWidth={2} />
+                <Sparkles size={20} className="text-brand dark:text-teal-300" strokeWidth={2} />
               </div>
               <div>
                 <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-1">AI-Assisted</h4>

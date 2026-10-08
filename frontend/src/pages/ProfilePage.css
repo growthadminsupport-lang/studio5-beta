@@ -23,7 +23,7 @@
   width: 96px;
   height: 96px;
   border-radius: 50%;
-  background-color: #00685f;
+  background-color: #056559;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -48,7 +48,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #00685f;
+  color: #056559;
   font-size: 14.5px;
   font-weight: 600;
   text-decoration: none;
@@ -121,14 +121,14 @@
 }
 
 .input-group input:focus {
-  border-color: #00685f;
+  border-color: #056559;
 }
 
 /* Buttons */
 .btn-primary {
   width: 100%;
   height: 48px;
-  background-color: #00685f;
+  background-color: #056559;
   color: #ffffff;
   font-size: 16px;
   font-weight: 700;
@@ -146,8 +146,8 @@
   width: 100%;
   height: 48px;
   background: transparent;
-  color: #00685f;
-  border: 1.5px solid #00685f;
+  color: #056559;
+  border: 1.5px solid #056559;
   font-size: 16px;
   font-weight: 700;
   border-radius: 9999px;

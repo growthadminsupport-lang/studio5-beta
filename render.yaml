@@ -43,8 +43,6 @@ services:
         generateValue: true
       - key: JWT_ACCESS_EXPIRES_IN
         value: 15m
-      - key: JWT_REFRESH_EXPIRES_IN
-        value: 7d
       - key: CORS_ORIGIN
         sync: false
       # Password reset links are built from this. Unset, MailService falls back to

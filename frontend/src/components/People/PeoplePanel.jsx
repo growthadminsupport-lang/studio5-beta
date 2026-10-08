@@ -201,14 +201,14 @@ export default function PeoplePanel({ child, inWindow = false }) {
     <div>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            {!inWindow && <h1 className="text-xl font-bold text-[#056559] dark:text-teal-300">People</h1>}
+            {!inWindow && <h1 className="text-xl font-bold text-brand dark:text-teal-300">People</h1>}
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Who can see and update {child.fullName}&apos;s records.</p>
           </div>
           {child.myRole === "PARENT" && (
             <button
               type="button"
               onClick={() => setInviteOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-[#056559] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#03443c] dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
             >
               <UserPlus size={16} /> Invite
             </button>
