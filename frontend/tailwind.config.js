@@ -20,8 +20,9 @@ export default {
         },
       },
       fontFamily: {
-        // Thai first-class: each platform's own Thai face, no web-font download.
-        sans: ['"Segoe UI"', "Roboto", '"Noto Sans Thai"', '"Leelawadee UI"', "Thonburi", "system-ui", "sans-serif"],
+        // Anuphan, self-hosted (index.css). System fonts after it, Thai ones last for names
+        // typed in Thai.
+        sans: ['"Anuphan"', '"Segoe UI"', "Roboto", "system-ui", '"Noto Sans Thai"', '"Leelawadee UI"', "Thonburi", "sans-serif"],
       },
       borderRadius: {
         field: "12px",
