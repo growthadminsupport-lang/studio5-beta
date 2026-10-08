@@ -22,10 +22,18 @@ describe('AppController (e2e)', () => {
   });
 
   it('/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect({ status: 'ok', service: 'growth-backend' });
+    return (
+      request(app.getHttpServer())
+        .get('/health')
+        .expect(200)
+        // `storage` says where uploads go ("r2" or "local"), so it differs per environment.
+        .expect((r) =>
+          expect(r.body).toMatchObject({
+            status: 'ok',
+            service: 'growth-backend',
+          }),
+        )
+    );
   });
 
   afterEach(async () => {

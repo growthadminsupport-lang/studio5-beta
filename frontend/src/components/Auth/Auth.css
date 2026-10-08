@@ -231,6 +231,20 @@
   margin: 0;
 }
 
+/* Why the last session ended (LoginForm), and the Google callback's status. */
+.auth-notice {
+  background: #e8f4f1;
+  color: #035048;
+  padding: 10px 14px;
+  border-radius: var(--radius-input);
+  font-size: 13px;
+  margin: 0;
+}
+[data-theme="dark"] .auth-notice {
+  background: rgba(45, 212, 191, 0.12);
+  color: #99f6e4;
+}
+
 /* =========================
    SUCCESS
    ========================= */

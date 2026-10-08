@@ -38,6 +38,7 @@ const page = {
   InvitePage: () => import("./pages/InvitePage"),
   PeoplePage: () => import("./pages/PeoplePage"),
   WelcomePage: () => import("./pages/WelcomePage"),
+  GoogleCallbackPage: () => import("./pages/GoogleCallbackPage"),
   VerifyEmailPage: () => import("./pages/VerifyEmailPage"),
 };
 const lazyPage = Object.fromEntries(Object.entries(page).map(([k, load]) => [k, lazy(load)]));
@@ -62,6 +63,7 @@ const {
   InvitePage,
   PeoplePage,
   WelcomePage,
+  GoogleCallbackPage,
   VerifyEmailPage,
 } = lazyPage;
 const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
@@ -122,6 +124,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/welcome" element={<WelcomePage />} />
+      <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* Public Pages with Navigation Header/Footer */}

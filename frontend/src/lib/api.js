@@ -41,6 +41,11 @@ export function getRefreshToken() {
   return localStorage.getItem(REFRESH_KEY) ?? sessionStorage.getItem(REFRESH_KEY);
 }
 
+/** "Remember me": the refresh token survives the browser closing. */
+export function isRemembered() {
+  return localStorage.getItem(REFRESH_KEY) !== null;
+}
+
 export function storeRefreshToken(token, remember) {
   const keep = remember ?? localStorage.getItem(REFRESH_KEY) !== null;
   localStorage.removeItem(REFRESH_KEY);

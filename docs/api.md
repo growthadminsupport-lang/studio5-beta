@@ -34,13 +34,18 @@ The frontend reads the backend URL from `VITE_API_URL`. Routes have no `/api` pr
 - Send `Authorization: Bearer <accessToken>` on every route not marked *public* below. The access
   token lives `JWT_ACCESS_EXPIRES_IN` (15 minutes in production).
 - On a `401`, call `POST /auth/refresh` with `{ refreshToken }`. You get a new pair; the old
-  refresh token is revoked (rotation). Refresh tokens are stored hashed and last
-  `JWT_REFRESH_EXPIRES_IN` (7 days).
+  refresh token is revoked (rotation). Refresh tokens are stored hashed.
+- Sessions have two limits (`backend/src/auth/session-limits.ts`). Idle: a refresh token expires
+  if unused for 7 days ("Remember me", and new accounts) or 1 hour (not remembered). Absolute:
+  30 days or 12 hours after signing in, however active; refreshing does not extend it. Then the
+  person signs in again. `login` and `google` take `remember: true` for the long limits.
 - The frontend keeps the refresh token in `localStorage` when "Remember me" is ticked, otherwise in
-  `sessionStorage`. The access token stays in memory. Only one refresh runs at a time, and
-  parallel `401`s wait for it.
-- Google sign-in sends the Google Identity Services ID token as `{ credential }`. The backend
-  verifies it against `GOOGLE_CLIENT_ID`.
+  `sessionStorage`, and signs a session that is not remembered out after 30 minutes without
+  input. The access token stays in memory. Only one refresh runs at a time, and parallel `401`s
+  wait for it.
+- Google sign-in is a full-page redirect to Google (OpenID Connect, `response_type=id_token`),
+  back to `/auth/google/callback` in the frontend, which checks `state` and `nonce` and sends the
+  ID token as `{ credential }`. The backend verifies it against `GOOGLE_CLIENT_ID`.
 
 ### Rate limits
 
@@ -115,7 +120,7 @@ The server also shapes responses by role. Hiding a field in the UI is not enough
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/auth/register` | *Public.* `fullName`, `email`, `password`, `phoneNumber?`, `acceptedTerms: true`, and `accountType?` `USER` (default) or `DOCTOR`. A doctor also sends `licenseNumber` and `hospital` and starts as `PENDING`. Emails are stored lowercase. Disposable domains are refused, and in production so are domains with no mail server. The account starts unconfirmed and a confirmation link is emailed (48 hours). `409` with `code: GOOGLE_ACCOUNT` if the address belongs to a Google account, `EMAIL_TAKEN` otherwise. |
-| POST | `/auth/login` | *Public.* `email`, `password`. A Google-only account gets `401` with `code: GOOGLE_ACCOUNT` and a message pointing to Google sign-in. |
+| POST | `/auth/login` | *Public.* `email`, `password`, `remember?`. A Google-only account gets `401` with `code: GOOGLE_ACCOUNT` and a message pointing to Google sign-in. |
 | POST | `/auth/google` | *Public.* Step by step, reusing the same `credential` (valid about an hour): an account linked to this Google identity is signed in. A password account with the same address returns `{ linkRequired, email }`; calling again with `linkAccount: true` links it (same account). If that address was never confirmed, linking also removes its password and sessions (`passwordRemoved: true`). A new address returns `{ signupRequired, email, fullName, picture }`; calling again with `signup: true`, `acceptedTerms: true`, `accountType`, `fullName?`, `phoneNumber`, and for doctors `licenseNumber` and `hospital`, creates the account, already confirmed. |
 | POST | `/auth/set-password` | `newPassword`. Adds a password to a Google-only account, so either way in reaches it. `400` if it already has one. |
 | POST | `/auth/verify-email` | *Public.* `token` from the confirmation email. Single use. |
@@ -235,7 +240,7 @@ dashboard.
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | Neon pooled connection string |
-| `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN` | Tokens |
+| `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN` | Tokens (session limits are in code, `session-limits.ts`) |
 | `CORS_ORIGIN` | The one allowed frontend origin, e.g. `https://studio5-beta.vercel.app` |
 | `FRONTEND_URL` | Base for links in emails (reset, invite) |
 | `RESEND_API_KEY`, `MAIL_FROM` | Email through Resend, sent from `hacklgroups.com` |

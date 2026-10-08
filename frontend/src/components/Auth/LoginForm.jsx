@@ -5,7 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { errorMessage } from "../../lib/api";
 import GoogleButton from "./GoogleButton";
-import { useGoogleFlow } from "./useGoogleFlow";
+import { SIGNED_OUT_KEY } from "../../context/AuthContext";
 import LogoMotion from "../LogoMotion";
 import "./Auth.css";
 
@@ -15,6 +15,12 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
+  // Why the last session ended, when the app ended it (idle, expired); shown once.
+  const [signedOut] = useState(() => {
+    const reason = sessionStorage.getItem(SIGNED_OUT_KEY);
+    sessionStorage.removeItem(SIGNED_OUT_KEY);
+    return reason;
+  });
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,8 +49,6 @@ function LoginForm() {
     }
   };
 
-  const { handleCredential: handleGoogle, dialog: googleDialog } = useGoogleFlow(destination, setError);
-
   return (
     <form onSubmit={handleSubmit} className="auth-form">
       {/* Logo */}
@@ -57,6 +61,8 @@ function LoginForm() {
       <p className="auth-subtitle">
         Log in to track your child's growth
       </p>
+
+      {signedOut && !error && <p className="auth-notice" role="status">{signedOut}</p>}
 
       {/* Error */}
       {error && <p className="auth-error">{error}</p>}
@@ -100,7 +106,7 @@ function LoginForm() {
             checked={remember}
             onChange={(e) => setRemember(e.target.checked)}
           />
-          <span>Remember me</span>
+          <span>Remember me for 30 days</span>
         </label>
 
         <Link to="/forgot-password" className="forgot-link-inline">
@@ -121,7 +127,7 @@ function LoginForm() {
       )}
 
       {/* Google Login */}
-      <GoogleButton onCredential={handleGoogle} />
+      <GoogleButton next={destination} remember={remember} from="/login" />
 
       {/* Register */}
       <div className="auth-links">
@@ -132,7 +138,6 @@ function LoginForm() {
           </Link>
         </span>
       </div>
-      {googleDialog}
     </form>
   );
 }

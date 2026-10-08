@@ -45,6 +45,7 @@ export default function WelcomePage() {
     try {
       await googleSignIn({
         credential: state.credential,
+        remember: state.remember ?? true,
         signup: true,
         acceptedTerms: true,
         accountType,

@@ -4,7 +4,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { errorMessage } from "../../lib/api";
 import GoogleButton from "./GoogleButton";
-import { useGoogleFlow } from "./useGoogleFlow";
 import LogoMotion from "../LogoMotion";
 import "./Auth.css";
 
@@ -77,7 +76,6 @@ function RegisterForm() {
   };
 
   // Terms, account type and phone are asked on the welcome page that follows.
-  const { handleCredential: handleGoogleSignUp, dialog: googleDialog } = useGoogleFlow(destination, setError);
 
   return (
     <form onSubmit={handleSubmit} className="auth-form">
@@ -279,10 +277,10 @@ function RegisterForm() {
           <div className="auth-divider">
             <span>or</span>
           </div>
-          <GoogleButton onCredential={handleGoogleSignUp} label="Sign up with Google" />
+          {/* Creating an account is remembered, as with the form. */}
+          <GoogleButton next={destination} remember from="/register" label="Sign up with Google" />
         </>
       )}
-      {googleDialog}
 
       {/* Login Link */}
       <div className="auth-links">

@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { existsSync, readdirSync, rmSync } from 'fs';
 import { AwsClient } from 'aws4fetch';
 import { join } from 'path';
@@ -965,6 +966,75 @@ maybe('roles and permissions (e2e)', () => {
       await http()
         .post('/auth/refresh')
         .send({ refreshToken: b.body.refreshToken })
+        .expect(401);
+    });
+
+    it('limits a session: short without "Remember me", long with it, never past its absolute end', async () => {
+      // Two more logins would push the suite past the login limit (10 a minute per IP).
+      await prisma.$executeRawUnsafe('TRUNCATE "rate_limits"');
+      await prisma.user.create({
+        data: {
+          email: 'limits@e2e.test',
+          fullName: 'Limits',
+          passwordHash: await bcrypt.hash(PASSWORD, 4),
+          isVerified: true,
+        },
+      });
+      const sessionOf = (refreshToken: string) =>
+        prisma.session.findUniqueOrThrow({
+          where: {
+            refreshToken: createHash('sha256')
+              .update(refreshToken)
+              .digest('hex'),
+          },
+        });
+      const hoursLeft = (d: Date) => (d.getTime() - Date.now()) / 3_600_000;
+
+      const browser = await http()
+        .post('/auth/login')
+        .send({ email: 'limits@e2e.test', password: PASSWORD })
+        .expect(200);
+      const short = await sessionOf(browser.body.refreshToken);
+      expect(short.persistent).toBe(false);
+      expect(hoursLeft(short.expiresAt)).toBeCloseTo(1, 1);
+      expect(hoursLeft(short.absoluteExpiresAt)).toBeCloseTo(12, 1);
+
+      const remembered = await http()
+        .post('/auth/login')
+        .send({ email: 'limits@e2e.test', password: PASSWORD, remember: true })
+        .expect(200);
+      const long = await sessionOf(remembered.body.refreshToken);
+      expect(long.persistent).toBe(true);
+      expect(hoursLeft(long.expiresAt) / 24).toBeCloseTo(7, 1);
+      expect(hoursLeft(long.absoluteExpiresAt) / 24).toBeCloseTo(30, 1);
+
+      // A refresh renews the idle limit but carries the absolute end over unchanged.
+      const renewed = await http()
+        .post('/auth/refresh')
+        .send({ refreshToken: browser.body.refreshToken })
+        .expect(200);
+      const next = await sessionOf(renewed.body.refreshToken);
+      expect(next.persistent).toBe(false);
+      expect(next.absoluteExpiresAt).toEqual(short.absoluteExpiresAt);
+
+      // A password change keeps this device signed in on the same terms.
+      const changed = await http()
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${renewed.body.accessToken}`)
+        .send({ currentPassword: PASSWORD, newPassword: 'Limits999!' })
+        .expect(200);
+      const after = await sessionOf(changed.body.refreshToken);
+      expect(after.persistent).toBe(false);
+      expect(after.absoluteExpiresAt).toEqual(short.absoluteExpiresAt);
+
+      // Past its absolute end the session is over, however recently it was refreshed.
+      await prisma.session.update({
+        where: { id: after.id },
+        data: { absoluteExpiresAt: new Date(Date.now() - 1000) },
+      });
+      await http()
+        .post('/auth/refresh')
+        .send({ refreshToken: changed.body.refreshToken })
         .expect(401);
     });
 
