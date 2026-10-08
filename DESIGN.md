@@ -29,9 +29,12 @@ slate-400.
 
 ## Type
 
-- Font: `"Segoe UI", Roboto, "Noto Sans Thai", "Leelawadee UI", Thonburi, system-ui, sans-serif`
-  (`font-sans`). Each platform's own Thai face; no web-font download. The Knowledge hero alone
-  uses Baloo 2 for its display title.
+- Font: **Anuphan** (Cadson Demak, SIL OFL), chosen 2026-10-09 over Prompt, Plus Jakarta Sans and
+  Nunito for being modern and calm with clear, even numbers for the measurement cards. Self-hosted
+  from `frontend/public/fonts/`, English letters only (the TOR asks for an English interface):
+  one 34 KB variable file, weights 300–700, preloaded. Fallbacks: Segoe UI, Roboto, system-ui,
+  then the system Thai faces for names typed in Thai (`font-sans`). The Knowledge hero alone uses
+  Baloo 2 for its display title.
 - Scale (Tailwind): 12 `text-xs` (labels, chips only), 14 `text-sm` (body in cards, forms),
   16 `text-base` (reading text), 18 `text-lg`, 20 `text-xl` (page titles in the app),
   24 `text-2xl`, 30 `text-3xl`, 36 `text-4xl` (Home hero). Nothing under 12px except the
