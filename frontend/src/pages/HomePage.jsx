@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { HeroLogo } from "../components/LogoMotion";
-import { useTheme } from "../context/ThemeContext";
 import { BUILTIN_ARTICLES } from "../content/articles";
 import { AboutShowcase, DashboardShowcase } from "../components/Home/Showcases";
 import { useSiteSections } from "../lib/siteContent";
@@ -24,7 +23,6 @@ const articles = HOME_SLUGS.map((slug) => BUILTIN_ARTICLES.find((a) => a.slug ==
 }));
 
 export default function HomePage() {
-  const { theme } = useTheme();
   const { isLoggedIn } = useAuth() || {};
   const sections = useSiteSections();
 
@@ -34,10 +32,8 @@ export default function HomePage() {
       {/* ----------------- Hero Section ----------------- */}
       <section className="max-w-3xl mx-auto px-6 pt-8 pb-10 text-center flex flex-col items-center">
         <div className="flex flex-col items-center justify-center mb-3">
-          {/* The blend that hides the image's white (or black) background goes on the wrapper:
-              the float's transform isolates everything inside it from the page. */}
           <HeroLogo
-            className={`w-32 h-32 md:w-44 md:h-44 mb-1 ${theme === "dark" ? "mix-blend-lighten" : "mix-blend-darken"}`}
+            className="w-32 h-32 md:w-44 md:h-44 mb-1"
             imageClassName="w-full h-full object-contain scale-125 md:scale-130 -translate-y-2"
           />
         </div>
