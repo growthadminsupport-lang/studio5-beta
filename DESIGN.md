@@ -60,6 +60,10 @@ slate-400.
   never the API's field names. A failed load says so and offers **Try again**; it is never shown
   as an empty state.
 - Destructive actions ask first.
+- Dates people know by heart (date of birth, due date) are Day / Month / Year fields
+  (`DateFields.jsx`, the GOV.UK pattern), not a calendar: on iOS the calendar opens on today, so
+  a 9-year-old's birthday is dozens of taps away, and its native Reset cannot be controlled by
+  the page. Recent dates (a measurement, an X-ray) keep the native date picker.
 - Motion respects `prefers-reduced-motion`, except the Home logo (a brand decision, 2026-10-04).
 
 ## Layout

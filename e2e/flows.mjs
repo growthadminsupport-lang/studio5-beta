@@ -16,6 +16,14 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 };
 
+// A child's date of birth or due date: Day / Month / Year fields (DateFields.jsx).
+async function fillDate(page, iso) {
+  const [y, m, d] = iso.split('-');
+  await page.getByLabel('Day', { exact: true }).fill(String(Number(d)));
+  await page.getByLabel('Month', { exact: true }).selectOption(String(Number(m)));
+  await page.getByLabel('Year', { exact: true }).fill(y);
+}
+
 const browser = await { chromium, firefox, webkit }[ENGINE].launch(
   ENGINE === 'chromium' ? { executablePath: process.env.CHROME, args: ['--no-sandbox'] } : {},
 );
@@ -102,9 +110,9 @@ try {
   check('relationship choices are offered (mother or father / guardian / relative), mother or father by default',
     (await parent.getByLabel('Mother or father').isChecked()) && (await parent.getByLabel('Legal guardian').isVisible()));
   await parent.locator('input[type=text]').first().fill('Mali Test');
-  await parent.locator('input[type=date]').fill('2016-03-15');
+  await fillDate(parent, '2016-03-15');
   await parent.getByRole('button', { name: 'Girl' }).click();
-  await parent.locator('input[type=text]').nth(2).fill('HN-77001');
+  await parent.getByLabel(/Hospital number/).fill('HN-77001');
   await parent.getByRole('button', { name: 'Save and continue' }).click();
   await parent.waitForURL('**/dashboard');
   await parent.getByText('Mali Test').first().waitFor();
@@ -166,7 +174,7 @@ try {
   // A baby gets the baby drawing.
   await parent.goto(`${APP}/children/new`);
   await parent.locator('input[type=text]').first().fill('Baby Test');
-  await parent.locator('input[type=date]').fill('2026-06-01');
+  await fillDate(parent, '2026-06-01');
   await parent.getByRole('button', { name: 'Boy' }).click();
   await parent.getByRole('button', { name: 'Save and continue' }).click();
   await parent.waitForURL('**/dashboard');
@@ -230,7 +238,7 @@ try {
   await parent.goto(`${APP}/children/new`);
   await parent.locator('input[type=text]').first().fill('Bump Test');
   await parent.getByLabel('Not born yet').check();
-  await parent.locator('input[type=date]').fill(due);
+  await fillDate(parent, due);
   await parent.getByRole('button', { name: 'Save and continue' }).click();
   await parent.waitForURL('**/dashboard');
   await parent.getByText(/Bump is on the way · Due/).waitFor();

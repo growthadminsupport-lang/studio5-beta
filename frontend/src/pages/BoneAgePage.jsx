@@ -8,7 +8,6 @@ import { isUnborn } from '../utils/childDisplay';
 import { api, errorMessage, dateOnly } from '../lib/api';
 import { ACCEPT } from '../lib/xray';
 import XrayPrepareDialog from '../components/BoneAge/XrayPrepareDialog';
-import DateInput from '../components/DateInput';
 
 // Before preparing: a PDF report or a phone photo can be large; what is uploaded is at most
 // 2048 px and 10 MB (lib/xray.js).
@@ -207,11 +206,11 @@ function DoctorRecord({ record, onSaved, onDelete }) {
             <option value="ADVANCED">Advanced for age</option>
             <option value="DELAYED">Delayed for age</option>
           </select>
-          <DateInput
+          <input
+            type="date"
             value={examDate}
-            resetTo={dateOnly(record.examDate)}
             max={todayIso()}
-            onChange={setExamDate}
+            onChange={(e) => setExamDate(e.target.value)}
             aria-label="Exam date"
             className="rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand dark:border-slate-700 dark:text-slate-100"
           />
@@ -343,12 +342,12 @@ function DoctorView({ child }) {
         <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">Add a hand X-ray</h2>
         <label className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
           Exam date
-          <DateInput
+          <input
+            type="date"
             value={examDate}
-            resetTo={todayIso()}
             min={child.dateOfBirth}
             max={todayIso()}
-            onChange={setExamDate}
+            onChange={(e) => setExamDate(e.target.value)}
             className="min-w-0 rounded-xl border border-slate-200 bg-transparent px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand dark:border-slate-700 dark:text-slate-100"
           />
         </label>
