@@ -16,12 +16,21 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 };
 
-// A child's date of birth or due date: Day / Month / Year fields (DateFields.jsx).
-async function fillDate(page, iso) {
-  const [y, m, d] = iso.split('-');
-  await page.getByLabel('Day', { exact: true }).fill(String(Number(d)));
-  await page.getByLabel('Month', { exact: true }).selectOption(String(Number(m)));
-  await page.getByLabel('Year', { exact: true }).fill(y);
+// Every date field is GrowTH's own calendar (DatePicker.jsx): open it by its name, jump to the
+// year and month from the title, then pick the day.
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+async function pickDate(page, field, iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  await page.getByRole('button', { name: new RegExp(`^${field}:`) }).click();
+  const cal = page.getByRole('dialog', { name: 'Choose a date' });
+  await cal.getByRole('button', { name: /Choose month and year/ }).click();
+  for (let i = 0; i < 20 && !(await cal.getByRole('button', { name: String(y), exact: true }).count()); i++) {
+    const shown = Number(await cal.locator('[data-pick]').first().textContent());
+    await cal.getByRole('button', { name: y < shown ? 'Earlier years' : 'Later years' }).click();
+  }
+  await cal.getByRole('button', { name: String(y), exact: true }).click();
+  await cal.getByRole('button', { name: MONTH_NAMES[m - 1], exact: true }).click();
+  await cal.getByRole('button', { name: `${MONTH_NAMES[m - 1]} ${d}, ${y}`, exact: true }).click();
 }
 
 const browser = await { chromium, firefox, webkit }[ENGINE].launch(
@@ -110,7 +119,7 @@ try {
   check('relationship choices are offered (mother or father / guardian / relative), mother or father by default',
     (await parent.getByLabel('Mother or father').isChecked()) && (await parent.getByLabel('Legal guardian').isVisible()));
   await parent.locator('input[type=text]').first().fill('Mali Test');
-  await fillDate(parent, '2016-03-15');
+  await pickDate(parent, 'Date of birth', '2016-03-15');
   await parent.getByRole('button', { name: 'Girl' }).click();
   await parent.getByLabel(/Hospital number/).fill('HN-77001');
   await parent.getByRole('button', { name: 'Save and continue' }).click();
@@ -174,7 +183,7 @@ try {
   // A baby gets the baby drawing.
   await parent.goto(`${APP}/children/new`);
   await parent.locator('input[type=text]').first().fill('Baby Test');
-  await fillDate(parent, '2026-06-01');
+  await pickDate(parent, 'Date of birth', '2026-06-01');
   await parent.getByRole('button', { name: 'Boy' }).click();
   await parent.getByRole('button', { name: 'Save and continue' }).click();
   await parent.waitForURL('**/dashboard');
@@ -238,7 +247,7 @@ try {
   await parent.goto(`${APP}/children/new`);
   await parent.locator('input[type=text]').first().fill('Bump Test');
   await parent.getByLabel('Not born yet').check();
-  await fillDate(parent, due);
+  await pickDate(parent, 'Due date', due);
   await parent.getByRole('button', { name: 'Save and continue' }).click();
   await parent.waitForURL('**/dashboard');
   await parent.getByText(/Bump is on the way · Due/).waitFor();
@@ -257,12 +266,12 @@ try {
   await parent.goto(`${APP}/growth`);
   await parent.getByPlaceholder('Height (cm)').first().fill('128');
   await parent.getByPlaceholder('Weight (kg)').first().fill('26');
-  await parent.locator('form input[type=date]').fill('2025-09-15');
+  await pickDate(parent, 'Date measured', '2025-09-15');
   await parent.getByRole('button', { name: 'Add measurement' }).click();
   await parent.getByText(/(Within|Outside) the usual range\./).first().waitFor({ timeout: 15000 });
   await parent.getByPlaceholder('Height (cm)').first().fill('134');
   await parent.getByPlaceholder('Weight (kg)').first().fill('31');
-  await parent.locator('form input[type=date]').fill('2026-09-15');
+  await pickDate(parent, 'Date measured', '2026-09-15');
   await parent.getByRole('button', { name: 'Add measurement' }).click();
   await parent.waitForTimeout(1500);
   const dots = await parent.locator('.growth-own-dot').count();

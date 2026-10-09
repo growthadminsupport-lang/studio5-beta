@@ -60,10 +60,10 @@ slate-400.
   never the API's field names. A failed load says so and offers **Try again**; it is never shown
   as an empty state.
 - Destructive actions ask first.
-- Dates people know by heart (date of birth, due date) are Day / Month / Year fields
-  (`DateFields.jsx`, the GOV.UK pattern), not a calendar: on iOS the calendar opens on today, so
-  a 9-year-old's birthday is dozens of taps away, and its native Reset cannot be controlled by
-  the page. Recent dates (a measurement, an X-ray) keep the native date picker.
+- Every date field is GrowTH's own calendar (`DatePicker.jsx`), never the browser's: on iOS the
+  native picker opens on today and its Reset cannot be controlled by the page. The month title
+  jumps to a year grid, then a month grid (any date in three taps); Clear really clears; Today
+  when allowed; min/max dates are greyed out. Same teal as the rest of the site, light and dark.
 - Motion respects `prefers-reduced-motion`, except the Home logo (a brand decision, 2026-10-04).
 
 ## Layout
