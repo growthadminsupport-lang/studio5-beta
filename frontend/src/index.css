@@ -280,16 +280,16 @@ textarea {
   textarea {
     font-size: 16px !important;
   }
-  /* iOS gives date fields a minimum width of their own and centres the date: in the edit-child
-     window on an iPad the field ran past the window's edge. */
+  /* iOS gives date fields a minimum width of their own and centres the date: in a narrow box
+     on an iPad the field ran past its edge. */
   input[type="date"] {
     -webkit-appearance: none;
     appearance: none;
     display: block;
     min-width: 0;
     max-width: 100%;
-    /* Without its native look an empty date field (a new child) has no line box on iOS and
-       shrinks to its padding. */
+    /* Without its native look an empty date field has no line box on iOS and shrinks to its
+       padding. */
     min-height: 44px;
   }
   input[type="date"]::-webkit-date-and-time-value {

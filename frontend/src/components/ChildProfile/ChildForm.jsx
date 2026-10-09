@@ -4,7 +4,7 @@ import { useChildren } from "../../context/ChildrenContext";
 import { errorMessage } from "../../lib/api";
 import { AVATAR_SETS, BABY_OUTFITS, EYE_COLORS, HAIR_COLORS, MOUTH_LABELS, SKIN_TONES, avatarVersion, hairCount, withDefaults } from "../../lib/avatar";
 import { AvatarFigure, AvatarZoom } from "./ChildAvatar";
-import DateInput from "../DateInput";
+import DateFields from "../DateFields";
 
 function dueMaxIso() {
   const d = new Date(Date.now() + 300 * 86_400_000);
@@ -282,18 +282,22 @@ export default function ChildForm({ child, onDone, submitLabel }) {
   const [avatar, setAvatar] = useState(child?.avatar ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // Problems with the date are shown under the date fields, not at the top of the form.
+  const [dateError, setDateError] = useState(null);
 
   async function submit(e) {
     e.preventDefault();
     setError(null);
+    setDateError(null);
     let body;
     if (hnOnly) {
       body = { hn: hn.trim() };
     } else {
       if (!fullName.trim()) return setError("Please enter your child’s full name.");
-      if (!dateOfBirth) return setError(notBorn ? "Please enter the due date." : "Please enter the date of birth.");
-      if (!notBorn && dateOfBirth > todayIso()) return setError("The date of birth can’t be in the future. Not born yet? Tick the box.");
-      if (notBorn && dateOfBirth <= todayIso()) return setError("A due date is in the future. Already born? Untick the box.");
+      if (!dateOfBirth) return setDateError(notBorn ? "Enter the due date: day, month and year." : "Enter the date of birth: day, month and year.");
+      if (!notBorn && dateOfBirth > todayIso()) return setDateError("The date of birth can’t be in the future. Not born yet? Tick the box.");
+      if (notBorn && dateOfBirth <= todayIso()) return setDateError("A due date is in the future. Already born? Untick the box.");
+      if (notBorn && dateOfBirth > dueMaxIso()) return setDateError("A due date can be at most about 10 months from today.");
       body = {
         fullName: fullName.trim(),
         nickname: nickname.trim() || null,
@@ -352,17 +356,20 @@ export default function ChildForm({ child, onDone, submitLabel }) {
         <input type="checkbox" checked={notBorn} onChange={(e) => setNotBorn(e.target.checked)} className="h-5 w-5 accent-brand" />
         Not born yet
       </label>
-      <Field label={notBorn ? "Due date" : "Date of birth"}>
-        <DateInput
-          required
-          min={notBorn ? todayIso() : undefined}
-          max={notBorn ? dueMaxIso() : todayIso()}
+      <fieldset className="block min-w-0">
+        <legend className="mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-200">
+          {notBorn ? "Due date" : "Date of birth"}
+        </legend>
+        <DateFields
           value={dateOfBirth}
-          resetTo={child?.dateOfBirth ?? ""}
-          onChange={setDateOfBirth}
-          className={field}
+          onChange={(v) => {
+            setDateOfBirth(v);
+            setDateError(null);
+          }}
+          fieldClass={field}
+          error={dateError}
         />
-      </Field>
+      </fieldset>
 
       <Field group label="Sex">
         <div className="grid grid-cols-2 overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-700">
