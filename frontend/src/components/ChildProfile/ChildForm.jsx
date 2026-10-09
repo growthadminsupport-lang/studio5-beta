@@ -4,10 +4,16 @@ import { useChildren } from "../../context/ChildrenContext";
 import { errorMessage } from "../../lib/api";
 import { AVATAR_SETS, BABY_OUTFITS, EYE_COLORS, HAIR_COLORS, MOUTH_LABELS, SKIN_TONES, avatarVersion, hairCount, withDefaults } from "../../lib/avatar";
 import { AvatarFigure, AvatarZoom } from "./ChildAvatar";
-import DateFields from "../DateFields";
+import DatePicker from "../DatePicker";
 
 function dueMaxIso() {
   const d = new Date(Date.now() + 300 * 86_400_000);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function tomorrowIso() {
+  const d = new Date(Date.now() + 86_400_000);
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -294,7 +300,7 @@ export default function ChildForm({ child, onDone, submitLabel }) {
       body = { hn: hn.trim() };
     } else {
       if (!fullName.trim()) return setError("Please enter your child’s full name.");
-      if (!dateOfBirth) return setDateError(notBorn ? "Enter the due date: day, month and year." : "Enter the date of birth: day, month and year.");
+      if (!dateOfBirth) return setDateError(notBorn ? "Choose the due date." : "Choose the date of birth.");
       if (!notBorn && dateOfBirth > todayIso()) return setDateError("The date of birth can’t be in the future. Not born yet? Tick the box.");
       if (notBorn && dateOfBirth <= todayIso()) return setDateError("A due date is in the future. Already born? Untick the box.");
       if (notBorn && dateOfBirth > dueMaxIso()) return setDateError("A due date can be at most about 10 months from today.");
@@ -356,20 +362,26 @@ export default function ChildForm({ child, onDone, submitLabel }) {
         <input type="checkbox" checked={notBorn} onChange={(e) => setNotBorn(e.target.checked)} className="h-5 w-5 accent-brand" />
         Not born yet
       </label>
-      <fieldset className="block min-w-0">
-        <legend className="mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-200">
-          {notBorn ? "Due date" : "Date of birth"}
-        </legend>
-        <DateFields
+      <Field group label={notBorn ? "Due date" : "Date of birth"}>
+        <DatePicker
           value={dateOfBirth}
           onChange={(v) => {
             setDateOfBirth(v);
             setDateError(null);
           }}
-          fieldClass={field}
-          error={dateError}
+          min={notBorn ? tomorrowIso() : undefined}
+          max={notBorn ? dueMaxIso() : todayIso()}
+          aria-label={notBorn ? "Due date" : "Date of birth"}
+          className={field}
+          invalid={Boolean(dateError)}
+          describedBy={dateError ? "child-date-error" : undefined}
         />
-      </fieldset>
+        {dateError && (
+          <p id="child-date-error" role="alert" className="mt-1.5 text-sm text-red-700 dark:text-red-300">
+            {dateError}
+          </p>
+        )}
+      </Field>
 
       <Field group label="Sex">
         <div className="grid grid-cols-2 overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-700">

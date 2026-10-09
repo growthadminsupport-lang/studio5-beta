@@ -6,6 +6,7 @@ import { isUnborn } from '../utils/childDisplay';
 import GrowthChart from '../components/GrowthTracking/GrowthChart';
 import { Pencil, Trash2, Check, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { api, errorMessage } from '../lib/api';
+import DatePicker from '../components/DatePicker';
 
 // What a child's measurement can plausibly be, checked before sending so the message is plain
 // and points at the field (the API's own limits are wider and its wording is technical).
@@ -224,7 +225,7 @@ function GrowthPage() {
             {askHead && (
               <input type="number" inputMode="decimal" step="0.1" min="0" placeholder="Head circumference (cm)" aria-invalid={badField === 'head'} aria-describedby={badField === 'head' ? 'measure-error' : undefined} value={headCm} onChange={(e) => setHeadCm(e.target.value)} className={`${inputCls} ${badField === 'head' ? invalidCls : ''}`} />
             )}
-            <input type="date" value={measuredAt} min={child.dateOfBirth} max={todayIso()} onChange={(e) => setMeasuredAt(e.target.value)} aria-label="Date measured" className={inputCls} />
+            <DatePicker value={measuredAt} min={child.dateOfBirth} max={todayIso()} onChange={setMeasuredAt} aria-label="Date measured" className={inputCls} />
             <button
               type="submit"
               disabled={saving}

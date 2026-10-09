@@ -8,6 +8,7 @@ import { isUnborn } from '../utils/childDisplay';
 import { api, errorMessage, dateOnly } from '../lib/api';
 import { ACCEPT } from '../lib/xray';
 import XrayPrepareDialog from '../components/BoneAge/XrayPrepareDialog';
+import DatePicker from '../components/DatePicker';
 
 // Before preparing: a PDF report or a phone photo can be large; what is uploaded is at most
 // 2048 px and 10 MB (lib/xray.js).
@@ -206,11 +207,10 @@ function DoctorRecord({ record, onSaved, onDelete }) {
             <option value="ADVANCED">Advanced for age</option>
             <option value="DELAYED">Delayed for age</option>
           </select>
-          <input
-            type="date"
+          <DatePicker
             value={examDate}
             max={todayIso()}
-            onChange={(e) => setExamDate(e.target.value)}
+            onChange={setExamDate}
             aria-label="Exam date"
             className="rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand dark:border-slate-700 dark:text-slate-100"
           />
@@ -340,17 +340,18 @@ function DoctorView({ child }) {
 
       <Card className="mb-6">
         <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">Add a hand X-ray</h2>
-        <label className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-          Exam date
-          <input
-            type="date"
+        {/* Not a <label>: the calendar inside is a set of buttons; the field names itself. */}
+        <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+          <span aria-hidden="true">Exam date</span>
+          <DatePicker
             value={examDate}
             min={child.dateOfBirth}
             max={todayIso()}
-            onChange={(e) => setExamDate(e.target.value)}
+            onChange={setExamDate}
+            aria-label="Exam date"
             className="min-w-0 rounded-xl border border-slate-200 bg-transparent px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand dark:border-slate-700 dark:text-slate-100"
           />
-        </label>
+        </div>
         <div
           onDragOver={(e) => {
             e.preventDefault();
